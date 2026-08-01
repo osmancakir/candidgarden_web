@@ -3,7 +3,7 @@
 Date: 2023-06-23 Updated: 2024-03-19
 
 Status: superseded by
-[040-tigris-image-storage.md](./040-tigris-image-storage.md)
+[040-amazon-s3-image-storage.md](./040-amazon-s3-image-storage.md)
 
 ## Context
 

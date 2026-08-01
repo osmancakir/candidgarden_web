@@ -1,77 +1,66 @@
 # Image Storage
 
-The Epic Stack uses [Tigris](https://www.tigrisdata.com), an S3-compatible
-object storage service, for storing and serving uploaded images. Tigris is
-integrated tightly with Fly.io, so you don't need to worry about setting up an
-account or configuring any credentials.
+Uploaded images are stored in private [Amazon S3](https://aws.amazon.com/s3/)
+buckets. Image metadata and object keys remain in PostgreSQL; the application
+uploads objects with the AWS SDK and proxies reads through the image resource
+route using short-lived signed URLs.
 
 ## Configuration
 
-To use Tigris for image storage, you need to configure the following environment
-variables. These are automatically set for you on Fly.io when you create storage
-for your app which happens when you create a new Epic Stack project.
+The application requires these settings:
 
 ```sh
-AWS_ACCESS_KEY_ID="mock-access-key"
-AWS_SECRET_ACCESS_KEY="mock-secret-key"
-AWS_REGION="auto"
-AWS_ENDPOINT_URL_S3="https://fly.storage.tigris.dev"
-BUCKET_NAME="mock-bucket"
+AWS_REGION="eu-central-1"
+AWS_S3_BUCKET="your-private-image-bucket"
 ```
 
-These environment variables are set automatically in the `.env` file locally and
-a mock with MSW is set up so that everything works completely offline locally
-during development.
+The AWS SDK uses its default credential provider chain. In AWS-hosted
+environments, prefer an IAM role. For local development or Fly.io, credentials
+can be supplied through the standard variables:
+
+```sh
+AWS_ACCESS_KEY_ID="your-access-key"
+AWS_SECRET_ACCESS_KEY="your-secret-key"
+# AWS_SESSION_TOKEN="your-session-token" # when using temporary credentials
+```
+
+The repository's `.env.example` contains mock credentials, and MSW intercepts S3
+requests so local development and tests remain offline.
+
+Use separate private buckets and credentials for production and staging. The
+application identity needs only `s3:GetObject` and `s3:PutObject` for objects in
+the configured bucket:
+
+```json
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"Action": ["s3:GetObject", "s3:PutObject"],
+			"Resource": "arn:aws:s3:::YOUR_BUCKET/*"
+		}
+	]
+}
+```
+
+Keep S3 Block Public Access enabled. Browsers do not access the bucket directly,
+so no bucket CORS configuration is required for the current upload and serving
+flow.
 
 ## How It Works
 
-The Epic Stack maintains a hybrid approach to image storage:
+1. The application validates an uploaded image.
+2. The server uploads its binary data to the configured S3 bucket.
+3. PostgreSQL stores the image's ownership and S3 object key.
+4. The image resource route creates a 60-second signed URL and fetches the
+   private object for optimization and delivery.
 
-1. Image metadata (relationships, ownership, etc.) is stored in PostgreSQL
-2. The actual image binary data is stored in Tigris
-3. Image URLs point to the local server which proxies to Tigris
+Existing database object keys do not need to change when objects are copied into
+the S3 bucket with the same keys.
 
-### Database Schema
-
-The database schema maintains references to images while the actual binary data
-lives in Tigris:
-
-```prisma
-model UserImage {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  objectKey   String   // Reference to the image in Tigris
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([userId])
-}
-
-model NoteImage {
-  id          String   @id @default(cuid())
-  noteId      String
-  note        Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
-  objectKey   String   // Reference to the image in Tigris
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([noteId])
-}
-```
-
-### Image Upload Flow
-
-1. When an image is uploaded, it's first processed by the application
-   (validation, etc.)
-2. The image is then streamed to Tigris
-3. The metadata is stored in PostgreSQL with a reference to the Tigris object
-   key
-4. The image can then be served by proxying to Tigris
-
-## Customization
-
-For more details on customization, see the source code in:
+Relevant implementation files:
 
 - `app/utils/storage.server.ts`
 - `app/routes/resources/images.tsx`
+- `tests/mocks/s3.ts`

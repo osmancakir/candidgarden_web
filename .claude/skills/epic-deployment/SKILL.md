@@ -159,7 +159,10 @@ fly secrets unset SECRET_NAME --app [YOUR_APP_NAME]
 - `DATABASE_URL` - Automatically configured by LiteFS
 - `CACHE_DATABASE_PATH` - Automatically configured
 - `RESEND_API_KEY` - For sending emails (optional)
-- `TIGRIS_*` - For image storage (automatic)
+- `AWS_REGION` - Region containing the image bucket
+- `AWS_S3_BUCKET` - Private image bucket name
+- `AWS_ACCESS_KEY_ID` - AWS credential when an IAM role is unavailable
+- `AWS_SECRET_ACCESS_KEY` - AWS credential when an IAM role is unavailable
 - `SENTRY_DSN` - For error monitoring (optional)
 
 ### Volumes
@@ -329,22 +332,17 @@ quickly. Large PRs are hard to review, risky to merge, and slow down the team.
 - Use feature flags to merge incrementally
 - Break down into logical pieces
 
-### Tigris Object Storage
+### Amazon S3 Object Storage
 
-**Create storage:**
+**Create storage and configure Fly:**
 
 ```bash
-fly storage create --app [YOUR_APP_NAME]
+aws s3 mb s3://[YOUR_BUCKET_NAME] --region [YOUR_AWS_REGION]
+fly secrets set AWS_REGION=[YOUR_AWS_REGION] AWS_S3_BUCKET=[YOUR_BUCKET_NAME] AWS_ACCESS_KEY_ID=[YOUR_ACCESS_KEY] AWS_SECRET_ACCESS_KEY=[YOUR_SECRET_KEY] --app [YOUR_APP_NAME]
 ```
 
-**This creates:**
-
-- Tigris bucket
-- Automatic environment variables:
-  - `TIGRIS_ENDPOINT`
-  - `TIGRIS_ACCESS_KEY_ID`
-  - `TIGRIS_SECRET_ACCESS_KEY`
-  - `TIGRIS_BUCKET_NAME`
+Keep Block Public Access enabled and grant the application identity only
+`s3:GetObject` and `s3:PutObject` on the bucket's objects.
 
 ### Database Migrations
 

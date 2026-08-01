@@ -21,7 +21,7 @@ Here are a few things you get today:
   [Conform](https://conform.guide/)
 - Database ORM with [Prisma](https://prisma.io/)
 - Role-based User Permissions
-- Image storage and serving with [Tigris](https://www.tigrisdata.com/)
+- Image storage and serving with [Amazon S3](https://aws.amazon.com/s3/)
 - In-memory caching via [cachified](https://npm.im/@epic-web/cachified)
 - Styling with [Tailwind](https://tailwindcss.com/)
 - An excellent, customizable component library with
