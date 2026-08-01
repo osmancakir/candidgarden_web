@@ -15,7 +15,7 @@ resource.
 
 This is to prevent new users of the Epic Stack from being blocked or surprised
 by the CSP by default. However, it is recommended to enable the CSP in
-`server/index.ts` by removing the `reportOnly: true` option.
+`app/entry.server.tsx` by removing the `reportOnly: true` option.
 
 ## Secrets
 
@@ -25,10 +25,9 @@ The currently recommended policy for managing secrets is to place them in a
 need to actually connect to real services, this can be used as
 `cp .env.example .env`).
 
-These secrets need to also be set on Fly using the `fly secrets` command.
-
-There are significant limitations to this approach and will probably be improved
-in the future.
+Production and staging secrets are stored separately with `wrangler secret put`
+or `wrangler secret bulk`. See [the deployment guide](./deployment.md). Never
+commit `.env`, `.dev.vars`, or bulk secret files.
 
 ## [Cross-Site Scripting (XSS)](https://developer.mozilla.org/en-US/docs/Glossary/Cross-site_scripting)
 
@@ -54,9 +53,7 @@ to do this.
 
 ## Rate Limiting
 
-The Epic Stack uses a rate limiter to prevent abuse of the API. This is
-configured in the `server/index.ts` file and can be changed as needed. By
-default it uses [`express-rate-limit`](https://npm.im/express-rate-limit) with
-the in-memory store. There are trade-offs with this simpler approach, but it
-should be relatively simple to externalize the store into Redis as that's a
-built-in feature to express-rate-limit.
+The Node development/test harness has a permissive in-memory Express limiter.
+Production rate limiting must be configured at Cloudflare using WAF
+rate-limiting rules. Apply the strongest rules to authentication, verification,
+password reset, onboarding, settings mutations, and administrative paths.

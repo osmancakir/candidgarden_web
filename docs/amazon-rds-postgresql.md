@@ -17,7 +17,7 @@ separate development and test databases.
 cp .env.example .env
 npm run db:start
 npx prisma migrate deploy
-npx prisma generate --sql
+npx prisma generate
 npx prisma db seed
 ```
 
@@ -37,10 +37,10 @@ In the RDS console:
 1. Create a PostgreSQL DB instance and a database named `candidgarden`.
 2. Enable storage encryption, automated backups, and deletion protection for
    production.
-3. Prefer private access when the application runs in the same VPC. An app
-   hosted outside AWS needs explicit network connectivity to that VPC. If a
-   public development instance is unavoidable, restrict its security group to
-   known source addresses and do not allow `0.0.0.0/0` on port 5432.
+3. Prefer private access and connect Hyperdrive through Workers VPC or
+   Cloudflare Tunnel. If a public endpoint is used, restrict its security group
+   to Cloudflare's documented Hyperdrive egress addresses and do not allow
+   `0.0.0.0/0` on port 5432.
 4. Store credentials in a secret manager or in the deployment platform's secret
    store. Never commit the connection URL.
 
@@ -71,17 +71,15 @@ ORDER BY finished_at DESC;
 
 ## Configure the deployed app
 
-Set `DATABASE_URL` as a runtime secret on every environment. For the current Fly
-deployment:
-
-```sh
-fly secrets set DATABASE_URL='postgresql://USER:PASSWORD@RDS_ENDPOINT:5432/candidgarden?schema=public&sslmode=require&connection_limit=5' --app YOUR_APP
-```
+Create a cache-disabled Cloudflare Hyperdrive configuration for each RDS
+environment and bind it as `HYPERDRIVE`. The Worker receives an ephemeral
+Hyperdrive connection string from that binding; it does not receive the RDS
+`DATABASE_URL` as a runtime secret. See the [deployment guide](./deployment.md)
+for the commands and networking options.
 
 Use a separate RDS database or instance for staging. Do not point
 `TEST_DATABASE_URL` at production; the test harness deliberately resets schemas
 and rejects database names that do not contain `test`.
 
-RDS Proxy is optional. It becomes useful when connection churn or the number of
-application instances approaches the database connection limit, but it is not
-required for the first deployment.
+Hyperdrive provides the connection pooling layer for Worker traffic, so RDS
+Proxy is not required for this deployment.

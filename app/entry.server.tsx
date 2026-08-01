@@ -1,11 +1,7 @@
-import crypto from 'node:crypto'
-import { PassThrough } from 'node:stream'
-import { styleText } from 'node:util'
 import { contentSecurity } from '@nichtsam/helmet/content'
-import { createReadableStreamFromReadable } from '@react-router/node'
-import * as Sentry from '@sentry/react-router'
+import { captureException } from '@sentry/core'
 import { isbot } from 'isbot'
-import { renderToPipeableStream } from 'react-dom/server'
+import { renderToReadableStream } from 'react-dom/server'
 import {
 	ServerRouter,
 	type LoaderFunctionArgs,
@@ -29,90 +25,63 @@ type DocRequestArgs = Parameters<HandleDocumentRequestFunction>
 export default async function handleRequest(...args: DocRequestArgs) {
 	const [request, responseStatusCode, responseHeaders, reactRouterContext] =
 		args
-	responseHeaders.set('fly-region', process.env.FLY_REGION ?? 'unknown')
-	responseHeaders.set('fly-app', process.env.FLY_APP_NAME ?? 'unknown')
+	let didError = false
+	const nonce = crypto.randomUUID()
+	const timings = makeTimings('render', 'renderToReadableStream')
+	const body = await renderToReadableStream(
+		<NonceProvider value={nonce}>
+			<ServerRouter
+				nonce={nonce}
+				context={reactRouterContext}
+				url={request.url}
+			/>
+		</NonceProvider>,
+		{
+			nonce,
+			signal: AbortSignal.timeout(streamTimeout + 5000),
+			onError(error: unknown) {
+				didError = true
+				console.error(error)
+				captureException(error)
+			},
+		},
+	)
 
-	if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
-		responseHeaders.append('Document-Policy', 'js-profiling')
+	if (isbot(request.headers.get('user-agent'))) {
+		await body.allReady
 	}
 
-	const callbackName = isbot(request.headers.get('user-agent'))
-		? 'onAllReady'
-		: 'onShellReady'
-
-	const nonce = crypto.randomBytes(16).toString('hex')
-	return new Promise(async (resolve, reject) => {
-		let didError = false
-		// NOTE: this timing will only include things that are rendered in the shell
-		// and will not include suspended components and deferred loaders
-		const timings = makeTimings('render', 'renderToPipeableStream')
-
-		const { pipe, abort } = renderToPipeableStream(
-			<NonceProvider value={nonce}>
-				<ServerRouter
-					nonce={nonce}
-					context={reactRouterContext}
-					url={request.url}
-				/>
-			</NonceProvider>,
-			{
-				[callbackName]: () => {
-					const body = new PassThrough()
-					responseHeaders.set('Content-Type', 'text/html')
-					responseHeaders.append('Server-Timing', timings.toString())
-
-					contentSecurity(responseHeaders, {
-						crossOriginEmbedderPolicy: false,
-						contentSecurityPolicy: {
-							// NOTE: Remove reportOnly when you're ready to enforce this CSP
-							reportOnly: true,
-							directives: {
-								fetch: {
-									'connect-src': [
-										MODE === 'development' ? 'ws:' : undefined,
-										process.env.SENTRY_DSN ? '*.sentry.io' : undefined,
-										"'self'",
-									],
-									'font-src': ["'self'"],
-									'frame-src': ["'self'"],
-									'img-src': ["'self'", 'data:'],
-									'script-src': [
-										"'strict-dynamic'",
-										"'self'",
-										`'nonce-${nonce}'`,
-									],
-									'script-src-attr': [`'nonce-${nonce}'`],
-								},
-							},
-						},
-					})
-
-					resolve(
-						new Response(createReadableStreamFromReadable(body), {
-							headers: responseHeaders,
-							status: didError ? 500 : responseStatusCode,
-						}),
-					)
-					pipe(body)
+	responseHeaders.set('Content-Type', 'text/html')
+	responseHeaders.append('Server-Timing', timings.toString())
+	contentSecurity(responseHeaders, {
+		crossOriginEmbedderPolicy: false,
+		contentSecurityPolicy: {
+			// NOTE: Remove reportOnly when you're ready to enforce this CSP
+			reportOnly: true,
+			directives: {
+				fetch: {
+					'connect-src': [
+						MODE === 'development' ? 'ws:' : undefined,
+						process.env.SENTRY_DSN ? '*.sentry.io' : undefined,
+						"'self'",
+					],
+					'font-src': ["'self'"],
+					'frame-src': ["'self'"],
+					'img-src': ["'self'", 'data:'],
+					'script-src': ["'strict-dynamic'", "'self'", `'nonce-${nonce}'`],
+					'script-src-attr': [`'nonce-${nonce}'`],
 				},
-				onShellError: (err: unknown) => {
-					reject(err)
-				},
-				onError: () => {
-					didError = true
-				},
-				nonce,
 			},
-		)
+		},
+	})
 
-		setTimeout(abort, streamTimeout + 5000)
+	return new Response(body, {
+		headers: responseHeaders,
+		status: didError ? 500 : responseStatusCode,
 	})
 }
 
 export async function handleDataRequest(response: Response) {
-	response.headers.set('fly-region', process.env.FLY_REGION ?? 'unknown')
-	response.headers.set('fly-app', process.env.FLY_APP_NAME ?? 'unknown')
-
 	return response
 }
 
@@ -136,10 +105,10 @@ export function handleError(
 	}
 
 	if (error instanceof Error) {
-		console.error(styleText('red', String(error.stack)))
+		console.error(error.stack)
 	} else {
 		console.error(error)
 	}
 
-	Sentry.captureException(error)
+	captureException(error)
 }

@@ -1,7 +1,6 @@
 import docker from './docker.svg'
 import eslint from './eslint.svg'
 import fakerJS from './faker.svg'
-import fly from './fly.svg'
 import github from './github.svg'
 import msw from './msw.svg'
 import playwright from './playwright.svg'
@@ -28,13 +27,6 @@ export const logos = [
 		href: 'https://remix.run',
 		column: 1,
 		row: 1,
-	},
-	{
-		src: fly,
-		alt: 'Fly.io',
-		href: 'https://fly.io',
-		column: 1,
-		row: 2,
 	},
 	{
 		src: prisma,

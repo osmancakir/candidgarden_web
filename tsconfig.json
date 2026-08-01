@@ -1,9 +1,18 @@
 {
-	"include": ["**/*.ts", "**/*.tsx", ".react-router/types/**/*"],
+	"include": [
+		"**/*.ts",
+		"**/*.tsx",
+		".react-router/types/**/*",
+		"worker-configuration.d.ts"
+	],
 	"extends": ["@epic-web/config/typescript"],
 	"compilerOptions": {
 		// TODO: Probably should move this into epic-web/config
-		"types": ["@react-router/node", "vite/client"],
+		"types": [
+			"@react-router/node",
+			"vite/client",
+			"./worker-configuration.d.ts"
+		],
 		"rootDirs": [".", "./.react-router/types"],
 		"paths": {
 			"@/icon-name": [

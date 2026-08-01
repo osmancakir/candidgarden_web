@@ -2,6 +2,8 @@ node_modules
 .DS_store
 
 /build
+/dist
+/.wrangler
 .env
 .cache
 
@@ -18,4 +20,6 @@ node_modules
 
 # generated files
 /app/components/ui/icons
+/app/generated/prisma
+/app/generated/prisma-*
 .react-router/

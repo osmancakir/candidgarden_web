@@ -110,7 +110,9 @@ export async function insertGitHubUser(code?: string | null) {
 	return user
 }
 
-async function getUser(request: Request) {
+async function getUser(request: {
+	headers: { get(name: string): string | null }
+}) {
 	const accessToken = request.headers
 		.get('authorization')
 		?.slice('Bearer '.length)

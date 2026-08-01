@@ -1,9 +1,18 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["typedSql"]
+generator nodeClient {
+  provider   = "prisma-client"
+  output     = "../app/generated/prisma-node"
+  runtime    = "nodejs"
+  engineType = "client"
+}
+
+generator workerClient {
+  provider   = "prisma-client"
+  output     = "../app/generated/prisma-worker"
+  runtime    = "cloudflare"
+  engineType = "client"
 }
 
 datasource db {

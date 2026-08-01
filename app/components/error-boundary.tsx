@@ -1,4 +1,4 @@
-import { captureException } from '@sentry/react-router'
+import { captureException } from '@sentry/core'
 import { useEffect, type ReactElement } from 'react'
 import {
 	type ErrorResponse,

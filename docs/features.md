@@ -2,14 +2,13 @@
 
 Here are a few things you get today:
 
-- [Remix](https://remix.run/) is the Web Framework of choice
-- [Fly app deployment](https://fly.io/) with [Docker](https://www.docker.com/)
+- [React Router](https://reactrouter.com/) is the web framework of choice
+- Server-rendered deployment on
+  [Cloudflare Workers](https://workers.cloudflare.com/)
 - Managed [PostgreSQL](https://www.postgresql.org/) application database with
-  [pgvector](https://github.com/pgvector/pgvector) support
-- Healthcheck endpoint for
-  [Fly backups region fallbacks](https://fly.io/docs/reference/configuration/#services-http_checks)
-- [Grafana](https://fly-metrics.net/) dashboards of the running app via Fly
-  Metrics
+  [pgvector](https://github.com/pgvector/pgvector) support, connected through
+  [Cloudflare Hyperdrive](https://developers.cloudflare.com/hyperdrive/)
+- Cloudflare Workers observability with sampled logs and traces
 - [GitHub Actions](https://github.com/features/actions) with testing and deploy
   on merge for both production and staging environments
 - Email/Password Authentication with
@@ -21,7 +20,8 @@ Here are a few things you get today:
   [Conform](https://conform.guide/)
 - Database ORM with [Prisma](https://prisma.io/)
 - Role-based User Permissions
-- Image storage and serving with [Amazon S3](https://aws.amazon.com/s3/)
+- Private image storage with [Amazon S3](https://aws.amazon.com/s3/) and image
+  transformation/caching at Cloudflare's edge
 - In-memory caching via [cachified](https://npm.im/@epic-web/cachified)
 - Styling with [Tailwind](https://tailwindcss.com/)
 - An excellent, customizable component library with

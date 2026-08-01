@@ -8,11 +8,10 @@ optimize images on demand, introduced via
 
 The [/resources/images](../app/routes/resources/images.tsx) endpoint accepts the
 search parameters `src`, `w` (width), `h` (height), `format`, and `fit` to
-perform image transformations and serve optimized variants. The transformations
-are performed with `sharp`, and the optimized images are cached in
-`./data/images` on the filesystem and via HTTP caching. All transformations
-happen via stream processing, so images are never loaded fully into memory at
-once.
+perform image transformations and serve optimized variants. The Worker sends
+validated transformation options to Cloudflare Image Transformations and stores
+successful immutable responses in the Cloudflare Cache API. No application
+filesystem or Sharp runtime is used.
 
 ## Client Part
 
@@ -27,9 +26,6 @@ images that should load immediately.
 
 ## Image Sources
 
-If you want to add a new image storage location, update the
-[/resources/images](../app/routes/resources/images.tsx) endpoint and modify
-`getSource` and `allowlistedOrigins` to instruct openimg on how to retrieve the
-source images from the new location. Currently, the endpoint uses fetch requests
-to retrieve user images from the resource route endpoints and the filesystem to
-retrieve static application assets from the public and assets folders.
+Uploaded images are retrieved from private Amazon S3 objects through 60-second
+signed URLs. A `src` parameter is accepted only for same-origin static assets;
+arbitrary external image origins and nested optimizer requests are rejected.

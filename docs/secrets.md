@@ -1,7 +1,7 @@
 # Secrets
 
-Managing secrets in the Epic Stack is done using environment variables and the
-`fly secrets` command.
+Managing secrets locally is done with environment files. Deployed secrets are
+stored by Cloudflare Workers and managed with Wrangler.
 
 > **Warning**: It is very important that you do NOT hard code any secrets in the
 > source code. Even if your app source is not public, there are a lot of reasons
@@ -25,13 +25,14 @@ so you can interact with the real service if you need to during development.
 
 ## Production secrets
 
-To publish a secret to your production and staging applications, you can use the
-`fly secrets set` command. For example, if you were integrating with the `tito`
-API, to set the `TITO_API_SECRET` secret, you would run the following command:
+To publish one secret to the production and staging Workers, use Wrangler. For
+example, if you were integrating with the `tito` API:
 
 ```sh
-fly secrets set TITO_API_SECRET=some_secret_value
-fly secrets set TITO_API_SECRET=some_secret_value --app [YOUR_STAGING_APP_NAME]
+npx wrangler secret put TITO_API_SECRET --env production
+npx wrangler secret put TITO_API_SECRET --env staging
 ```
 
-This will redeploy your app with that environment variable set.
+Wrangler prompts for the value without putting it in shell history. For initial
+setup or rotation of several values, use the environment-specific bulk secret
+files described in the [deployment guide](./deployment.md#3-configure-worker-secrets).

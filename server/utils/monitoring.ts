@@ -47,7 +47,7 @@ export function init() {
 			return event
 		},
 		beforeSendTransaction(event) {
-			// Drop Fly/consul healthchecks, including orphaned Prisma spans that
+			// Drop platform healthchecks, including orphaned Prisma spans that
 			// surface as Slow DB Query insights with transaction prisma:client:operation.
 			if (isHealthcheckTransaction(event)) {
 				return null

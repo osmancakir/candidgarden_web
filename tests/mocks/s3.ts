@@ -16,7 +16,10 @@ const STORAGE_REGION = process.env.AWS_REGION
 const STORAGE_ACCESS_KEY = process.env.AWS_ACCESS_KEY_ID
 const STORAGE_ORIGIN = `https://${STORAGE_BUCKET}.s3.${STORAGE_REGION}.amazonaws.com`
 
-function validateAuth(request: Request) {
+function validateAuth(request: {
+	headers: { get(name: string): string | null }
+	url: string
+}) {
 	const authHeader = request.headers.get('Authorization')
 	const credential = new URL(request.url).searchParams.get('X-Amz-Credential')
 

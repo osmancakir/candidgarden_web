@@ -1,4 +1,5 @@
 name: 🚀 Deploy
+
 on:
   push:
     branches:
@@ -11,130 +12,113 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  actions: write
   contents: read
 
 jobs:
   lint:
     name: ⬣ ESLint
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
-
       - name: ⎔ Setup node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
+          cache: npm
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
-
-      - name: 🏄 Copy test env vars
-        run: cp .env.example .env
-
-      - name: 🛠 Setup Database
-        run: npx prisma migrate deploy && npx prisma generate --sql
-
+        run: npm ci
       - name: 🔬 Lint
         run: npm run lint
 
   typecheck:
-    name: ʦ TypeScript
-    runs-on: ubuntu-22.04
+    name: ʦ TypeScript and Worker build
+    runs-on: ubuntu-24.04
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
-
       - name: ⎔ Setup node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
+          cache: npm
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
-
-      - name: 🏗 Build
-        run: npm run build
-
+        run: npm ci
       - name: 🏄 Copy test env vars
         run: cp .env.example .env
-
-      - name: 🛠 Setup Database
-        run: npx prisma migrate deploy && npx prisma generate --sql
-
       - name: 🔎 Type check
-        run: npm run typecheck --if-present
+        run: npm run typecheck
+      - name: 🏗 Build Node harness
+        run: npm run build
+      - name: ☁️ Build Cloudflare Worker
+        run: npm run build:worker
 
   vitest:
     name: ⚡ Vitest
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: candidgarden
+          POSTGRES_PASSWORD: candidgarden
+          POSTGRES_DB: candidgarden_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U candidgarden -d candidgarden_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
-
       - name: ⎔ Setup node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
+          cache: npm
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
-
+        run: npm ci
       - name: 🏄 Copy test env vars
         run: cp .env.example .env
-
-      - name: 🛠 Setup Database
-        run: npx prisma migrate deploy && npx prisma generate --sql
-
-      - name: ⚡ Run vitest
+      - name: ⚡ Run Vitest
         run: npm run test -- --coverage
 
   playwright:
     name: 🎭 Playwright
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: candidgarden
+          POSTGRES_PASSWORD: candidgarden
+          POSTGRES_DB: candidgarden
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U candidgarden -d candidgarden"
+          --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
-
-      - name: 🏄 Copy test env vars
-        run: cp .env.example .env
-
       - name: ⎔ Setup node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
+          cache: npm
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
-
-      - name: 📥 Install Playwright Browsers
+        run: npm ci
+      - name: 🏄 Copy test env vars
+        run: cp .env.example .env
+      - name: 📥 Install Playwright browser
         run: npm run test:e2e:install
-
-      - name: 🛠 Setup Database
-        run: npx prisma migrate deploy && npx prisma generate --sql
-
-      - name: 🏦 Cache Database
-        id: db-cache
-        uses: actions/cache@v4
-        with:
-          path: prisma/data.db
-          key:
-            db-cache-schema_${{ hashFiles('./prisma/schema.prisma')
-            }}-migrations_${{ hashFiles('./prisma/migrations/*/migration.sql')
-            }}
-
-      - name: 🌱 Seed Database
-        if: steps.db-cache.outputs.cache-hit != 'true'
+      - name: 🛠 Migrate and seed database
         run: npx prisma migrate reset --force
-
-      - name: 🏗 Build
+      - name: 🏗 Build Node test harness
         run: npm run build
-
       - name: 🎭 Playwright tests
         run: npx playwright test
-
       - name: 📊 Upload report
         uses: actions/upload-artifact@v4
         if: always()
@@ -143,87 +127,41 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
-  container:
-    name: 📦 Prepare Container
-    runs-on: ubuntu-24.04
-    # only prepare container on pushes
-    if: ${{ github.event_name == 'push' }}
-    steps:
-      - name: ⬇️ Checkout repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 50
-
-      - name: 👀 Read app name
-        uses: SebRollen/toml-action@v1.2.0
-        id: app_name
-        with:
-          file: 'fly.toml'
-          field: 'app'
-
-      - name: 🎈 Setup Fly
-        uses: superfly/flyctl-actions/setup-flyctl@1.5
-
-      - name: 📦 Build Staging Container
-        if: ${{ github.ref == 'refs/heads/dev' }}
-        run: |
-          flyctl deploy \
-            --build-only \
-            --push \
-            --image-label ${{ github.sha }} \
-            --build-arg COMMIT_SHA=${{ github.sha }} \
-            --app ${{ steps.app_name.outputs.value }}-staging
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
-      - name: 📦 Build Production Container
-        if: ${{ github.ref == 'refs/heads/main' }}
-        run: |
-          flyctl deploy \
-            --build-only \
-            --push \
-            --image-label ${{ github.sha }} \
-            --build-arg COMMIT_SHA=${{ github.sha }} \
-            --build-secret SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }} \
-            --app ${{ steps.app_name.outputs.value }}
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
   deploy:
-    name: 🚀 Deploy
+    name: ☁️ Deploy Cloudflare Worker
     runs-on: ubuntu-24.04
-    needs: [lint, typecheck, vitest, playwright, container]
-    # only deploy on pushes
-    if: ${{ github.event_name == 'push' }}
+    needs: [lint, typecheck, vitest, playwright]
+    if: github.event_name == 'push'
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      COMMIT_SHA: ${{ github.sha }}
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v4
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v4
         with:
-          fetch-depth: '50'
-
-      - name: 👀 Read app name
-        uses: SebRollen/toml-action@v1.2.0
-        id: app_name
-        with:
-          file: 'fly.toml'
-          field: 'app'
-
-      - name: 🎈 Setup Fly
-        uses: superfly/flyctl-actions/setup-flyctl@1.5
-
-      - name: 🚀 Deploy Staging
-        if: ${{ github.ref == 'refs/heads/dev' }}
-        run: |
-          flyctl deploy \
-            --image "registry.fly.io/${{ steps.app_name.outputs.value }}-staging:${{ github.sha }}" \
-            --app ${{ steps.app_name.outputs.value }}-staging
+          node-version: 22
+          cache: npm
+      - name: 📥 Download deps
+        run: npm ci
+      - name: 🛠 Apply staging PostgreSQL migrations
+        if: github.ref == 'refs/heads/dev'
+        run: npx prisma migrate deploy
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
-      - name: 🚀 Deploy Production
-        if: ${{ github.ref == 'refs/heads/main' }}
-        run: |
-          flyctl deploy \
-            --image "registry.fly.io/${{ steps.app_name.outputs.value }}:${{ github.sha }}"
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      - name: 🛠 Apply production PostgreSQL migrations
+        if: github.ref == 'refs/heads/main'
+        run: npx prisma migrate deploy
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      - name: 🚀 Deploy staging
+        if: github.ref == 'refs/heads/dev'
+        run: npm run deploy:staging
+      - name: 🚀 Deploy production
+        if: github.ref == 'refs/heads/main'
+        run: npm run deploy:production

@@ -25,10 +25,10 @@ const app = express()
 const getHost = (req: { get: (key: string) => string | undefined }) =>
 	req.get('X-Forwarded-Host') ?? req.get('host') ?? ''
 
-// fly is our proxy
+// The local/test harness may run behind a reverse proxy.
 app.set('trust proxy', true)
 
-// ensure HTTPS only (X-Forwarded-Proto comes from Fly)
+// Ensure HTTPS when the reverse proxy supplies X-Forwarded-Proto.
 app.use((req, res, next) => {
 	if (req.method !== 'GET') return next()
 	const proto = req.get('X-Forwarded-Proto')
@@ -97,13 +97,11 @@ const rateLimitDefault = {
 	standardHeaders: true,
 	legacyHeaders: false,
 	validate: { trustProxy: false },
-	// Malicious users can spoof their IP address which means we should not default
-	// to trusting req.ip when hosted on Fly.io. However, users cannot spoof Fly-Client-Ip.
-	// When sitting behind a CDN such as cloudflare, replace fly-client-ip with the CDN
-	// specific header such as cf-connecting-ip
+	// The production Worker uses Cloudflare rate-limiting rules. This local/test
+	// harness accepts Cloudflare's connecting-IP header when one is present.
 	keyGenerator: (req: express.Request) => {
 		const ip = req.ip ?? req.socket?.remoteAddress
-		return req.get('fly-client-ip') ?? ipKeyGenerator(ip ?? '0.0.0.0')
+		return req.get('cf-connecting-ip') ?? ipKeyGenerator(ip ?? '0.0.0.0')
 	},
 }
 

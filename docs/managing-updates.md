@@ -2,8 +2,9 @@
 
 ## Updating Node.js
 
-The Epic Stack runs a long-running Node.js server. It defaults to the current
-active LTS version of node
+The production application runs on Cloudflare Workers. Node.js is still used by
+the local/test harness, build tooling, database migrations, and CI. It defaults
+to the current active LTS version
 ([read the Node.js version decision document](./decisions/021-node-version.md)).
 
 If you wish to change the Node.js version, you can do so by updating the
@@ -17,16 +18,9 @@ If you wish to change the Node.js version, you can do so by updating the
 }
 ```
 
-You will also want to update the `Dockerfile` to use the same version of Node.js
-as the `package.json` file.
-
-```diff
-- FROM node:18-bookworm-slim as base
-+ FROM node:20.3.1-bookworm-slim as base
-```
-
-You'll find the
-[Node.js versions available on Docker Hub](https://hub.docker.com/_/node).
+Keep the Node version in `.github/workflows/deploy.yml` aligned with that
+constraint. Worker runtime compatibility is controlled separately by
+`compatibility_date` and `compatibility_flags` in `wrangler.jsonc`.
 
 ## Within the Epic Stack
 

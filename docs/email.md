@@ -12,9 +12,11 @@ Create [an API Key](https://resend.com/api-keys) and set `RESEND_API_KEY` in
 both prod and staging:
 
 ```sh
-fly secrets set RESEND_API_KEY="re_blAh_blaHBlaHblahBLAhBlAh" --app [YOUR_APP_NAME]
-fly secrets set RESEND_API_KEY="re_blAh_blaHBlaHblahBLAhBlAh" --app [YOUR_APP_NAME]-staging
+npx wrangler secret put RESEND_API_KEY --env production
+npx wrangler secret put RESEND_API_KEY --env staging
 ```
+
+Wrangler securely prompts for the API key for each environment.
 
 Setup a [custom sending domain](https://resend.com/domains) and then make sure
 to update the `from` email address in `app/utils/email.server.ts` and the

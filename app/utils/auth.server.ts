@@ -1,9 +1,9 @@
 import crypto from 'node:crypto'
-import { type Connection, type Password, type User } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { redirect } from 'react-router'
 import { Authenticator } from 'remix-auth'
 import { safeRedirect } from 'remix-utils/safe-redirect'
+import { type Connection, type Password, type User } from '#prisma-client'
 import { providers } from './connections.server.ts'
 import { prisma } from './db.server.ts'
 import { combineHeaders, downloadFile } from './misc.tsx'
@@ -217,9 +217,9 @@ export async function logout(
 	// if this fails, we still need to delete the session from the user's browser
 	// and it doesn't do any harm staying in the db anyway.
 	if (sessionId) {
-		// the .catch is important because that's what triggers the query.
-		// learn more about PrismaPromise: https://www.prisma.io/docs/orm/reference/prisma-client-reference#prismapromise-behavior
-		void prisma.session.deleteMany({ where: { id: sessionId } }).catch(() => {})
+		await prisma.session
+			.deleteMany({ where: { id: sessionId } })
+			.catch(() => {})
 	}
 	throw redirect(safeRedirect(redirectTo), {
 		...responseInit,

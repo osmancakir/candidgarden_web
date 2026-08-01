@@ -1,16 +1,11 @@
 # Memory
 
-Epic Stack apps start with a single instance with 256MB of memory. This is a
-pretty small amount of memory, but it's enough to get started with. To help
-avoid memory pressure even at that scale, we allocate a 512MB swap file. Learn
-more about this decision in
-[the memory swap decision document](decisions/010-memory-swap.md).
+Production runs in Cloudflare's Workers runtime, so there is no VM, container,
+or swap file to size. The application must remain within the active Workers
+plan's memory and CPU limits.
 
-To modify or increase the swap file, check `swap_size_mb` in `fly.toml`.
-
-> **NOTE**: PRs welcome to document how to determine the effectiveness of the
-> swap file for your app.
-
-To increase the memory allocated to your vm, use the
-[`fly scale`](https://fly.io/docs/flyctl/scale-memory/) command. You can
-[learn more about memory sizing in the Fly docs](https://fly.io/docs/machines/guides-examples/machine-sizing).
+Request bodies and responses should be streamed where practical. Uploaded image
+files are bounded by application validation before they are buffered for the S3
+SDK, and rendered HTML/image responses are streamed. Consult the current
+[Workers limits](https://developers.cloudflare.com/workers/platform/limits/)
+before increasing upload sizes or adding memory-heavy dependencies.

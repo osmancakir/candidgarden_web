@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { cloudflare } from '@cloudflare/vite-plugin'
 import { reactRouter } from '@react-router/dev/vite'
 import {
 	type SentryReactRouterBuildOptions,
@@ -13,6 +14,7 @@ import { iconsSpritesheet } from 'vite-plugin-icons-spritesheet'
 export default defineConfig((config) => {
 	const mode = config.mode ?? process.env.NODE_ENV
 	const isTest = mode === 'test' || Boolean(process.env.VITEST)
+	const isCloudflare = process.env.CLOUDFLARE_WORKERS === 'true'
 	const cacheServerStubPlugin = {
 		name: 'vitest-cache-server-stub',
 		enforce: 'pre' as const,
@@ -25,14 +27,25 @@ export default defineConfig((config) => {
 		},
 	}
 	return {
+		resolve: {
+			alias: {
+				'#prisma-client': path.resolve(
+					isCloudflare
+						? './app/generated/prisma-worker/client.ts'
+						: './app/generated/prisma-node/client.ts',
+				),
+			},
+		},
 		build: {
 			target: 'es2022',
 			cssMinify: mode === 'production',
 
-			rollupOptions: {
-				input: config.isSsrBuild ? './server/app.ts' : undefined,
-				external: [/node:.*/, 'fsevents'],
-			},
+			rollupOptions: isCloudflare
+				? undefined
+				: {
+						input: config.isSsrBuild ? './server/app.ts' : undefined,
+						external: [/node:.*/, 'fsevents'],
+					},
 
 			assetsInlineLimit: (source: string) => {
 				if (
@@ -53,6 +66,7 @@ export default defineConfig((config) => {
 		sentryConfig,
 		plugins: [
 			cacheServerStubPlugin,
+			isCloudflare ? cloudflare({ viteEnvironment: { name: 'ssr' } }) : null,
 			envOnlyMacros(),
 			tailwindcss(),
 			reactRouterDevTools(),

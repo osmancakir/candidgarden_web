@@ -1,6 +1,6 @@
 /**
  * Pure helpers for dropping expected Sentry noise from the public Epic Stack
- * demo (bots, scanners, Fly healthchecks) without hiding real application bugs.
+ * demo (bots, scanners, and platform healthchecks) without hiding real bugs.
  */
 
 const EXPECTED_REACT_ROUTER_ERROR_PATTERNS = [

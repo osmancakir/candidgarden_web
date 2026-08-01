@@ -1,0 +1,92 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "candidgarden",
+	"main": "./workers/app.ts",
+	"compatibility_date": "2026-08-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"upload_source_maps": true,
+	"assets": {
+		"binding": "ASSETS",
+		"directory": "./build/client",
+	},
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 0.1,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 0.1,
+			"invocation_logs": true,
+		},
+		"traces": {
+			"enabled": true,
+			"head_sampling_rate": 0.1,
+			"persist": true,
+		},
+	},
+	"vars": {
+		"ALLOW_INDEXING": "false",
+	},
+	"secrets": {
+		"required": [
+			"SESSION_SECRET",
+			"HONEYPOT_SECRET",
+			"AWS_ACCESS_KEY_ID",
+			"AWS_SECRET_ACCESS_KEY",
+			"AWS_REGION",
+			"AWS_S3_BUCKET",
+		],
+	},
+	"hyperdrive": [
+		{
+			"binding": "HYPERDRIVE",
+			"id": "00000000000000000000000000000000",
+			"localConnectionString": "postgresql://candidgarden:candidgarden@localhost:5432/candidgarden?schema=public",
+		},
+	],
+	"env": {
+		"staging": {
+			"name": "candidgarden-staging",
+			"vars": {
+				"ALLOW_INDEXING": "false",
+			},
+			"secrets": {
+				"required": [
+					"SESSION_SECRET",
+					"HONEYPOT_SECRET",
+					"AWS_ACCESS_KEY_ID",
+					"AWS_SECRET_ACCESS_KEY",
+					"AWS_REGION",
+					"AWS_S3_BUCKET",
+				],
+			},
+			"hyperdrive": [
+				{
+					"binding": "HYPERDRIVE",
+					"id": "00000000000000000000000000000000",
+				},
+			],
+		},
+		"production": {
+			"name": "candidgarden",
+			"vars": {
+				"ALLOW_INDEXING": "true",
+			},
+			"secrets": {
+				"required": [
+					"SESSION_SECRET",
+					"HONEYPOT_SECRET",
+					"AWS_ACCESS_KEY_ID",
+					"AWS_SECRET_ACCESS_KEY",
+					"AWS_REGION",
+					"AWS_S3_BUCKET",
+				],
+			},
+			"hyperdrive": [
+				{
+					"binding": "HYPERDRIVE",
+					"id": "00000000000000000000000000000000",
+				},
+			],
+		},
+	},
+}

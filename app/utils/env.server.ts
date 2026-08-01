@@ -2,7 +2,9 @@ import { z } from 'zod'
 
 const schema = z.object({
 	NODE_ENV: z.enum(['production', 'development', 'test'] as const),
-	DATABASE_URL: z.string().url(),
+	// Node development/tests use this directly. Production Workers use the
+	// HYPERDRIVE binding instead.
+	DATABASE_URL: z.string().url().optional(),
 	SESSION_SECRET: z.string(),
 	HONEYPOT_SECRET: z.string(),
 	// If you plan on using Sentry, remove the .optional()
@@ -18,6 +20,9 @@ const schema = z.object({
 	ALLOW_INDEXING: z.enum(['true', 'false']).optional(),
 
 	// Amazon S3 configuration. Credentials use the AWS SDK provider chain.
+	AWS_ACCESS_KEY_ID: z.string(),
+	AWS_SECRET_ACCESS_KEY: z.string(),
+	AWS_SESSION_TOKEN: z.string().optional(),
 	AWS_REGION: z.string(),
 	AWS_S3_BUCKET: z.string(),
 })

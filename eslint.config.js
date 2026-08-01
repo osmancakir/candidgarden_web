@@ -9,6 +9,10 @@ export default [
 		rules: { 'react-hooks/rules-of-hooks': 'off' },
 	},
 	{
-		ignores: ['.react-router/*'],
+		ignores: [
+			'.react-router/*',
+			'app/generated/prisma/**',
+			'app/generated/prisma-*/**',
+		],
 	},
 ]

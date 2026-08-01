@@ -12,7 +12,7 @@ networking, TLS, and production connection instructions.
 ```sh
 npm run db:start
 npx prisma migrate deploy
-npx prisma generate --sql
+npx prisma generate
 npx prisma db seed
 ```
 
@@ -31,11 +31,11 @@ Update `prisma/schema.prisma`, then create and review a migration:
 
 ```sh
 npx prisma migrate dev --name describe_the_change
-npx prisma generate --sql
+npx prisma generate
 ```
 
 Commit both the Prisma schema and generated migration. Deployments apply
-checked-in migrations with `prisma migrate deploy` before starting the app.
+checked-in migrations with `prisma migrate deploy` before deploying the Worker.
 
 ## Production operations
 
@@ -43,10 +43,6 @@ Use RDS automated backups and point-in-time recovery for application data. Keep
 production, staging, development, and test databases separate. Never run
 `prisma migrate reset` against production.
 
-To connect from inside a deployed Fly machine, run:
-
-```sh
-fly ssh console -C database-cli --app YOUR_APP
-```
-
-The command uses the secret `DATABASE_URL` and opens `psql`.
+The Worker connects to RDS through a cache-disabled Hyperdrive binding. Prisma
+migrations do not run inside the Worker; run them from CI or an administrative
+machine that has direct network access to RDS.
