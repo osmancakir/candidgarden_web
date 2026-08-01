@@ -34,10 +34,8 @@ with regards to session management.
 
 ## Consequences
 
-This requires doing a database lookup for every authenticated request to
-determine whether there is an active session in the database for the user's
-request. This is not a problem for us since we're using SQLite and there's 0
-latency, so the query is extremely fast.
+This requires doing an indexed PostgreSQL lookup for every authenticated request
+to determine whether there is an active session for the user.
 
 The sessions table does not currently have the capability to proactively delete
 expired sessions which means it could fill up indefinitely. This would be a good

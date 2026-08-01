@@ -39,6 +39,12 @@ set SKIP_SETUP=true && set SKIP_FORMAT=true && set SKIP_DEPLOYMENT=true && npx e
 
 ## Development
 
+- Start PostgreSQL:
+
+  ```sh
+  npm run db:start
+  ```
+
 - Initial setup:
 
   ```sh
@@ -58,6 +64,9 @@ set SKIP_SETUP=true && set SKIP_FORMAT=true && set SKIP_DEPLOYMENT=true && npx e
   ```
 
 This starts your app in development mode, rebuilding assets on file changes.
+
+See [Amazon RDS for PostgreSQL](./amazon-rds-postgresql.md) for production
+database setup and TLS guidance.
 
 The database seed script creates a new user with some data you can use to get
 started:

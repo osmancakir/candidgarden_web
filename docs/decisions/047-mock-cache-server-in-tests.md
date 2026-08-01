@@ -2,7 +2,9 @@
 
 Date: 2026-02-01
 
-Status: accepted
+Status: superseded; tests now use only an in-memory cache mock
+
+This document is retained only as historical context.
 
 ## Context
 

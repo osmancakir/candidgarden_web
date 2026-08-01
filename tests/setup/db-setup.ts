@@ -1,31 +1,54 @@
-import path from 'node:path'
-import fsExtra from 'fs-extra'
-import { afterAll, beforeEach } from 'vitest'
-import { BASE_DATABASE_PATH } from './global-setup.ts'
+import { execaCommand } from 'execa'
+import { afterAll, beforeAll, beforeEach } from 'vitest'
 
-const poolId = process.env.VITEST_POOL_ID || '0'
-const databaseFile = `./tests/prisma/data.${poolId}.db`
-const databasePath = path.join(process.cwd(), databaseFile)
-process.env.DATABASE_URL = `file:${databasePath}`
-
-const cacheDatabasePath = process.env.CACHE_DATABASE_PATH
-if (cacheDatabasePath && cacheDatabasePath !== ':memory:') {
-	const parsed = path.parse(cacheDatabasePath)
-	const cacheFileName = parsed.ext
-		? `${parsed.name}.${poolId}${parsed.ext}`
-		: `${parsed.name}.${poolId}`
-	const cacheDir = parsed.dir || '.'
-	process.env.CACHE_DATABASE_PATH = path.join(cacheDir, cacheFileName)
+const testDatabaseUrl = process.env.TEST_DATABASE_URL
+if (!testDatabaseUrl) {
+	throw new Error(
+		'TEST_DATABASE_URL is required. It must point to a dedicated PostgreSQL test database.',
+	)
 }
 
+const parsedTestDatabaseUrl = new URL(testDatabaseUrl)
+const databaseName = parsedTestDatabaseUrl.pathname.slice(1)
+if (!/(^|[_-])test($|[_-])/.test(databaseName)) {
+	throw new Error(
+		`Refusing to reset PostgreSQL database "${databaseName}" because its name does not contain "test".`,
+	)
+}
+
+const poolId = (process.env.VITEST_POOL_ID || '0').replace(
+	/[^a-zA-Z0-9_]/g,
+	'_',
+)
+const schema = `vitest_${poolId}`
+parsedTestDatabaseUrl.searchParams.set('schema', schema)
+process.env.DATABASE_URL = parsedTestDatabaseUrl.toString()
+
+beforeAll(async () => {
+	await execaCommand(
+		'npx prisma migrate reset --force --skip-seed --skip-generate',
+		{
+			stdio: 'inherit',
+			env: {
+				...process.env,
+				DATABASE_URL: process.env.DATABASE_URL,
+				// The URL guard above ensures only a dedicated test database is reset.
+				PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: 'true',
+			},
+		},
+	)
+})
+
 beforeEach(async () => {
-	await fsExtra.copyFile(BASE_DATABASE_PATH, databasePath)
+	// Keep the roles and permissions seeded by the baseline migration while
+	// removing user-created data between tests. Cascades cover related records.
+	const { prisma } = await import('#app/utils/db.server.ts')
+	await prisma.$executeRawUnsafe(
+		'TRUNCATE TABLE "Verification", "User" CASCADE',
+	)
 })
 
 afterAll(async () => {
-	// we *must* use dynamic imports here so the process.env.DATABASE_URL is set
-	// before prisma is imported and initialized
 	const { prisma } = await import('#app/utils/db.server.ts')
 	await prisma.$disconnect()
-	await fsExtra.remove(databasePath)
 })

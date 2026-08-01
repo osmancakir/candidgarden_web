@@ -2,7 +2,9 @@
 
 Date: 2025-03-22
 
-Status: accepted
+Status: superseded; the SQLite cache and its Node driver were removed
+
+This document is retained only as historical context.
 
 ## Context
 

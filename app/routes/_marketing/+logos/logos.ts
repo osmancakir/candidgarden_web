@@ -13,7 +13,6 @@ import remix from './remix.svg'
 import resend from './resend.svg'
 import sentry from './sentry.svg'
 import shadcnUI from './shadcn-ui.svg'
-import sqlite from './sqlite.svg'
 import tailwind from './tailwind.svg'
 import testingLibrary from './testing-library.png'
 import typescript from './typescript.svg'
@@ -36,13 +35,6 @@ export const logos = [
 		href: 'https://fly.io',
 		column: 1,
 		row: 2,
-	},
-	{
-		src: sqlite,
-		alt: 'SQLite',
-		href: 'https://sqlite.org',
-		column: 1,
-		row: 3,
 	},
 	{
 		src: prisma,

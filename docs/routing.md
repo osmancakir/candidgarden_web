@@ -49,9 +49,7 @@ app/routes
 ├── admin
 │   └── cache
 │       ├── index.tsx
-│       ├── lru.$cacheKey.ts
-│       ├── sqlite.$cacheKey.ts
-│       └── sqlite.tsx
+│       └── lru.$cacheKey.ts
 ├── resources
 │   ├── download-user-data.tsx
 │   ├── healthcheck.tsx
@@ -130,9 +128,6 @@ app/routes
 			path="admin/cache/lru/:cacheKey"
 			file="routes/admin/cache/lru.$cacheKey.ts"
 		/>
-		<Route path="admin/cache/sqlite" file="routes/admin/cache/sqlite.tsx">
-			<Route path=":cacheKey" file="routes/admin/cache/sqlite.$cacheKey.ts" />
-		</Route>
 		<Route path="me" file="routes/me.tsx" />
 		<Route
 			path="resources/download-user-data"

@@ -2,7 +2,10 @@
 
 Date: 2023-05-13
 
-Status: accepted
+Status: superseded by the PostgreSQL migration
+
+This document is retained only as historical context from the upstream Epic
+Stack.
 
 ## Context
 

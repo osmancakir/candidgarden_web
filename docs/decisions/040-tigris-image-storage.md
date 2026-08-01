@@ -23,7 +23,7 @@ We will switch from storing images in SQLite to storing them in Tigris, an
 S3-compatible object storage service. This change will:
 
 1. Move binary image data out of SQLite into specialized object storage
-2. Maintain metadata about images in SQLite (references, ownership, etc.)
+2. Maintain metadata about images in PostgreSQL (references, ownership, etc.)
 3. Leverage Tigris's S3-compatible API for efficient image storage and retrieval
 4. Enable better scalability for applications with many image uploads
 
@@ -34,7 +34,7 @@ Tigris and instead we'll manage authenticated fetch requests ourselves.
 
 ### Positive
 
-1. Reduced SQLite database size and improved backup efficiency
+1. Reduced relational database size and improved backup efficiency
 2. Better separation of concerns (binary data vs relational data)
 3. Potentially better image serving performance through Tigris's infrastructure
 4. More scalable solution for applications with heavy image usage

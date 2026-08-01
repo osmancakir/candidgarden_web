@@ -4,9 +4,8 @@ Here are a few things you get today:
 
 - [Remix](https://remix.run/) is the Web Framework of choice
 - [Fly app deployment](https://fly.io/) with [Docker](https://www.docker.com/)
-- Multi-region, distributed, production-ready
-  [SQLite Database](https://sqlite.org/) with
-  [LiteFS](https://fly.io/docs/litefs/)
+- Managed [PostgreSQL](https://www.postgresql.org/) application database with
+  [pgvector](https://github.com/pgvector/pgvector) support
 - Healthcheck endpoint for
   [Fly backups region fallbacks](https://fly.io/docs/reference/configuration/#services-http_checks)
 - [Grafana](https://fly-metrics.net/) dashboards of the running app via Fly
@@ -23,9 +22,7 @@ Here are a few things you get today:
 - Database ORM with [Prisma](https://prisma.io/)
 - Role-based User Permissions
 - Image storage and serving with [Tigris](https://www.tigrisdata.com/)
-- Caching via [cachified](https://npm.im/@epic-web/cachified): Both in-memory
-  and SQLite-based (with
-  [better-sqlite3](https://github.com/WiseLibs/better-sqlite3))
+- In-memory caching via [cachified](https://npm.im/@epic-web/cachified)
 - Styling with [Tailwind](https://tailwindcss.com/)
 - An excellent, customizable component library with
   [Radix UI](https://www.radix-ui.com/)

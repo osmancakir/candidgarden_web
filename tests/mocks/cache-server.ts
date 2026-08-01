@@ -8,7 +8,6 @@ type CacheEntry<Value> = {
 }
 
 const lruStore = new Map<string, CacheEntry<unknown>>()
-const sqliteStore = new Map<string, CacheEntry<unknown>>()
 
 export const lruCache = {
 	name: 'test-lru-cache',
@@ -20,31 +19,15 @@ export const lruCache = {
 	delete: (key: string) => lruStore.delete(key),
 }
 
-export const cache = {
-	name: 'test-sqlite-cache',
-	async get(key: string) {
-		return sqliteStore.get(key) ?? null
-	},
-	async set(key: string, entry: CacheEntry<unknown>) {
-		sqliteStore.set(key, entry)
-		return entry
-	},
-	async delete(key: string) {
-		sqliteStore.delete(key)
-	},
+export const cache = lruCache
+
+export function getAllCacheKeys(limit: number) {
+	return [...lruStore.keys()].slice(0, limit)
 }
 
-export async function getAllCacheKeys(limit: number) {
-	const sqlite = [...sqliteStore.keys()].slice(0, limit)
-	const lru = [...lruStore.keys()].slice(0, limit)
-	return { sqlite, lru }
-}
-
-export async function searchCacheKeys(search: string, limit: number) {
+export function searchCacheKeys(search: string, limit: number) {
 	const matches = (value: string) => value.includes(search)
-	const sqlite = [...sqliteStore.keys()].filter(matches).slice(0, limit)
-	const lru = [...lruStore.keys()].filter(matches).slice(0, limit)
-	return { sqlite, lru }
+	return [...lruStore.keys()].filter(matches).slice(0, limit)
 }
 
 export async function cachified<Value>(options: {

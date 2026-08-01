@@ -1,87 +1,100 @@
+-- Enable vector similarity search. Amazon RDS for PostgreSQL provides this
+-- extension; the local pgvector image in compose.yaml provides it as well.
+CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
+
 -- CreateTable
 CREATE TABLE "User" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "name" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Note" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "content" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     "ownerId" TEXT NOT NULL,
-    CONSTRAINT "Note_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+
+    CONSTRAINT "Note_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "NoteImage" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "altText" TEXT,
     "objectKey" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     "noteId" TEXT NOT NULL,
-    CONSTRAINT "NoteImage_noteId_fkey" FOREIGN KEY ("noteId") REFERENCES "Note" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+
+    CONSTRAINT "NoteImage_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "UserImage" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "altText" TEXT,
     "objectKey" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     "userId" TEXT NOT NULL,
-    CONSTRAINT "UserImage_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+
+    CONSTRAINT "UserImage_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Password" (
     "hash" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    CONSTRAINT "Password_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "userId" TEXT NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "Session" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "expirationDate" DATETIME NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "id" TEXT NOT NULL,
+    "expirationDate" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     "userId" TEXT NOT NULL,
-    CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+
+    CONSTRAINT "Session_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Permission" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "action" TEXT NOT NULL,
     "entity" TEXT NOT NULL,
     "access" TEXT NOT NULL,
     "description" TEXT NOT NULL DEFAULT '',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Permission_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Role" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL DEFAULT '',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Role_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Verification" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "id" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "type" TEXT NOT NULL,
     "target" TEXT NOT NULL,
     "secret" TEXT NOT NULL,
@@ -89,50 +102,54 @@ CREATE TABLE "Verification" (
     "digits" INTEGER NOT NULL,
     "period" INTEGER NOT NULL,
     "charSet" TEXT NOT NULL,
-    "expiresAt" DATETIME
+    "expiresAt" TIMESTAMP(3),
+
+    CONSTRAINT "Verification_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Connection" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "providerName" TEXT NOT NULL,
     "providerId" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     "userId" TEXT NOT NULL,
-    CONSTRAINT "Connection_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+
+    CONSTRAINT "Connection_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Passkey" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "aaguid" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    "publicKey" BLOB NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "publicKey" BYTEA NOT NULL,
     "userId" TEXT NOT NULL,
     "webauthnUserId" TEXT NOT NULL,
     "counter" BIGINT NOT NULL,
     "deviceType" TEXT NOT NULL,
     "backedUp" BOOLEAN NOT NULL,
     "transports" TEXT,
-    CONSTRAINT "Passkey_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+
+    CONSTRAINT "Passkey_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "_PermissionToRole" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
-    CONSTRAINT "_PermissionToRole_A_fkey" FOREIGN KEY ("A") REFERENCES "Permission" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "_PermissionToRole_B_fkey" FOREIGN KEY ("B") REFERENCES "Role" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+
+    CONSTRAINT "_PermissionToRole_AB_pkey" PRIMARY KEY ("A", "B")
 );
 
 -- CreateTable
 CREATE TABLE "_RoleToUser" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
-    CONSTRAINT "_RoleToUser_A_fkey" FOREIGN KEY ("A") REFERENCES "Role" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "_RoleToUser_B_fkey" FOREIGN KEY ("B") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+
+    CONSTRAINT "_RoleToUser_AB_pkey" PRIMARY KEY ("A", "B")
 );
 
 -- CreateIndex
@@ -175,101 +192,81 @@ CREATE UNIQUE INDEX "Connection_providerName_providerId_key" ON "Connection"("pr
 CREATE INDEX "Passkey_userId_idx" ON "Passkey"("userId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "_PermissionToRole_AB_unique" ON "_PermissionToRole"("A", "B");
-
--- CreateIndex
 CREATE INDEX "_PermissionToRole_B_index" ON "_PermissionToRole"("B");
-
--- CreateIndex
-CREATE UNIQUE INDEX "_RoleToUser_AB_unique" ON "_RoleToUser"("A", "B");
 
 -- CreateIndex
 CREATE INDEX "_RoleToUser_B_index" ON "_RoleToUser"("B");
 
---------------------------------- Manual Seeding --------------------------
--- Hey there, Kent here! This is how you can reliably seed your database with
--- some data. You edit the migration.sql file and that will handle it for you.
+-- AddForeignKey
+ALTER TABLE "Note" ADD CONSTRAINT "Note_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- The user Roles and Permissions are seeded here.
--- If you'd like to customise roles and permissions, you can edit and add the code below to your `prisma/seed.ts` file.
--- Seed your development database with `npx prisma db seed`
--- Create a sql dump of your database with `sqlite3 prisma/data.db .dump > seed.sql`
--- Replace the SQL below with your new Roles & Permissions related SQL from `seed.sql`
+-- AddForeignKey
+ALTER TABLE "NoteImage" ADD CONSTRAINT "NoteImage_noteId_fkey" FOREIGN KEY ("noteId") REFERENCES "Note"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- console.time('🔑 Created permissions...')
--- const entities = ['user', 'note']
--- const actions = ['create', 'read', 'update', 'delete']
--- const accesses = ['own', 'any'] as const
+-- AddForeignKey
+ALTER TABLE "UserImage" ADD CONSTRAINT "UserImage_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- let permissionsToCreate = []
--- for (const entity of entities) {
--- 	for (const action of actions) {
--- 		for (const access of accesses) {
--- 			permissionsToCreate.push({ entity, action, access })
--- 		}
--- 	}
--- }
--- await prisma.permission.createMany({ data: permissionsToCreate })
--- console.timeEnd('🔑 Created permissions...')
+-- AddForeignKey
+ALTER TABLE "Password" ADD CONSTRAINT "Password_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- console.time('👑 Created roles...')
--- await prisma.role.create({
--- 	data: {
--- 		name: 'admin',
--- 		permissions: {
--- 			connect: await prisma.permission.findMany({
--- 				select: { id: true },
--- 				where: { access: 'any' },
--- 			}),
--- 		},
--- 	},
--- })
--- await prisma.role.create({
--- 	data: {
--- 		name: 'user',
--- 		permissions: {
--- 			connect: await prisma.permission.findMany({
--- 				select: { id: true },
--- 				where: { access: 'own' },
--- 			}),
--- 		},
--- 	},
--- })
--- console.timeEnd('👑 Created roles...')
+-- AddForeignKey
+ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-INSERT INTO Permission VALUES('clnf2zvli0000pcou3zzzzome','create','user','own','',1696625465526,1696625465526);
-INSERT INTO Permission VALUES('clnf2zvll0001pcouly1310ku','create','user','any','',1696625465529,1696625465529);
-INSERT INTO Permission VALUES('clnf2zvll0002pcouka7348re','read','user','own','',1696625465530,1696625465530);
-INSERT INTO Permission VALUES('clnf2zvlm0003pcouea4dee51','read','user','any','',1696625465530,1696625465530);
-INSERT INTO Permission VALUES('clnf2zvlm0004pcou2guvolx5','update','user','own','',1696625465531,1696625465531);
-INSERT INTO Permission VALUES('clnf2zvln0005pcoun78ps5ap','update','user','any','',1696625465531,1696625465531);
-INSERT INTO Permission VALUES('clnf2zvlo0006pcouyoptc5jp','delete','user','own','',1696625465532,1696625465532);
-INSERT INTO Permission VALUES('clnf2zvlo0007pcouw1yzoyam','delete','user','any','',1696625465533,1696625465533);
-INSERT INTO Permission VALUES('clnf2zvlp0008pcou9r0fhbm8','create','note','own','',1696625465533,1696625465533);
-INSERT INTO Permission VALUES('clnf2zvlp0009pcouj3qib9q9','create','note','any','',1696625465534,1696625465534);
-INSERT INTO Permission VALUES('clnf2zvlq000apcouxnspejs9','read','note','own','',1696625465535,1696625465535);
-INSERT INTO Permission VALUES('clnf2zvlr000bpcouf4cg3x72','read','note','any','',1696625465535,1696625465535);
-INSERT INTO Permission VALUES('clnf2zvlr000cpcouy1vp6oeg','update','note','own','',1696625465536,1696625465536);
-INSERT INTO Permission VALUES('clnf2zvls000dpcouvzwjjzrq','update','note','any','',1696625465536,1696625465536);
-INSERT INTO Permission VALUES('clnf2zvls000epcou4ts5ui8f','delete','note','own','',1696625465537,1696625465537);
-INSERT INTO Permission VALUES('clnf2zvlt000fpcouk29jbmxn','delete','note','any','',1696625465538,1696625465538);
+-- AddForeignKey
+ALTER TABLE "Connection" ADD CONSTRAINT "Connection_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-INSERT INTO Role VALUES('clnf2zvlw000gpcour6dyyuh6','admin','',1696625465540,1696625465540);
-INSERT INTO Role VALUES('clnf2zvlx000hpcou5dfrbegs','user','',1696625465542,1696625465542);
+-- AddForeignKey
+ALTER TABLE "Passkey" ADD CONSTRAINT "Passkey_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-INSERT INTO _PermissionToRole VALUES('clnf2zvll0001pcouly1310ku','clnf2zvlw000gpcour6dyyuh6');
-INSERT INTO _PermissionToRole VALUES('clnf2zvlm0003pcouea4dee51','clnf2zvlw000gpcour6dyyuh6');
-INSERT INTO _PermissionToRole VALUES('clnf2zvln0005pcoun78ps5ap','clnf2zvlw000gpcour6dyyuh6');
-INSERT INTO _PermissionToRole VALUES('clnf2zvlo0007pcouw1yzoyam','clnf2zvlw000gpcour6dyyuh6');
-INSERT INTO _PermissionToRole VALUES('clnf2zvlp0009pcouj3qib9q9','clnf2zvlw000gpcour6dyyuh6');
-INSERT INTO _PermissionToRole VALUES('clnf2zvlr000bpcouf4cg3x72','clnf2zvlw000gpcour6dyyuh6');
-INSERT INTO _PermissionToRole VALUES('clnf2zvls000dpcouvzwjjzrq','clnf2zvlw000gpcour6dyyuh6');
-INSERT INTO _PermissionToRole VALUES('clnf2zvlt000fpcouk29jbmxn','clnf2zvlw000gpcour6dyyuh6');
-INSERT INTO _PermissionToRole VALUES('clnf2zvli0000pcou3zzzzome','clnf2zvlx000hpcou5dfrbegs');
-INSERT INTO _PermissionToRole VALUES('clnf2zvll0002pcouka7348re','clnf2zvlx000hpcou5dfrbegs');
-INSERT INTO _PermissionToRole VALUES('clnf2zvlm0004pcou2guvolx5','clnf2zvlx000hpcou5dfrbegs');
-INSERT INTO _PermissionToRole VALUES('clnf2zvlo0006pcouyoptc5jp','clnf2zvlx000hpcou5dfrbegs');
-INSERT INTO _PermissionToRole VALUES('clnf2zvlp0008pcou9r0fhbm8','clnf2zvlx000hpcou5dfrbegs');
-INSERT INTO _PermissionToRole VALUES('clnf2zvlq000apcouxnspejs9','clnf2zvlx000hpcou5dfrbegs');
-INSERT INTO _PermissionToRole VALUES('clnf2zvlr000cpcouy1vp6oeg','clnf2zvlx000hpcou5dfrbegs');
-INSERT INTO _PermissionToRole VALUES('clnf2zvls000epcou4ts5ui8f','clnf2zvlx000hpcou5dfrbegs');
+-- AddForeignKey
+ALTER TABLE "_PermissionToRole" ADD CONSTRAINT "_PermissionToRole_A_fkey" FOREIGN KEY ("A") REFERENCES "Permission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_PermissionToRole" ADD CONSTRAINT "_PermissionToRole_B_fkey" FOREIGN KEY ("B") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_RoleToUser" ADD CONSTRAINT "_RoleToUser_A_fkey" FOREIGN KEY ("A") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_RoleToUser" ADD CONSTRAINT "_RoleToUser_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Seed the authorization data required by signup and permission checks.
+INSERT INTO "Permission" ("id", "action", "entity", "access", "description", "createdAt", "updatedAt") VALUES
+    ('clnf2zvli0000pcou3zzzzome', 'create', 'user', 'own', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('clnf2zvll0001pcouly1310ku', 'create', 'user', 'any', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('clnf2zvll0002pcouka7348re', 'read', 'user', 'own', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('clnf2zvlm0003pcouea4dee51', 'read', 'user', 'any', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('clnf2zvlm0004pcou2guvolx5', 'update', 'user', 'own', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('clnf2zvln0005pcoun78ps5ap', 'update', 'user', 'any', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('clnf2zvlo0006pcouyoptc5jp', 'delete', 'user', 'own', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('clnf2zvlo0007pcouw1yzoyam', 'delete', 'user', 'any', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('clnf2zvlp0008pcou9r0fhbm8', 'create', 'note', 'own', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('clnf2zvlp0009pcouj3qib9q9', 'create', 'note', 'any', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('clnf2zvlq000apcouxnspejs9', 'read', 'note', 'own', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('clnf2zvlr000bpcouf4cg3x72', 'read', 'note', 'any', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('clnf2zvlr000cpcouy1vp6oeg', 'update', 'note', 'own', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('clnf2zvls000dpcouvzwjjzrq', 'update', 'note', 'any', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('clnf2zvls000epcou4ts5ui8f', 'delete', 'note', 'own', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('clnf2zvlt000fpcouk29jbmxn', 'delete', 'note', 'any', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO "Role" ("id", "name", "description", "createdAt", "updatedAt") VALUES
+    ('clnf2zvlw000gpcour6dyyuh6', 'admin', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('clnf2zvlx000hpcou5dfrbegs', 'user', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO "_PermissionToRole" ("A", "B") VALUES
+    ('clnf2zvll0001pcouly1310ku', 'clnf2zvlw000gpcour6dyyuh6'),
+    ('clnf2zvlm0003pcouea4dee51', 'clnf2zvlw000gpcour6dyyuh6'),
+    ('clnf2zvln0005pcoun78ps5ap', 'clnf2zvlw000gpcour6dyyuh6'),
+    ('clnf2zvlo0007pcouw1yzoyam', 'clnf2zvlw000gpcour6dyyuh6'),
+    ('clnf2zvlp0009pcouj3qib9q9', 'clnf2zvlw000gpcour6dyyuh6'),
+    ('clnf2zvlr000bpcouf4cg3x72', 'clnf2zvlw000gpcour6dyyuh6'),
+    ('clnf2zvls000dpcouvzwjjzrq', 'clnf2zvlw000gpcour6dyyuh6'),
+    ('clnf2zvlt000fpcouk29jbmxn', 'clnf2zvlw000gpcour6dyyuh6'),
+    ('clnf2zvli0000pcou3zzzzome', 'clnf2zvlx000hpcou5dfrbegs'),
+    ('clnf2zvll0002pcouka7348re', 'clnf2zvlx000hpcou5dfrbegs'),
+    ('clnf2zvlm0004pcou2guvolx5', 'clnf2zvlx000hpcou5dfrbegs'),
+    ('clnf2zvlo0006pcouyoptc5jp', 'clnf2zvlx000hpcou5dfrbegs'),
+    ('clnf2zvlp0008pcou9r0fhbm8', 'clnf2zvlx000hpcou5dfrbegs'),
+    ('clnf2zvlq000apcouxnspejs9', 'clnf2zvlx000hpcou5dfrbegs'),
+    ('clnf2zvlr000cpcouy1vp6oeg', 'clnf2zvlx000hpcou5dfrbegs'),
+    ('clnf2zvls000epcou4ts5ui8f', 'clnf2zvlx000hpcou5dfrbegs');

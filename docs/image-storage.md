@@ -27,7 +27,7 @@ during development.
 
 The Epic Stack maintains a hybrid approach to image storage:
 
-1. Image metadata (relationships, ownership, etc.) is stored in SQLite
+1. Image metadata (relationships, ownership, etc.) is stored in PostgreSQL
 2. The actual image binary data is stored in Tigris
 3. Image URLs point to the local server which proxies to Tigris
 
@@ -65,7 +65,8 @@ model NoteImage {
 1. When an image is uploaded, it's first processed by the application
    (validation, etc.)
 2. The image is then streamed to Tigris
-3. The metadata is stored in SQLite with a reference to the Tigris object key
+3. The metadata is stored in PostgreSQL with a reference to the Tigris object
+   key
 4. The image can then be served by proxying to Tigris
 
 ## Customization
