@@ -34,7 +34,12 @@ declare global {
 }
 
 export function init() {
-	const parsed = schema.safeParse(process.env)
+	// Vite replaces direct NODE_ENV reads at build time, but the Workers
+	// process.env object does not contain that build-time value.
+	const parsed = schema.safeParse({
+		...process.env,
+		NODE_ENV: process.env.NODE_ENV,
+	})
 
 	if (parsed.success === false) {
 		console.error(

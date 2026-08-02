@@ -114,7 +114,13 @@ export class GitHubProvider implements AuthProvider {
 					`https://api.github.com/user/${providerId}`,
 					{ headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` } },
 				)
-				const rawJson = await response.json()
+				// GitHub answers rate limits and auth failures with bodies that are
+				// not always JSON, and a throw here escapes cachified and takes the
+				// whole settings page down with a 500. Treat anything unparseable as
+				// a miss so the caller falls back to the "Unknown" display name.
+				const rawJson = await response
+					.json()
+					.catch(() => null as unknown)
 				const result = GitHubUserSchema.safeParse(rawJson)
 				if (!result.success) {
 					// if it was unsuccessful, then we should kick it out of the cache

@@ -33,7 +33,7 @@ import { ClientHintCheck, getHints } from './utils/client-hints.tsx'
 import { prisma } from './utils/db.server.ts'
 import { getEnv } from './utils/env.server.ts'
 import { pipeHeaders } from './utils/headers.server.ts'
-import { honeypot } from './utils/honeypot.server.ts'
+import { getHoneypot } from './utils/honeypot.server.ts'
 import { combineHeaders, getDomainUrl, getImgSrc } from './utils/misc.tsx'
 import { useNonce } from './utils/nonce-provider.ts'
 import { type Theme, getTheme } from './utils/theme.server.ts'
@@ -106,7 +106,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		await logout({ request, redirectTo: '/' })
 	}
 	const { toast, headers: toastHeaders } = await getToast(request)
-	const honeyProps = await honeypot.getInputProps()
+	const honeyProps = await getHoneypot().getInputProps()
 
 	return data(
 		{

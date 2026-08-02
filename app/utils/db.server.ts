@@ -5,9 +5,25 @@ import { PrismaClient } from '#prisma-client'
 
 const prismaContext = new AsyncLocalStorage<PrismaClient>()
 
+/**
+ * Prisma's own URL convention carries the schema in a `?schema=` search param,
+ * but `pg` ignores it, so the driver adapter has to be told separately or every
+ * query lands on whatever `search_path` defaults to.
+ */
+function getSchemaFromConnectionString(connectionString: string) {
+	try {
+		return new URL(connectionString).searchParams.get('schema') ?? undefined
+	} catch {
+		return undefined
+	}
+}
+
 export function createPrismaClient(connectionString: string) {
 	return new PrismaClient({
-		adapter: new PrismaPg({ connectionString }),
+		adapter: new PrismaPg(
+			{ connectionString },
+			{ schema: getSchemaFromConnectionString(connectionString) },
+		),
 		log: [
 			{ level: 'error', emit: 'stdout' },
 			{ level: 'warn', emit: 'stdout' },

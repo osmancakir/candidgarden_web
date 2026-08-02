@@ -43,8 +43,10 @@ beforeEach(async () => {
 	// Keep the roles and permissions seeded by the baseline migration while
 	// removing user-created data between tests. Cascades cover related records.
 	const { prisma } = await import('#app/utils/db.server.ts')
+	// Raw SQL bypasses the schema the adapter applies to generated queries, so
+	// name the per-worker schema explicitly here.
 	await prisma.$executeRawUnsafe(
-		'TRUNCATE TABLE "Verification", "User" CASCADE',
+		`TRUNCATE TABLE "${schema}"."Verification", "${schema}"."User" CASCADE`,
 	)
 })
 
