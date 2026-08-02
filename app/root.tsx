@@ -69,7 +69,7 @@ export const meta: Route.MetaFunction = ({ data }) => {
 	return [
 		{
 			title: data
-				? 'Candid Garden · Institute for Machine Iconography'
+				? 'Candid Garden · Institute for Art Re-Search'
 				: 'Error | Candid Garden',
 		},
 		{

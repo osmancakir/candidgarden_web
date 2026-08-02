@@ -17,7 +17,7 @@ export const meta: Route.MetaFunction = () => [
 	{
 		name: 'description',
 		content:
-			'The charter of the Institute for Machine Iconography: mission, definitions, selection criteria, and the standing invitation to dispute our readings.',
+			'The charter of the Institute for Art Re-Search: mission, definitions, selection criteria, and the standing invitation to dispute our readings.',
 	},
 ]
 
@@ -25,7 +25,7 @@ export default function AboutRoute() {
 	return (
 		<DocumentPage
 			kind="Charter"
-			title="Institute for Machine Iconography"
+			title="Institute for Art Re-Search"
 			lead="Candid Garden is a research project. It publishes machine-generated iconographic metadata for works in the ARTigo corpus, structured by Erwin Panofsky’s three levels of meaning, and presents that metadata for scholarly correction. We are not a museum, we are not a product, and we are not confident."
 			stamp={
 				<ProvenanceStamp

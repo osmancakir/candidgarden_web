@@ -1,7 +1,6 @@
 import { Link } from 'react-router'
 import {
 	archivalDate,
-	CURRENT_MODEL,
 	DATASET,
 	confidenceBand,
 	formatConfidence,
@@ -65,17 +64,15 @@ export function Display({
 }
 
 /**
- * §5: "Every entry is timestamped." The record stamp — generation date, model,
- * run — is scientific provenance, not decoration.
+ * §5: "Every entry is timestamped." The record stamp — generation date and run
+ * — is scientific provenance, not decoration.
  */
 export function RecordStamp({
 	date,
-	model = CURRENT_MODEL,
 	run,
 	className,
 }: {
 	date: Date | string | number
-	model?: string
 	run?: string | number
 	className?: string
 }) {
@@ -84,8 +81,6 @@ export function RecordStamp({
 			className={cn('text-ground-muted tracking-widest normal-case', className)}
 		>
 			<time dateTime={new Date(date).toISOString()}>{archivalDate(date)}</time>
-			{' · '}
-			{model}
 			{run != null ? ` · run ${run}` : null}
 		</Data>
 	)
@@ -149,14 +144,12 @@ export function Chip({
  */
 export function ProvenanceStamp({
 	dataset = DATASET,
-	model = CURRENT_MODEL,
 	run,
 	date,
 	verification,
 	className,
 }: {
 	dataset?: string
-	model?: string
 	run?: string | number
 	date: Date | string | number
 	verification: VerificationStatus
@@ -175,8 +168,6 @@ export function ProvenanceStamp({
 			<dl className="font-data text-data-sm grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 uppercase">
 				<dt className="tracking-[0.12em] opacity-70">Dataset</dt>
 				<dd>{dataset}</dd>
-				<dt className="tracking-[0.12em] opacity-70">Model</dt>
-				<dd className="normal-case">{model}</dd>
 				{run != null ? (
 					<>
 						<dt className="tracking-[0.12em] opacity-70">Run</dt>

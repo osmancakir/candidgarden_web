@@ -23,7 +23,7 @@ export const meta: Route.MetaFunction = ({ params, matches }) => {
 		{ title: `Notes · ${displayName} · Candid Garden` },
 		{
 			name: 'description',
-			content: `${noteCount} ${notesText} filed by ${displayName} at the Institute for Machine Iconography.`,
+			content: `${noteCount} ${notesText} filed by ${displayName} at the Institute for Art Re-Search.`,
 		},
 	]
 }

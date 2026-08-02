@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router'
-import { CURRENT_MODEL, DATASET } from '#app/utils/archive.ts'
+import { DATASET } from '#app/utils/archive.ts'
 import { cn } from '#app/utils/misc.tsx'
 import { Data } from './primitives.tsx'
 
@@ -29,7 +29,7 @@ export function Wordmark({
 			</span>
 			{withSubtitle ? (
 				<Data className="text-ground-muted mt-1 block">
-					Institute for Machine Iconography
+					Institute for Art Re-Search
 				</Data>
 			) : null}
 		</Link>
@@ -81,12 +81,12 @@ export function InstituteNav({ className }: { className?: string }) {
  */
 export function Colophon({ className }: { className?: string }) {
 	const entries: Array<[string, React.ReactNode]> = [
-		['Dataset', `${DATASET} · 66,000 works`],
-		['Model', CURRENT_MODEL],
+		['Dataset', `${DATASET} · 54,497 artworks`],
 		['Method', 'Panofsky I–III'],
-		['Display', 'Archivo Black'],
-		['Body', 'Times New Roman'],
-		['Data', 'IBM Plex Mono'],
+		['Tags', '513,159'],
+		['Human Tags', '295,343'],
+		['AI Tags', '226,947'],
+		['Taggings', '5,805,481'],
 	]
 	return (
 		<footer className={cn('register-void px-5 py-12 md:px-8', className)}>
@@ -161,7 +161,7 @@ export function PrintColophon() {
 | (__ / _ \| .' | |) | || |) | | (_ / / _ \|   / |) | _|| .' |
  \___/_/ \_\_|\_|___/___|___/   \___/_/ \_\_|_\___/|___|_|\_|
 
-              INSTITUTE FOR MACHINE ICONOGRAPHY
+              INSTITUTE FOR ART RE-SEARCH
 `}
 			</pre>
 			<p style={{ fontFamily: 'monospace', fontSize: '12px' }}>

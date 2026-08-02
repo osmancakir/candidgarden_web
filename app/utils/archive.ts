@@ -6,9 +6,6 @@
  * is byte-identical to the same date stamped on a dossier.
  */
 
-/** The model that produced the current generation of iconographic metadata. */
-export const CURRENT_MODEL = 'claude-sonnet-4-6'
-
 /** Dataset the archive is drawn from. */
 export const DATASET = 'ARTigo'
 

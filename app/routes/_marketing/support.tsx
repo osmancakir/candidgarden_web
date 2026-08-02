@@ -11,7 +11,7 @@ export const meta: Route.MetaFunction = () => [
 	{
 		name: 'description',
 		content:
-			'How to dispute a reading, report a broken record, or otherwise write to the Institute for Machine Iconography.',
+			'How to dispute a reading, report a broken record, or otherwise write to the Institute for Art Re-Search.',
 	},
 ]
 
@@ -34,9 +34,7 @@ export default function SupportRoute() {
 				</p>
 				<p className="not-italic">
 					<Data className="text-ground-muted">Address</Data>{' '}
-					<a href="mailto:corrections@candidgarden.example">
-						corrections@candidgarden.example
-					</a>
+					<a href="mailto:hey@candidgarden.com">hey@candidgarden.com</a>
 				</p>
 			</DocumentSection>
 

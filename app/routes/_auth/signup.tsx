@@ -102,7 +102,7 @@ export function SignupEmail({
 		<E.Html lang="en" dir="ltr">
 			<E.Container>
 				<h1>
-					<E.Text>Candid Garden · Institute for Machine Iconography</E.Text>
+					<E.Text>Candid Garden · Institute for Art Re-Search</E.Text>
 				</h1>
 				<p>
 					<E.Text>

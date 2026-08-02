@@ -10,7 +10,7 @@ export const meta: Route.MetaFunction = () => [
 	{
 		name: 'description',
 		content:
-			'The Candid Garden index: 66,000 works from the ARTigo corpus with machine-generated iconographic metadata, filterable by motif, subject class, period, collection and verification status.',
+			'The Candid Garden index: 54,497 artworks from the ARTigo corpus with machine-generated iconographic metadata, filterable by motif, subject class, period, collection and verification status.',
 	},
 ]
 

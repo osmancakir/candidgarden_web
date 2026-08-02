@@ -26,7 +26,7 @@ export const meta: Route.MetaFunction = () => [
 	{
 		name: 'description',
 		content:
-			'Essays, methodology and corrections from the Institute for Machine Iconography — the chapter that revisits the archive’s own gaps.',
+			'Essays, methodology and corrections from the Institute for Art Re-Search — the chapter that revisits the archive’s own gaps.',
 	},
 ]
 
@@ -99,8 +99,7 @@ export default function EssaysRoute() {
 						Corrections on file
 					</Data>
 					<NoRecords>
-						No corrections have been accepted yet. This is a young archive, not
-						an accurate one.
+						No correction is in the queue currently.
 					</NoRecords>
 				</div>
 			</DocumentSection>

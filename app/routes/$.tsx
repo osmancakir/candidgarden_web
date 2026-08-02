@@ -39,7 +39,7 @@ type LostPlate = {
 
 async function randomPlate(): Promise<LostPlate | null> {
 	// `highlight` works are curated and few, so picking from those is cheap and
-	// worth looking at — far better than an OFFSET over 66,000 rows on a page
+	// worth looking at — far better than an OFFSET over 54,497 rows on a page
 	// nobody meant to visit.
 	const candidates = await prisma.resource.findMany({
 		where: { highlight: true, objectKey: { not: null } },

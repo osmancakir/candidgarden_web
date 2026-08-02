@@ -32,14 +32,14 @@ export default function TermsOfServiceRoute() {
 
 			<DocumentSection n={2} heading="Attribution">
 				<p>
-					When you cite a record, cite its stamp. A reading without its model
-					and date is not a citation of this archive; it is a rumour about it.
-					The form we ask for is:
+					When you cite a record, cite its stamp. A reading without its date is
+					not a citation of this archive; it is a rumour about it. The form we
+					ask for is:
 				</p>
 				<p>
 					<cite>
 						Candid Garden, record #1042, motif “garden” (agreement 0.87),
-						generated 03/14/26 by claude-sonnet-4-6, run 118.
+						generated 03/14/26, run 118.
 					</cite>
 				</p>
 				<p>

@@ -15,11 +15,11 @@ import { type Route } from './+types/index.ts'
  */
 
 export const meta: Route.MetaFunction = () => [
-	{ title: 'Candid Garden · Institute for Machine Iconography' },
+	{ title: 'Candid Garden · Institute for Art Re-Search' },
 	{
 		name: 'description',
 		content:
-			'Machine-generated iconographic metadata for 66,000 works from the ARTigo corpus, structured by Panofsky’s three levels of meaning and presented for scholarly correction.',
+			'Machine-generated iconographic metadata for 54,497 artworks from the ARTigo corpus, structured by Panofsky’s three levels of meaning and presented for scholarly correction.',
 	},
 ]
 

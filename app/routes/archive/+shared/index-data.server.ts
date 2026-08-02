@@ -176,7 +176,7 @@ export async function loadIndex(
 /**
  * The console's option lists. These change only when the corpus is reingested,
  * so they are cached rather than recomputed on every keystroke of the filter
- * form — a `DISTINCT` across 66,000 rows is not a per-request cost worth
+ * form — a `DISTINCT` across 54,497 rows is not a per-request cost worth
  * paying.
  */
 async function loadFacets(timings?: Timings): Promise<ArchiveFacets> {

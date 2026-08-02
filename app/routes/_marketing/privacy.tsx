@@ -9,7 +9,7 @@ export const meta: Route.MetaFunction = () => [
 	{
 		name: 'description',
 		content:
-			'What the Institute for Machine Iconography records about its readers, and what it does not.',
+			'What the Institute for Art Re-Search records about its readers, and what it does not.',
 	},
 ]
 
