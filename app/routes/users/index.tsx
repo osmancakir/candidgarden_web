@@ -2,6 +2,12 @@ import { Img } from 'openimg/react'
 import { redirect, Link } from 'react-router'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { ErrorList } from '#app/components/forms.tsx'
+import {
+	Data,
+	Display,
+	LoadingRecords,
+	NoRecords,
+} from '#app/components/institute/primitives.tsx'
 import { SearchBar } from '#app/components/search-bar.tsx'
 import { prisma } from '#app/utils/db.server.ts'
 import { cn, getUserImgSrc, useDelayedIsPending } from '#app/utils/misc.tsx'
@@ -52,53 +58,71 @@ export default function UsersRoute({ loaderData }: Route.ComponentProps) {
 	})
 
 	return (
-		<div className="container mt-36 mb-48 flex flex-col items-center justify-center gap-6">
-			<h1 className="text-h1">Epic Notes Users</h1>
-			<div className="w-full max-w-[700px]">
+		<div className="container py-12 md:py-16">
+			<header className="border-rule border-b pb-6">
+				<Data className="text-ground-muted mb-3 block tracking-[0.2em]">
+					Register
+				</Data>
+				<Display as="h1" size="chapter">
+					Contributors
+				</Display>
+				<p className="font-body text-prose-lg measure mt-4">
+					Everyone who holds an account with the institute. Annotations and
+					disputes are credited here.
+				</p>
+			</header>
+
+			<div className="mt-6 max-w-xl">
 				<SearchBar status={loaderData.status} autoFocus autoSubmit />
 			</div>
-			<main>
+
+			<div className="mt-10">
 				{loaderData.status === 'idle' ? (
 					loaderData.users.length ? (
 						<ul
 							className={cn(
-								'flex w-full flex-wrap items-center justify-center gap-4 delay-200',
-								{ 'opacity-50': isPending },
+								'border-rule grid border-t sm:grid-cols-2 lg:grid-cols-3',
+								isPending && 'opacity-50',
 							)}
 						>
 							{loaderData.users.map((user) => (
-								<li key={user.id}>
+								<li key={user.id} className="border-rule border-b">
 									<Link
 										to={user.username}
-										className="bg-muted flex h-36 w-44 flex-col items-center justify-center rounded-lg px-5 py-3"
+										className="hover:bg-tint flex items-center gap-4 p-4 no-underline transition-colors"
 										aria-label={`${user.name || user.username} profile`}
 									>
 										<Img
-											alt={user.name ?? user.username}
+											alt=""
+											aria-hidden
 											src={getUserImgSrc(user.imageObjectKey)}
-											className="size-16 rounded-full"
-											width={256}
-											height={256}
+											className="border-rule size-12 shrink-0 border object-cover"
+											width={192}
+											height={192}
 										/>
-										{user.name ? (
-											<span className="text-body-md w-full overflow-hidden text-center text-ellipsis whitespace-nowrap">
-												{user.name}
+										<span className="min-w-0">
+											{user.name ? (
+												<span className="font-body text-prose block truncate">
+													{user.name}
+												</span>
+											) : null}
+											<span className="font-data text-data-sm text-ground-muted block truncate tracking-wide">
+												{user.username}
 											</span>
-										) : null}
-										<span className="text-body-sm text-muted-foreground w-full overflow-hidden text-center text-ellipsis">
-											{user.username}
 										</span>
 									</Link>
 								</li>
 							))}
 						</ul>
 					) : (
-						<p>No users found</p>
+						<NoRecords>No contributors match that query</NoRecords>
 					)
 				) : loaderData.status === 'error' ? (
 					<ErrorList errors={['There was an error parsing the results']} />
-				) : null}
-			</main>
+				) : (
+					<LoadingRecords />
+				)}
+			</div>
 		</div>
 	)
 }

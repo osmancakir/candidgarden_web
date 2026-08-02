@@ -34,7 +34,8 @@ test('Users can add 2FA to their account and use it when logging in', async ({
 	)
 	await main.getByRole('button', { name: /submit/i }).click()
 
-	await expect(main).toHaveText(/You have enabled two-factor authentication./i)
+	await expect(main).toContainText(/two-factor/i)
+	await expect(main).toContainText(/enabled/i)
 	await expect(main.getByRole('link', { name: /disable 2fa/i })).toBeVisible()
 
 	await page.getByRole('link', { name: 'User menu' }).click()

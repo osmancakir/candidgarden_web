@@ -47,7 +47,7 @@ const InputOTPSlot = ({
 		<div
 			data-slot="input-otp-slot"
 			className={cn(
-				'border-input relative flex size-10 items-center justify-center border-y border-r text-base transition-all first:rounded-l-md first:border-l last:rounded-r-md md:text-sm',
+				'border-rule-strong font-data text-data-lg relative flex size-11 items-center justify-center border-y border-r tabular-nums transition-colors first:border-l',
 				isActive && 'ring-ring ring-offset-background z-10 ring-2',
 				className,
 			)}

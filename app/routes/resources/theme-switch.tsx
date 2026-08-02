@@ -4,7 +4,6 @@ import { invariantResponse } from '@epic-web/invariant'
 import { data, redirect, useFetcher, useFetchers } from 'react-router'
 import { ServerOnly } from 'remix-utils/server-only'
 import { z } from 'zod'
-import { Icon } from '#app/components/ui/icon.tsx'
 import { useHints, useOptionalHints } from '#app/utils/client-hints.tsx'
 import {
 	useOptionalRequestInfo,
@@ -55,23 +54,15 @@ export function ThemeSwitch({
 	const mode = optimisticMode ?? userPreference ?? 'system'
 	const nextMode =
 		mode === 'system' ? 'light' : mode === 'light' ? 'dark' : 'system'
+
+	// The control names the ground it will put you on rather than showing a sun
+	// or a moon: in this project "light" and "dark" are registers with names —
+	// paper and void — and the toggle is the one place that says so out loud.
 	const modeLabel = {
-		light: (
-			<Icon name="sun">
-				<span className="sr-only">Light</span>
-			</Icon>
-		),
-		dark: (
-			<Icon name="moon">
-				<span className="sr-only">Dark</span>
-			</Icon>
-		),
-		system: (
-			<Icon name="laptop">
-				<span className="sr-only">System</span>
-			</Icon>
-		),
-	}
+		light: { text: 'Paper', a11y: 'Light theme — the paper register' },
+		dark: { text: 'Void', a11y: 'Dark theme — the void register' },
+		system: { text: 'Auto', a11y: 'Follow the system theme' },
+	} as const
 
 	return (
 		<fetcher.Form
@@ -85,14 +76,14 @@ export function ThemeSwitch({
 				)}
 			</ServerOnly>
 			<input type="hidden" name="theme" value={nextMode} />
-			<div className="flex gap-2">
-				<button
-					type="submit"
-					className="flex size-8 cursor-pointer items-center justify-center"
-				>
-					{modeLabel[mode]}
-				</button>
-			</div>
+			<button
+				type="submit"
+				className="font-data text-data-sm border-rule text-ground-muted hover:border-link hover:text-link inline-flex cursor-pointer items-center gap-2 border px-2 py-1.5 tracking-[0.12em] uppercase transition-colors"
+			>
+				<span aria-hidden="true">Ground</span>
+				<span className="text-ground-fg">{modeLabel[mode].text}</span>
+				<span className="sr-only">{modeLabel[mode].a11y}</span>
+			</button>
 		</fetcher.Form>
 	)
 }

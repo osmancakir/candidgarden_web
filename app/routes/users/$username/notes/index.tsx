@@ -3,8 +3,10 @@ import { type Route } from './+types/index.ts'
 
 export default function NotesIndexRoute() {
 	return (
-		<div className="container pt-12">
-			<p className="text-body-md">Select a note</p>
+		<div className="border-rule border py-16 text-center">
+			<span className="font-data text-data-sm text-ground-muted tracking-[0.12em] uppercase">
+				Select a note from the rail
+			</span>
 		</div>
 	)
 }
@@ -18,10 +20,10 @@ export const meta: Route.MetaFunction = ({ params, matches }) => {
 	const noteCount = notesMatch?.data?.owner.notes.length ?? 0
 	const notesText = noteCount === 1 ? 'note' : 'notes'
 	return [
-		{ title: `${displayName}'s Notes | Epic Notes` },
+		{ title: `Notes · ${displayName} · Candid Garden` },
 		{
 			name: 'description',
-			content: `Checkout ${displayName}'s ${noteCount} ${notesText} on Epic Notes`,
+			content: `${noteCount} ${notesText} filed by ${displayName} at the Institute for Machine Iconography.`,
 		},
 	]
 }

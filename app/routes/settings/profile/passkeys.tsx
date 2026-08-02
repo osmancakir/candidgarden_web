@@ -3,14 +3,22 @@ import { formatDistanceToNow } from 'date-fns'
 import { useState } from 'react'
 import { Form, useRevalidator } from 'react-router'
 import { z } from 'zod'
+import {
+	Ledger,
+	LedgerRow,
+	PanelHeading,
+} from '#app/components/institute/document.tsx'
+import {
+	NoRecords,
+	UncertaintyNotice,
+} from '#app/components/institute/primitives.tsx'
 import { Button } from '#app/components/ui/button.tsx'
-import { Icon } from '#app/components/ui/icon.tsx'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { type Route } from './+types/passkeys.ts'
 
 export const handle = {
-	breadcrumb: <Icon name="passkey">Passkeys</Icon>,
+	breadcrumb: 'Passkeys',
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
@@ -124,67 +132,60 @@ export default function Passkeys({ loaderData }: Route.ComponentProps) {
 	}
 
 	return (
-		<div className="flex flex-col gap-6">
-			<div className="flex justify-between gap-4">
-				<h1 className="text-h1">Passkeys</h1>
+		<div className="flex flex-col gap-8">
+			<PanelHeading
+				kind="Credentials"
+				title="Passkeys"
+				lead="Hardware and platform authenticators registered to this account. Any one of them can sign you in without a password."
+			/>
+
+			<div>
 				<form action={handlePasskeyRegistration}>
-					<Button
-						type="submit"
-						variant="secondary"
-						className="flex items-center gap-2"
-					>
-						<Icon name="plus">Register new passkey</Icon>
+					<Button type="submit" variant="outline" size="sm">
+						Register new passkey
 					</Button>
 				</form>
 			</div>
 
-			{error ? (
-				<div className="bg-destructive/15 text-destructive rounded-lg p-4">
-					{error}
-				</div>
-			) : null}
+			<UncertaintyNotice notice={error ? error.toUpperCase() : null} />
 
 			{loaderData.passkeys.length ? (
-				<ul className="flex flex-col gap-4" title="passkeys">
-					{loaderData.passkeys.map((passkey) => (
-						<li
-							key={passkey.id}
-							className="border-muted-foreground flex items-center justify-between gap-4 rounded-lg border p-4"
-						>
-							<div className="flex flex-col gap-2">
-								<div className="flex items-center gap-2">
-									<Icon name="lock-closed" />
-									<span className="font-semibold">
-										{passkey.deviceType === 'platform'
+				<Ledger>
+					<ul title="passkeys">
+						{loaderData.passkeys.map((passkey) => (
+							<li key={passkey.id}>
+								<LedgerRow
+									label={
+										passkey.deviceType === 'platform'
 											? 'Device'
-											: 'Security Key'}
-									</span>
-								</div>
-								<div className="text-muted-foreground text-sm">
-									Registered {formatDistanceToNow(new Date(passkey.createdAt))}{' '}
-									ago
-								</div>
-							</div>
-							<Form method="POST">
-								<input type="hidden" name="passkeyId" value={passkey.id} />
-								<Button
-									type="submit"
-									name="intent"
-									value="delete"
-									variant="destructive"
-									size="sm"
-									className="flex items-center gap-2"
-								>
-									<Icon name="trash">Delete</Icon>
-								</Button>
-							</Form>
-						</li>
-					))}
-				</ul>
+											: 'Security key'
+									}
+									value={`Registered ${formatDistanceToNow(new Date(passkey.createdAt))} ago`}
+									action={
+										<Form method="POST">
+											<input
+												type="hidden"
+												name="passkeyId"
+												value={passkey.id}
+											/>
+											<Button
+												type="submit"
+												name="intent"
+												value="delete"
+												variant="destructive"
+												size="sm"
+											>
+												Revoke
+											</Button>
+										</Form>
+									}
+								/>
+							</li>
+						))}
+					</ul>
+				</Ledger>
 			) : (
-				<div className="text-muted-foreground text-center">
-					No passkeys registered yet
-				</div>
+				<NoRecords>No passkeys registered</NoRecords>
 			)}
 		</div>
 	)

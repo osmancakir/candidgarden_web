@@ -54,7 +54,7 @@ test('onboarding with link', async ({ page, navigate, getOnboardingData }) => {
 	await expect(page).toHaveURL(`/login`)
 
 	const createAccountLink = page.getByRole('link', {
-		name: /create an account/i,
+		name: /register with the institute/i,
 	})
 	await createAccountLink.click()
 
@@ -71,7 +71,8 @@ test('onboarding with link', async ({ page, navigate, getOnboardingData }) => {
 	invariant(email, 'Email not found')
 	expect(email.to).toBe(onboardingData.email.toLowerCase())
 	expect(email.from).toBe('hello@epicstack.dev')
-	expect(email.subject).toMatch(/welcome/i)
+	// §7 rules out “Welcome to…”; the institute states what the mail is for.
+	expect(email.subject).toMatch(/verify your address/i)
 	const onboardingUrl = extractUrl(email.text) as AppPages
 	invariant(onboardingUrl, 'Onboarding URL not found')
 	await navigate(onboardingUrl)
@@ -134,7 +135,8 @@ test('onboarding with a short code', async ({
 	invariant(email, 'Email not found')
 	expect(email.to).toBe(onboardingData.email.toLowerCase())
 	expect(email.from).toBe('hello@epicstack.dev')
-	expect(email.subject).toMatch(/welcome/i)
+	// §7 rules out “Welcome to…”; the institute states what the mail is for.
+	expect(email.subject).toMatch(/verify your address/i)
 	const codeMatch = email.text.match(CODE_REGEX)
 	const code = codeMatch?.groups?.code
 	invariant(code, 'Onboarding code not found')
@@ -163,7 +165,9 @@ test('completes onboarding after GitHub OAuth given valid user details', async (
 
 	await expect(page).toHaveURL(/\/onboarding\/github/)
 	await expect(
-		page.getByText(new RegExp(`welcome aboard ${ghUser.primaryEmail}`, 'i')),
+		page.getByText(
+			new RegExp(`the address ${ghUser.primaryEmail} is verified`, 'i'),
+		),
 	).toBeVisible()
 
 	// fields are pre-populated for the user, so we only need to accept
@@ -256,7 +260,9 @@ test('shows help texts on entering invalid details on onboarding page after GitH
 
 	await expect(page).toHaveURL(/\/onboarding\/github/)
 	await expect(
-		page.getByText(new RegExp(`welcome aboard ${ghUser.primaryEmail}`, 'i')),
+		page.getByText(
+			new RegExp(`the address ${ghUser.primaryEmail} is verified`, 'i'),
+		),
 	).toBeVisible()
 
 	const usernameInput = page.getByRole('textbox', { name: /username/i })

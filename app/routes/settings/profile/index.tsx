@@ -6,8 +6,13 @@ import { Img } from 'openimg/react'
 import { data, Link, useFetcher } from 'react-router'
 import { z } from 'zod'
 import { ErrorList, Field } from '#app/components/forms.tsx'
+import {
+	Ledger,
+	LedgerRow,
+	PanelHeading,
+} from '#app/components/institute/document.tsx'
+import { Data } from '#app/components/institute/primitives.tsx'
 import { Button } from '#app/components/ui/button.tsx'
-import { Icon } from '#app/components/ui/icon.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { requireUserId, sessionKey } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
@@ -98,84 +103,123 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function EditUserProfile({ loaderData }: Route.ComponentProps) {
+	const { user, isTwoFactorEnabled, hasPassword } = loaderData
 	return (
-		<div className="flex flex-col gap-12">
-			<div className="flex justify-center">
-				<div className="relative size-52">
+		<div className="flex flex-col gap-10">
+			<PanelHeading
+				kind="Personnel record"
+				title={user.name ?? user.username}
+				lead="What the institute holds about you, and the controls for changing it."
+			/>
+
+			<div className="flex flex-wrap items-start gap-6">
+				{/* Square, like every plate in the archive (§5). */}
+				<div className="relative">
 					<Img
-						src={getUserImgSrc(loaderData.user.image?.objectKey)}
-						alt={loaderData.user.name ?? loaderData.user.username}
-						className="h-full w-full rounded-full object-cover"
-						width={832}
-						height={832}
+						src={getUserImgSrc(user.image?.objectKey)}
+						alt={user.name ?? user.username}
+						className="border-rule size-40 border object-cover"
+						width={640}
+						height={640}
 						isAboveFold
 					/>
-					<Button
-						asChild
-						variant="outline"
-						className="absolute top-3 -right-3 flex size-10 items-center justify-center rounded-full p-0"
-					>
-						<Link
-							preventScrollReset
-							to="photo"
-							title="Change profile photo"
-							aria-label="Change profile photo"
-						>
-							<Icon name="camera" className="size-4" />
+					<Button asChild variant="outline" size="sm" className="mt-2 w-full">
+						<Link preventScrollReset to="photo">
+							Change profile photo
 						</Link>
 					</Button>
 				</div>
+				<div className="min-w-64 flex-1">
+					<UpdateProfile loaderData={loaderData} />
+				</div>
 			</div>
-			<UpdateProfile loaderData={loaderData} />
 
-			<div className="border-foreground col-span-6 my-6 h-1 border-b-[1.5px]" />
-			<div className="col-span-full flex flex-col gap-6">
-				<div>
-					<Link to="change-email">
-						<Icon name="envelope-closed">
-							Change email from {loaderData.user.email}
-						</Icon>
-					</Link>
-				</div>
-				<div>
-					<Link to="two-factor">
-						{loaderData.isTwoFactorEnabled ? (
-							<Icon name="lock-closed">2FA is enabled</Icon>
-						) : (
-							<Icon name="lock-open-1">Enable 2FA</Icon>
-						)}
-					</Link>
-				</div>
-				<div>
-					<Link to={loaderData.hasPassword ? 'password' : 'password/create'}>
-						<Icon name="dots-horizontal">
-							{loaderData.hasPassword ? 'Change Password' : 'Create a Password'}
-						</Icon>
-					</Link>
-				</div>
-				<div>
-					<Link to="connections">
-						<Icon name="link-2">Manage connections</Icon>
-					</Link>
-				</div>
-				<div>
-					<Link to="passkeys">
-						<Icon name="passkey">Manage passkeys</Icon>
-					</Link>
-				</div>
-				<div>
-					<Link
-						reloadDocument
-						download="my-epic-notes-data.json"
-						to="/resources/download-user-data"
-					>
-						<Icon name="download">Download your data</Icon>
-					</Link>
-				</div>
-				<SignOutOfSessions loaderData={loaderData} />
-				<DeleteData />
-			</div>
+			<section>
+				<Data className="text-ground-muted mb-3 block tracking-[0.2em]">
+					Credentials
+				</Data>
+				<Ledger>
+					<LedgerRow
+						label="Email"
+						value={user.email}
+						action={<SettingsLink to="change-email">Change email</SettingsLink>}
+					/>
+					<LedgerRow
+						label="Password"
+						value={hasPassword ? 'Set' : 'Not set'}
+						action={
+							<SettingsLink to={hasPassword ? 'password' : 'password/create'}>
+								{hasPassword ? 'Change password' : 'Create password'}
+							</SettingsLink>
+						}
+					/>
+					<LedgerRow
+						label="Two-factor"
+						value={isTwoFactorEnabled ? 'Enabled' : 'Not enabled'}
+						action={
+							<SettingsLink to="two-factor">
+								{isTwoFactorEnabled ? 'Manage 2FA' : 'Enable 2FA'}
+							</SettingsLink>
+						}
+					/>
+					<LedgerRow
+						label="Passkeys"
+						value="Sign in without a password"
+						action={<SettingsLink to="passkeys">Manage passkeys</SettingsLink>}
+					/>
+					<LedgerRow
+						label="Connections"
+						value="Third-party identity providers"
+						action={
+							<SettingsLink to="connections">Manage connections</SettingsLink>
+						}
+					/>
+				</Ledger>
+			</section>
+
+			<section>
+				<Data className="text-ground-muted mb-3 block tracking-[0.2em]">
+					Your data
+				</Data>
+				<Ledger>
+					<LedgerRow
+						label="Export"
+						value="Everything the institute holds about you, as JSON."
+						action={
+							<Link
+								reloadDocument
+								download="candid-garden-data.json"
+								to="/resources/download-user-data"
+								className="font-data text-data-sm text-link tracking-[0.12em] uppercase underline underline-offset-4"
+							>
+								Download
+							</Link>
+						}
+					/>
+					<SignOutOfSessions loaderData={loaderData} />
+					<DeleteData />
+				</Ledger>
+			</section>
 		</div>
+	)
+}
+
+/** The house style for an action at the end of a ledger row. */
+function SettingsLink({
+	to,
+	children,
+}: {
+	to: string
+	children: React.ReactNode
+}) {
+	return (
+		<Link
+			to={to}
+			preventScrollReset
+			className="font-data text-data-sm text-link tracking-[0.12em] uppercase underline underline-offset-4"
+		>
+			{children}
+		</Link>
 	)
 }
 
@@ -241,9 +285,8 @@ function UpdateProfile({
 
 	return (
 		<fetcher.Form method="POST" {...getFormProps(form)}>
-			<div className="grid grid-cols-6 gap-x-10">
+			<div className="grid gap-x-6 sm:grid-cols-2">
 				<Field
-					className="col-span-3"
 					labelProps={{
 						htmlFor: fields.username.id,
 						children: 'Username',
@@ -252,7 +295,6 @@ function UpdateProfile({
 					errors={fields.username.errors}
 				/>
 				<Field
-					className="col-span-3"
 					labelProps={{ htmlFor: fields.name.id, children: 'Name' }}
 					inputProps={getInputProps(fields.name, { type: 'text' })}
 					errors={fields.name.errors}
@@ -261,17 +303,16 @@ function UpdateProfile({
 
 			<ErrorList errors={form.errors} id={form.errorId} />
 
-			<div className="mt-8 flex justify-center">
+			<div className="mt-4">
 				<StatusButton
 					type="submit"
-					size="wide"
 					name="intent"
 					value={profileUpdateActionIntent}
 					status={
 						fetcher.state !== 'idle' ? 'pending' : (form.status ?? 'idle')
 					}
 				>
-					Save changes
+					Save record
 				</StatusButton>
 			</div>
 		</fetcher.Form>
@@ -306,33 +347,36 @@ function SignOutOfSessions({
 	const fetcher = useFetcher<typeof signOutOfSessionsAction>()
 	const otherSessionsCount = loaderData.user._count.sessions - 1
 	return (
-		<div>
-			{otherSessionsCount ? (
-				<fetcher.Form method="POST">
-					<StatusButton
-						{...dc.getButtonProps({
-							type: 'submit',
-							name: 'intent',
-							value: signOutOfSessionsActionIntent,
-						})}
-						variant={dc.doubleCheck ? 'destructive' : 'default'}
-						status={
-							fetcher.state !== 'idle'
-								? 'pending'
-								: (fetcher.data?.status ?? 'idle')
-						}
-					>
-						<Icon name="avatar">
-							{dc.doubleCheck
-								? `Are you sure?`
-								: `Sign out of ${otherSessionsCount} other sessions`}
-						</Icon>
-					</StatusButton>
-				</fetcher.Form>
-			) : (
-				<Icon name="avatar">This is your only session</Icon>
-			)}
-		</div>
+		<LedgerRow
+			label="Sessions"
+			value={
+				otherSessionsCount
+					? `Signed in on ${otherSessionsCount + 1} devices.`
+					: 'This is your only session.'
+			}
+			action={
+				otherSessionsCount ? (
+					<fetcher.Form method="POST">
+						<StatusButton
+							{...dc.getButtonProps({
+								type: 'submit',
+								name: 'intent',
+								value: signOutOfSessionsActionIntent,
+							})}
+							variant={dc.doubleCheck ? 'destructive' : 'outline'}
+							size="sm"
+							status={
+								fetcher.state !== 'idle'
+									? 'pending'
+									: (fetcher.data?.status ?? 'idle')
+							}
+						>
+							{dc.doubleCheck ? 'Confirm' : 'Sign out others'}
+						</StatusButton>
+					</fetcher.Form>
+				) : null
+			}
+		/>
 	)
 }
 
@@ -349,23 +393,27 @@ function DeleteData() {
 	const dc = useDoubleCheck()
 
 	const fetcher = useFetcher<typeof deleteDataAction>()
+	// §7: state plainly what will happen. Deletion is deletion.
 	return (
-		<div>
-			<fetcher.Form method="POST">
-				<StatusButton
-					{...dc.getButtonProps({
-						type: 'submit',
-						name: 'intent',
-						value: deleteDataActionIntent,
-					})}
-					variant={dc.doubleCheck ? 'destructive' : 'default'}
-					status={fetcher.state !== 'idle' ? 'pending' : 'idle'}
-				>
-					<Icon name="trash">
-						{dc.doubleCheck ? `Are you sure?` : `Delete all your data`}
-					</Icon>
-				</StatusButton>
-			</fetcher.Form>
-		</div>
+		<LedgerRow
+			label="Deletion"
+			value="Removes your account and everything attached to it. There is no shadow copy and no recovery."
+			action={
+				<fetcher.Form method="POST">
+					<StatusButton
+						{...dc.getButtonProps({
+							type: 'submit',
+							name: 'intent',
+							value: deleteDataActionIntent,
+						})}
+						variant="destructive"
+						size="sm"
+						status={fetcher.state !== 'idle' ? 'pending' : 'idle'}
+					>
+						{dc.doubleCheck ? 'Confirm deletion' : 'Delete everything'}
+					</StatusButton>
+				</fetcher.Form>
+			}
+		/>
 	)
 }

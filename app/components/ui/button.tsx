@@ -4,27 +4,38 @@ import * as React from 'react'
 
 import { cn } from '#app/utils/misc.tsx'
 
+/**
+ * Buttons are machine text: mono, uppercase, wide-tracked, square (§4, §9).
+ * They read as laboratory equipment rather than calls to action — no radius, no
+ * shadow, no gradient (§10). Every variant is register-relative, so a button
+ * dropped inside `.register-void` inverts without being told to.
+ */
 const buttonVariants = cva(
-	'ring-ring ring-offset-background inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-2 outline-hidden transition-colors focus-within:ring-2 focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50',
+	'font-data text-data-sm focus-visible:outline-link inline-flex items-center justify-center gap-2 rounded-none border tracking-[0.12em] uppercase outline-hidden transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-40',
 	{
 		variants: {
 			variant: {
-				default: 'bg-primary text-primary-foreground hover:bg-primary/80',
-				destructive:
-					'bg-destructive text-destructive-foreground hover:bg-destructive/80',
+				// The curatorial assertion: a solid block of the foreground colour.
+				default:
+					'border-ground-fg bg-ground-fg text-ground hover:text-ground-fg hover:bg-transparent',
+				// The default control: a hairline box that fills on hover.
 				outline:
-					'border-input bg-background hover:bg-accent hover:text-accent-foreground border',
+					'border-rule-strong text-ground-fg hover:border-ground-fg hover:bg-ground-fg hover:text-ground bg-transparent',
+				// Provenance red, reserved for irreversible acts.
+				destructive:
+					'border-stamp-fg text-stamp-fg hover:bg-stamp-fg hover:text-ground bg-transparent',
 				secondary:
-					'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-				ghost: 'hover:bg-accent hover:text-accent-foreground',
-				link: 'text-primary underline-offset-4 hover:underline',
+					'bg-tint text-ground-fg hover:bg-tint-strong border-transparent',
+				ghost: 'text-ground-fg hover:bg-tint border-transparent bg-transparent',
+				// §8: hover states are ultramarine underlines and nothing else.
+				link: 'text-link border-transparent bg-transparent underline-offset-4 hover:underline',
 			},
 			size: {
 				default: 'h-10 px-4 py-2',
-				wide: 'px-24 py-5',
-				sm: 'h-9 rounded-md px-3',
-				lg: 'h-11 rounded-md px-8',
-				pill: 'px-12 py-3 leading-3',
+				wide: 'px-16 py-4',
+				sm: 'h-8 px-3',
+				lg: 'h-12 px-8',
+				pill: 'px-10 py-3',
 				icon: 'size-10',
 			},
 		},

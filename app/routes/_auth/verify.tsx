@@ -6,7 +6,7 @@ import { HoneypotInputs } from 'remix-utils/honeypot/react'
 import { z } from 'zod'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { ErrorList, OTPField } from '#app/components/forms.tsx'
-import { Spacer } from '#app/components/spacer.tsx'
+import { AccessPage } from '#app/components/institute/access.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { checkHoneypot } from '#app/utils/honeypot.server.ts'
 import { useIsPending } from '#app/utils/misc.tsx'
@@ -46,27 +46,24 @@ export default function VerifyRoute({ actionData }: Route.ComponentProps) {
 	)
 	const type = parseWithZoddType.success ? parseWithZoddType.data : null
 
-	const checkEmail = (
-		<>
-			<h1 className="text-h1">Check your email</h1>
-			<p className="text-body-md text-muted-foreground mt-3">
-				We've sent you a code to verify your email address.
-			</p>
-		</>
-	)
+	// The title takes the display face and the lead takes Times, so the two are
+	// kept as plain strings rather than as JSX blocks carrying their own type.
+	const emailLead =
+		'A six-character code has been sent to your address. It expires in ten minutes.'
 
-	const headings: Record<VerificationTypes, React.ReactNode> = {
-		onboarding: checkEmail,
-		'reset-password': checkEmail,
-		'change-email': checkEmail,
-		'2fa': (
-			<>
-				<h1 className="text-h1">Check your 2FA app</h1>
-				<p className="text-body-md text-muted-foreground mt-3">
-					Please enter your 2FA code to verify your identity.
-				</p>
-			</>
-		),
+	const titles: Record<VerificationTypes, string> = {
+		onboarding: 'Check your email',
+		'reset-password': 'Check your email',
+		'change-email': 'Check your email',
+		'2fa': 'Check your authenticator',
+	}
+
+	const headings: Record<VerificationTypes, string> = {
+		onboarding: emailLead,
+		'reset-password': emailLead,
+		'change-email': emailLead,
+		'2fa':
+			'Enter the code from your two-factor application to confirm this is you.',
 	}
 
 	const [form, fields] = useForm({
@@ -85,57 +82,51 @@ export default function VerifyRoute({ actionData }: Route.ComponentProps) {
 	})
 
 	return (
-		<main className="container flex flex-col justify-center pt-20 pb-32">
-			<div className="text-center">
-				{type ? headings[type] : 'Invalid Verification Type'}
-			</div>
-
-			<Spacer size="xs" />
-
-			<div className="mx-auto flex w-72 max-w-full flex-col justify-center gap-1">
+		<AccessPage
+			kind="Verification"
+			title={type ? titles[type] : 'Invalid verification type'}
+			lead={
+				type
+					? headings[type]
+					: 'This verification link names a type the institute does not issue.'
+			}
+		>
+			<ErrorList errors={form.errors} id={form.errorId} />
+			<Form method="POST" {...getFormProps(form)}>
+				<HoneypotInputs />
 				<div>
-					<ErrorList errors={form.errors} id={form.errorId} />
+					<OTPField
+						labelProps={{
+							htmlFor: fields[codeQueryParam].id,
+							children: 'Code',
+						}}
+						inputProps={{
+							...getInputProps(fields[codeQueryParam], { type: 'text' }),
+							autoComplete: 'one-time-code',
+							autoFocus: true,
+						}}
+						errors={fields[codeQueryParam].errors}
+					/>
 				</div>
-				<div className="flex w-full gap-2">
-					<Form method="POST" {...getFormProps(form)} className="flex-1">
-						<HoneypotInputs />
-						<div className="flex items-center justify-center">
-							<OTPField
-								labelProps={{
-									htmlFor: fields[codeQueryParam].id,
-									children: 'Code',
-								}}
-								inputProps={{
-									...getInputProps(fields[codeQueryParam], { type: 'text' }),
-									autoComplete: 'one-time-code',
-									autoFocus: true,
-								}}
-								errors={fields[codeQueryParam].errors}
-							/>
-						</div>
-						<input
-							{...getInputProps(fields[typeQueryParam], { type: 'hidden' })}
-						/>
-						<input
-							{...getInputProps(fields[targetQueryParam], { type: 'hidden' })}
-						/>
-						<input
-							{...getInputProps(fields[redirectToQueryParam], {
-								type: 'hidden',
-							})}
-						/>
-						<StatusButton
-							className="w-full"
-							status={isPending ? 'pending' : (form.status ?? 'idle')}
-							type="submit"
-							disabled={isPending}
-						>
-							Submit
-						</StatusButton>
-					</Form>
-				</div>
-			</div>
-		</main>
+				<input {...getInputProps(fields[typeQueryParam], { type: 'hidden' })} />
+				<input
+					{...getInputProps(fields[targetQueryParam], { type: 'hidden' })}
+				/>
+				<input
+					{...getInputProps(fields[redirectToQueryParam], {
+						type: 'hidden',
+					})}
+				/>
+				<StatusButton
+					className="w-full"
+					status={isPending ? 'pending' : (form.status ?? 'idle')}
+					type="submit"
+					disabled={isPending}
+				>
+					Submit
+				</StatusButton>
+			</Form>
+		</AccessPage>
 	)
 }
 

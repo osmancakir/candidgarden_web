@@ -2,7 +2,12 @@ import { invariantResponse } from '@epic-web/invariant'
 import { type SEOHandle } from '@nasa-gcn/remix-seo'
 import { useState } from 'react'
 import { data, useFetcher } from 'react-router'
-import { Icon } from '#app/components/ui/icon.tsx'
+import {
+	Ledger,
+	LedgerRow,
+	PanelHeading,
+} from '#app/components/institute/document.tsx'
+import { Data, NoRecords } from '#app/components/institute/primitives.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import {
 	Tooltip,
@@ -27,7 +32,7 @@ import { type Route } from './+types/connections.ts'
 import { type BreadcrumbHandle } from './_layout.tsx'
 
 export const handle: BreadcrumbHandle & SEOHandle = {
-	breadcrumb: <Icon name="link-2">Connections</Icon>,
+	breadcrumb: 'Connections',
 	getSitemapEntries: () => null,
 }
 
@@ -115,11 +120,16 @@ export async function action({ request }: Route.ActionArgs) {
 
 export default function Connections({ loaderData }: Route.ComponentProps) {
 	return (
-		<div className="mx-auto max-w-md">
+		<div className="flex flex-col gap-8">
+			<PanelHeading
+				kind="Credentials"
+				title="Connections"
+				lead="Third-party identity providers that can sign you in to this account."
+			/>
+
 			{loaderData.connections.length ? (
-				<div className="flex flex-col gap-2">
-					<p>Here are your current connections:</p>
-					<ul className="flex flex-col gap-4">
+				<Ledger>
+					<ul>
 						{loaderData.connections.map((c) => (
 							<li key={c.id}>
 								<Connection
@@ -129,19 +139,25 @@ export default function Connections({ loaderData }: Route.ComponentProps) {
 							</li>
 						))}
 					</ul>
-				</div>
+				</Ledger>
 			) : (
-				<p>You don't have any connections yet.</p>
+				<NoRecords>No connections on file</NoRecords>
 			)}
-			<div className="border-border mt-5 flex flex-col gap-5 border-t-2 border-b-2 py-3">
-				{providerNames.map((providerName) => (
-					<ProviderConnectionForm
-						key={providerName}
-						type="Connect"
-						providerName={providerName}
-					/>
-				))}
-			</div>
+
+			<section>
+				<Data className="text-ground-muted mb-3 block tracking-[0.2em]">
+					Add a connection
+				</Data>
+				<div className="border-rule flex flex-col gap-3 border p-4">
+					{providerNames.map((providerName) => (
+						<ProviderConnectionForm
+							key={providerName}
+							type="Connect"
+							providerName={providerName}
+						/>
+					))}
+				</div>
+			</section>
 		</div>
 	)
 }
@@ -157,56 +173,65 @@ function Connection({
 	const [infoOpen, setInfoOpen] = useState(false)
 	const icon = providerIcons[connection.providerName]
 	return (
-		<div className="flex justify-between gap-2">
-			<span className={`inline-flex items-center gap-1.5`}>
-				{icon}
-				<span>
+		<LedgerRow
+			label={
+				<span className="inline-flex items-center gap-1.5">
+					{icon}
+					{connection.providerName}
+				</span>
+			}
+			value={
+				<>
 					{connection.link ? (
-						<a href={connection.link} className="underline">
+						<a
+							href={connection.link}
+							className="text-link underline underline-offset-4"
+						>
 							{connection.displayName}
 						</a>
 					) : (
 						connection.displayName
 					)}{' '}
-					({connection.createdAtFormatted})
-				</span>
-			</span>
-			{canDelete ? (
-				<deleteFetcher.Form method="POST">
-					<input name="connectionId" value={connection.id} type="hidden" />
+					<span className="font-data text-data-sm text-ground-muted">
+						· connected {connection.createdAtFormatted}
+					</span>
+				</>
+			}
+			action={
+				canDelete ? (
+					<deleteFetcher.Form method="POST">
+						<input name="connectionId" value={connection.id} type="hidden" />
+						<StatusButton
+							name="intent"
+							value="delete-connection"
+							variant="destructive"
+							size="sm"
+							status={
+								deleteFetcher.state !== 'idle'
+									? 'pending'
+									: (deleteFetcher.data?.status ?? 'idle')
+							}
+						>
+							Disconnect
+						</StatusButton>
+					</deleteFetcher.Form>
+				) : (
 					<TooltipProvider>
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<StatusButton
-									name="intent"
-									value="delete-connection"
-									variant="destructive"
-									size="sm"
-									status={
-										deleteFetcher.state !== 'idle'
-											? 'pending'
-											: (deleteFetcher.data?.status ?? 'idle')
-									}
-								>
-									<Icon name="cross-1" />
-								</StatusButton>
+						<Tooltip open={infoOpen} onOpenChange={setInfoOpen}>
+							<TooltipTrigger
+								onClick={() => setInfoOpen(true)}
+								className="font-data text-data-sm text-ground-muted tracking-[0.12em] uppercase underline underline-offset-4"
+							>
+								Locked
 							</TooltipTrigger>
-							<TooltipContent>Disconnect this account</TooltipContent>
+							<TooltipContent>
+								You cannot remove your last connection unless you have a
+								password.
+							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
-				</deleteFetcher.Form>
-			) : (
-				<TooltipProvider>
-					<Tooltip open={infoOpen} onOpenChange={setInfoOpen}>
-						<TooltipTrigger onClick={() => setInfoOpen(true)}>
-							<Icon name="question-mark-circled"></Icon>
-						</TooltipTrigger>
-						<TooltipContent>
-							You cannot delete your last connection unless you have a password.
-						</TooltipContent>
-					</Tooltip>
-				</TooltipProvider>
-			)}
-		</div>
+				)
+			}
+		/>
 	)
 }

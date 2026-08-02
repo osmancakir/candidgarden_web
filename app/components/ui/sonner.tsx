@@ -10,12 +10,14 @@ const EpicToaster = ({ theme, ...props }: ToasterProps) => {
 			toastOptions={{
 				classNames: {
 					toast:
-						'group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg',
-					description: 'group-[.toast]:text-muted-foreground',
+						// §10: no shadow, no radius. A toast is a slip of paper with a hairline edge.
+						'group toast group-[.toaster]:rounded-none group-[.toaster]:border group-[.toaster]:border-rule group-[.toaster]:bg-ground group-[.toaster]:font-data group-[.toaster]:text-data-sm group-[.toaster]:tracking-wide group-[.toaster]:text-ground-fg group-[.toaster]:shadow-none',
+					description:
+						'group-[.toast]:text-ground-muted group-[.toast]:font-body group-[.toast]:normal-case',
 					actionButton:
-						'group-[.toast]:bg-primary group-[.toast]:text-primary-foreground',
+						'group-[.toast]:rounded-none group-[.toast]:bg-ground-fg group-[.toast]:text-ground',
 					cancelButton:
-						'group-[.toast]:bg-muted group-[.toast]:text-muted-foreground',
+						'group-[.toast]:rounded-none group-[.toast]:bg-tint group-[.toast]:text-ground-muted',
 				},
 			}}
 			{...props}

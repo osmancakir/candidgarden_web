@@ -17,7 +17,9 @@ const Checkbox = ({
 	<CheckboxPrimitive.Root
 		data-slot="checkbox"
 		className={cn(
-			'peer border-primary ring-offset-background focus-visible:ring-ring data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground size-4 shrink-0 rounded-sm border focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50',
+			// A square box that fills with the foreground colour — the tick mark of a
+			// checklist on a paper form, not a toggle (§5: zero radius throughout).
+			'peer border-rule-strong data-[state=checked]:border-ground-fg data-[state=checked]:bg-ground-fg data-[state=checked]:text-ground focus-visible:outline-link size-4 shrink-0 rounded-none border bg-transparent outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40',
 			className,
 		)}
 		{...props}

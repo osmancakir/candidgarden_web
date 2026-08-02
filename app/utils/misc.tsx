@@ -15,6 +15,15 @@ export function getNoteImgSrc(objectKey: string) {
 	return `/resources/images?objectKey=${encodeURIComponent(objectKey)}`
 }
 
+/** An archive plate. Returns null when a work has no image on file, so callers
+ * are forced to render the honest "no image" state rather than a placeholder
+ * that pretends there is one. */
+export function getWorkImgSrc(objectKey?: string | null) {
+	return objectKey
+		? `/resources/images?objectKey=${encodeURIComponent(objectKey)}`
+		: null
+}
+
 export function getImgSrc({
 	height,
 	optimizerEndpoint,

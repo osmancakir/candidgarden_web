@@ -75,11 +75,11 @@ export function NoteEditor({
 	const imageList = fields.images.getFieldList()
 
 	return (
-		<div className="absolute inset-0">
+		<div>
 			<FormProvider context={form.context}>
 				<Form
 					method="POST"
-					className="flex h-full flex-col gap-y-4 overflow-x-hidden overflow-y-auto px-10 pt-12 pb-28"
+					className="flex flex-col gap-y-4"
 					{...getFormProps(form)}
 					encType="multipart/form-data"
 				>
@@ -117,7 +117,7 @@ export function NoteEditor({
 									return (
 										<li
 											key={imageMeta.key}
-											className="border-muted-foreground relative border-b-2"
+											className="border-rule relative border-b"
 										>
 											<button
 												className="text-foreground-destructive absolute top-0 right-0"
@@ -193,7 +193,7 @@ function ImageChooser({
 					<div className="relative size-32">
 						<label
 							htmlFor={fields.file.id}
-							className={cn('group absolute size-32 rounded-lg', {
+							className={cn('group absolute size-32', {
 								'bg-accent opacity-40 focus-within:opacity-100 hover:opacity-100':
 									!previewImage,
 								'cursor-pointer focus-within:ring-2': !existingImage,
@@ -205,7 +205,7 @@ function ImageChooser({
 										<Img
 											src={previewImage}
 											alt={altText ?? ''}
-											className="size-32 rounded-lg object-cover"
+											className="border-rule size-32 border object-cover"
 											width={512}
 											height={512}
 										/>
@@ -213,17 +213,17 @@ function ImageChooser({
 										<img
 											src={previewImage}
 											alt={altText ?? ''}
-											className="size-32 rounded-lg object-cover"
+											className="border-rule size-32 border object-cover"
 										/>
 									)}
 									{existingImage ? null : (
-										<div className="bg-secondary text-secondary-foreground pointer-events-none absolute -top-0.5 -right-0.5 rotate-12 rounded-sm px-2 py-1 text-xs shadow-md">
+										<div className="bg-ground-fg text-ground font-data pointer-events-none absolute top-0 right-0 px-1.5 py-0.5 text-[0.625rem] tracking-widest uppercase">
 											new
 										</div>
 									)}
 								</div>
 							) : (
-								<div className="border-muted-foreground text-muted-foreground flex size-32 items-center justify-center rounded-lg border text-4xl">
+								<div className="border-rule text-ground-muted font-data flex size-32 items-center justify-center border text-2xl">
 									<Icon name="plus" />
 								</div>
 							)}
@@ -255,7 +255,7 @@ function ImageChooser({
 							/>
 						</label>
 					</div>
-					<div className="min-h-[32px] px-4 pt-1 pb-3">
+					<div className="min-h-8 pt-1 pb-3">
 						<ErrorList id={fields.file.errorId} errors={fields.file.errors} />
 					</div>
 				</div>
@@ -266,7 +266,7 @@ function ImageChooser({
 						{...getTextareaProps(fields.altText)}
 						key={fields.altText.key}
 					/>
-					<div className="min-h-[32px] px-4 pt-1 pb-3">
+					<div className="min-h-8 pt-1 pb-3">
 						<ErrorList
 							id={fields.altText.errorId}
 							errors={fields.altText.errors}
@@ -274,7 +274,7 @@ function ImageChooser({
 					</div>
 				</div>
 			</div>
-			<div className="min-h-[32px] px-4 pt-1 pb-3">
+			<div className="min-h-8 pt-1 pb-3">
 				<ErrorList id={meta.errorId} errors={meta.errors} />
 			</div>
 		</fieldset>

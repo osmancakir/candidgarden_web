@@ -8,7 +8,7 @@ import { HoneypotInputs } from 'remix-utils/honeypot/react'
 import { z } from 'zod'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { CheckboxField, ErrorList, Field } from '#app/components/forms.tsx'
-import { Spacer } from '#app/components/spacer.tsx'
+import { AccessDivider, AccessPage } from '#app/components/institute/access.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { login, requireAnonymous } from '#app/utils/auth.server.ts'
@@ -99,114 +99,108 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
 	})
 
 	return (
-		<div className="flex min-h-full flex-col justify-center pt-20 pb-32">
-			<div className="mx-auto w-full max-w-md">
-				<div className="flex flex-col gap-3 text-center">
-					<h1 className="text-h1">Welcome back!</h1>
-					<p className="text-body-md text-muted-foreground">
-						Please enter your details.
-					</p>
+		<AccessPage
+			kind="Access"
+			title="Identify yourself"
+			lead="Accounts exist so that annotations and disputes can be credited to someone. Reading the archive never requires one."
+			aside={
+				<p className="font-body text-prose text-ground-muted">
+					No account?{' '}
+					<Link
+						to={
+							redirectTo
+								? `/signup?redirectTo=${encodeURIComponent(redirectTo)}`
+								: '/signup'
+						}
+						className="text-link underline underline-offset-4"
+					>
+						Register with the institute
+					</Link>
+					.
+				</p>
+			}
+		>
+			<Form method="POST" {...getFormProps(form)}>
+				<HoneypotInputs />
+				<Field
+					labelProps={{ children: 'Username' }}
+					inputProps={{
+						...getInputProps(fields.username, { type: 'text' }),
+						autoFocus: true,
+						className: 'lowercase',
+						autoComplete: 'username',
+					}}
+					errors={fields.username.errors}
+				/>
+
+				<Field
+					labelProps={{ children: 'Password' }}
+					inputProps={{
+						...getInputProps(fields.password, {
+							type: 'password',
+						}),
+						autoComplete: 'current-password',
+					}}
+					errors={fields.password.errors}
+				/>
+
+				<div className="flex justify-between">
+					<CheckboxField
+						labelProps={{
+							htmlFor: fields.remember.id,
+							children: 'Remember me',
+						}}
+						buttonProps={getInputProps(fields.remember, {
+							type: 'checkbox',
+						})}
+						errors={fields.remember.errors}
+					/>
+					<Link
+						to="/forgot-password"
+						className="font-data text-data-sm text-link tracking-widest uppercase underline underline-offset-4"
+					>
+						Forgot password?
+					</Link>
 				</div>
-				<Spacer size="xs" />
 
-				<div>
-					<div className="mx-auto w-full max-w-md px-8">
-						<Form method="POST" {...getFormProps(form)}>
-							<HoneypotInputs />
-							<Field
-								labelProps={{ children: 'Username' }}
-								inputProps={{
-									...getInputProps(fields.username, { type: 'text' }),
-									autoFocus: true,
-									className: 'lowercase',
-									autoComplete: 'username',
-								}}
-								errors={fields.username.errors}
-							/>
+				<input {...getInputProps(fields.redirectTo, { type: 'hidden' })} />
+				<ErrorList errors={form.errors} id={form.errorId} />
 
-							<Field
-								labelProps={{ children: 'Password' }}
-								inputProps={{
-									...getInputProps(fields.password, {
-										type: 'password',
-									}),
-									autoComplete: 'current-password',
-								}}
-								errors={fields.password.errors}
-							/>
+				<div className="pt-3">
+					<StatusButton
+						className="w-full"
+						status={isPending ? 'pending' : (form.status ?? 'idle')}
+						type="submit"
+						disabled={isPending}
+					>
+						Log in
+					</StatusButton>
+				</div>
+			</Form>
 
-							<div className="flex justify-between">
-								<CheckboxField
-									labelProps={{
-										htmlFor: fields.remember.id,
-										children: 'Remember me',
-									}}
-									buttonProps={getInputProps(fields.remember, {
-										type: 'checkbox',
-									})}
-									errors={fields.remember.errors}
+			<AccessDivider>or</AccessDivider>
+			<PasskeyLogin
+				redirectTo={redirectTo}
+				remember={fields.remember.value === 'on'}
+			/>
+
+			{providerNames.length ? (
+				<>
+					<AccessDivider>via</AccessDivider>
+					<ul className="flex flex-col gap-3">
+						{providerNames.map((providerName) => (
+							<li key={providerName}>
+								<ProviderConnectionForm
+									type="Login"
+									providerName={providerName}
+									redirectTo={redirectTo}
 								/>
-								<div>
-									<Link
-										to="/forgot-password"
-										className="text-body-xs font-semibold"
-									>
-										Forgot password?
-									</Link>
-								</div>
-							</div>
-
-							<input
-								{...getInputProps(fields.redirectTo, { type: 'hidden' })}
-							/>
-							<ErrorList errors={form.errors} id={form.errorId} />
-
-							<div className="flex items-center justify-between gap-6 pt-3">
-								<StatusButton
-									className="w-full"
-									status={isPending ? 'pending' : (form.status ?? 'idle')}
-									type="submit"
-									disabled={isPending}
-								>
-									Log in
-								</StatusButton>
-							</div>
-						</Form>
-						<hr className="my-4" />
-						<div className="flex flex-col gap-5">
-							<PasskeyLogin
-								redirectTo={redirectTo}
-								remember={fields.remember.value === 'on'}
-							/>
-						</div>
-						<hr className="my-4" />
-						<ul className="flex flex-col gap-5">
-							{providerNames.map((providerName) => (
-								<li key={providerName}>
-									<ProviderConnectionForm
-										type="Login"
-										providerName={providerName}
-										redirectTo={redirectTo}
-									/>
-								</li>
-							))}
-						</ul>
-						<div className="flex items-center justify-center gap-2 pt-6">
-							<span className="text-muted-foreground">New here?</span>
-							<Link
-								to={
-									redirectTo
-										? `/signup?redirectTo=${encodeURIComponent(redirectTo)}`
-										: '/signup'
-								}
-							>
-								Create an account
-							</Link>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
+							</li>
+						))}
+					</ul>
+				</>
+			) : null}
+		</AccessPage>
 	)
 }
 
@@ -299,7 +293,7 @@ function PasskeyLogin({
 }
 
 export const meta: Route.MetaFunction = () => {
-	return [{ title: 'Login to Epic Notes' }]
+	return [{ title: 'Access · Candid Garden' }]
 }
 
 export function ErrorBoundary() {

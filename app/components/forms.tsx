@@ -23,10 +23,15 @@ export function ErrorList({
 }) {
 	const errorsToRender = errors?.filter(Boolean)
 	if (!errorsToRender?.length) return null
+	// Errors are the interface speaking plainly about its own limits (§6), so
+	// they take the machine voice and the provenance red.
 	return (
 		<ul id={id} className="flex flex-col gap-1">
 			{errorsToRender.map((e) => (
-				<li key={e} className="text-foreground-destructive text-[10px]">
+				<li
+					key={e}
+					className="text-stamp-fg font-data text-data-sm tracking-widest"
+				>
 					{e}
 				</li>
 			))}
@@ -50,14 +55,14 @@ export function Field({
 	const errorId = errors?.length ? `${id}-error` : undefined
 	return (
 		<div className={className}>
-			<Label htmlFor={id} {...labelProps} />
+			<Label htmlFor={id} className="mb-1.5" {...labelProps} />
 			<Input
 				id={id}
 				aria-invalid={errorId ? true : undefined}
 				aria-describedby={errorId}
 				{...inputProps}
 			/>
-			<div className="min-h-[32px] px-4 pt-1 pb-3">
+			<div className="min-h-8 pt-1 pb-3">
 				{errorId ? <ErrorList id={errorId} errors={errors} /> : null}
 			</div>
 		</div>
@@ -80,7 +85,7 @@ export function OTPField({
 	const errorId = errors?.length ? `${id}-error` : undefined
 	return (
 		<div className={className}>
-			<Label htmlFor={id} {...labelProps} />
+			<Label htmlFor={id} className="mb-1.5" {...labelProps} />
 			<InputOTP
 				pattern={REGEXP_ONLY_DIGITS_AND_CHARS}
 				maxLength={6}
@@ -101,7 +106,7 @@ export function OTPField({
 					<InputOTPSlot index={5} />
 				</InputOTPGroup>
 			</InputOTP>
-			<div className="min-h-[32px] px-4 pt-1 pb-3">
+			<div className="min-h-8 pt-1 pb-3">
 				{errorId ? <ErrorList id={errorId} errors={errors} /> : null}
 			</div>
 		</div>
@@ -124,14 +129,14 @@ export function TextareaField({
 	const errorId = errors?.length ? `${id}-error` : undefined
 	return (
 		<div className={className}>
-			<Label htmlFor={id} {...labelProps} />
+			<Label htmlFor={id} className="mb-1.5" {...labelProps} />
 			<Textarea
 				id={id}
 				aria-invalid={errorId ? true : undefined}
 				aria-describedby={errorId}
 				{...textareaProps}
 			/>
-			<div className="min-h-[32px] px-4 pt-1 pb-3">
+			<div className="min-h-8 pt-1 pb-3">
 				{errorId ? <ErrorList id={errorId} errors={errors} /> : null}
 			</div>
 		</div>
@@ -191,10 +196,10 @@ export function CheckboxField({
 				<label
 					htmlFor={id}
 					{...labelProps}
-					className="text-body-xs text-muted-foreground self-center"
+					className="text-ground-muted font-data text-data-sm self-center tracking-wide"
 				/>
 			</div>
-			<div className="px-4 pt-1 pb-3">
+			<div className="pt-1 pb-3">
 				{errorId ? <ErrorList id={errorId} errors={errors} /> : null}
 			</div>
 		</div>

@@ -1,83 +1,314 @@
 @import 'tailwindcss';
+@import './fonts.css';
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
+/* ==========================================================================
+   CANDID GARDEN — token layer
+   See docs/brand-design.md. Three ideas govern everything below:
+
+   1. RAW PALETTE. Seven fixed hexes that never change meaning: paper, slate,
+      void, ink, bone, ultra, stamp. Plus two *lifted* variants (`ultra-lift`,
+      `stamp-lift`) that exist only because the literal accents fail WCAG AA on
+      the void ground — see §3 of the brand doc for the measured ratios.
+
+   2. REGISTERS. `paper`, `slate`, `void` are grounds a section can declare for
+      itself with `.register-*`. Declaring a register rebinds the semantic vars
+      (background, foreground, rule, link, stamp) so anything nested — including
+      the stock shadcn primitives — is correct on that ground without knowing
+      which ground it is on.
+
+   3. THE DESCENT. The theme toggle chooses the *resting* ground: light rests on
+      paper, dark rests on void. `.register-level-1/2/3` are relative to that
+      rest, so a Panofsky descent always travels the full distance away from
+      wherever the reader started (paper→slate→void in light, void→slate→paper
+      in dark). Level II is slate in both directions; it is the hinge.
+   ========================================================================== */
+
 :root {
-	--radius: 0.5rem;
+	/* --- raw palette (never flips) --- */
+	--paper: #f2f0eb;
+	--slate: #8c8c88;
+	--void: #0d0d0d;
+	--ink: #1a1a1a;
+	--bone: #e8e5de;
+	--ultra: #1f00e0;
+	--stamp: #9e2b25;
 
-	--background: oklch(100% 0 0);
-	--foreground: oklch(13.71% 0.036 258.53);
+	/* Accessibility-lifted accents for the void ground. #1F00E0 on #0D0D0D is
+	   1.98:1 and #9E2B25 is 2.62:1 — both far under the AA floor the brand doc
+	   sets in §8. These are the same hues raised into legibility: 6.49:1 and
+	   6.46:1 respectively. On paper the literal accents are used unchanged. */
+	--ultra-lift: #8b87ff;
+	--stamp-lift: #d97a73;
 
-	--card: oklch(100% 0 0);
-	--card-foreground: oklch(13.71% 0.036 258.53);
+	/* Secondary text on paper. The doc assigns `slate` this job, but #8C8C88 on
+	   paper is 2.96:1 and fails. `slate` remains the Level II *ground*; this
+	   darker relative (5.84:1) carries the secondary *text*. */
+	--slate-ink: #5f5c57;
+	/* The same role on void. */
+	--slate-bone: #a8a49c;
 
-	--popover: oklch(100% 0 0);
-	--popover-foreground: oklch(13.71% 0.036 258.53);
+	--radius: 0; /* §5: zero border-radius throughout */
 
-	--primary: oklch(20.79% 0.0399 265.73);
-	--primary-foreground: oklch(98.38% 0.0035 247.86);
+	/* --- semantic, bound to the paper register at rest --- */
+	--ground: var(--paper);
+	--ground-fg: var(--ink);
+	--ground-muted: var(--slate-ink);
+	--ground-inverse: var(--void);
+	--ground-inverse-fg: var(--bone);
+	--link: var(--ultra);
+	--stamp-fg: var(--stamp);
+	--rule: color-mix(in oklab, var(--ink) 20%, transparent);
+	--rule-strong: color-mix(in oklab, var(--ink) 45%, transparent);
+	--tint: color-mix(in oklab, var(--ink) 5%, transparent);
+	--tint-strong: color-mix(in oklab, var(--ink) 9%, transparent);
 
-	--secondary: oklch(86.48% 0.0153 248);
-	--secondary-foreground: oklch(20.79% 0.0399 265.73);
+	/* Descent grounds, relative to rest. */
+	--level-1-bg: var(--paper);
+	--level-1-fg: var(--ink);
+	--level-3-bg: var(--void);
+	--level-3-fg: var(--bone);
 
-	--muted: oklch(94.32% 0.0123 247.96);
-	--muted-foreground: oklch(40.68% 0.0281 257.44);
-
-	--accent: oklch(91.87% 0.01770618193703561 248.02064625050508);
-	--accent-foreground: oklch(20.79% 0.0399 265.73);
-
-	--border: oklch(92.9% 0.0126 255.53);
-	--input: oklch(92.56% 0.0133 255.54);
-	--input-invalid: oklch(63.68% 0.2078 25.33);
-
-	--destructive: oklch(57.14% 0.2121 27.25);
-	--destructive-foreground: oklch(98.38% 0.0035 247.86);
-	/* prefixed with foreground because it should look good on the background */
-	--foreground-destructive: oklch(51.46% 0.1979 16.57);
-
-	--ring: oklch(71.07% 0.0351 256.79);
+	/* --- shadcn compatibility layer ---
+	   The stock primitives (dropdown-menu, sonner, checkbox, input-otp…) read
+	   these names. Rebinding them here means those components inherit the brand
+	   without being rewritten, and follow a register when nested inside one. */
+	--background: var(--ground);
+	--foreground: var(--ground-fg);
+	--card: var(--ground);
+	--card-foreground: var(--ground-fg);
+	--popover: var(--ground);
+	--popover-foreground: var(--ground-fg);
+	--primary: var(--ground-fg);
+	--primary-foreground: var(--ground);
+	--secondary: var(--tint);
+	--secondary-foreground: var(--ground-fg);
+	--muted: var(--tint);
+	--muted-foreground: var(--ground-muted);
+	--accent: var(--tint-strong);
+	--accent-foreground: var(--ground-fg);
+	--border: var(--rule);
+	--input: var(--rule-strong);
+	--input-invalid: var(--stamp-fg);
+	--destructive: var(--stamp-fg);
+	--destructive-foreground: var(--ground);
+	--foreground-destructive: var(--stamp-fg);
+	--ring: var(--link);
 }
 
+/* Dark theme = the void register at rest. The descent inverts with it. */
 .dark {
-	--background: oklch(13.71% 0.036 258.53);
-	--foreground: oklch(98.38% 0.0035 247.86);
+	--ground: var(--void);
+	--ground-fg: var(--bone);
+	--ground-muted: var(--slate-bone);
+	--ground-inverse: var(--paper);
+	--ground-inverse-fg: var(--ink);
+	--link: var(--ultra-lift);
+	--stamp-fg: var(--stamp-lift);
+	--rule: color-mix(in oklab, var(--bone) 20%, transparent);
+	--rule-strong: color-mix(in oklab, var(--bone) 45%, transparent);
+	--tint: color-mix(in oklab, var(--bone) 6%, transparent);
+	--tint-strong: color-mix(in oklab, var(--bone) 11%, transparent);
 
-	--card: oklch(13.71% 0.036 258.53);
-	--card-foreground: oklch(98.38% 0.0035 247.86);
+	--level-1-bg: var(--void);
+	--level-1-fg: var(--bone);
+	--level-3-bg: var(--paper);
+	--level-3-fg: var(--ink);
+}
 
-	--popover: oklch(13.71% 0.036 258.53);
-	--popover-foreground: oklch(98.38% 0.0035 247.86);
+/* ---- Registers -----------------------------------------------------------
+   A section declares its own ground. Everything nested inherits correct text,
+   rules, links and stamp colour from the rebound vars above. */
 
-	--primary: oklch(98.38% 0.0035 247.86);
-	--primary-foreground: oklch(20.79% 0.0399 265.73);
+.register-paper {
+	--ground: var(--paper);
+	--ground-fg: var(--ink);
+	--ground-muted: var(--slate-ink);
+	--ground-inverse: var(--void);
+	--ground-inverse-fg: var(--bone);
+	--link: var(--ultra);
+	--stamp-fg: var(--stamp);
+	--rule: color-mix(in oklab, var(--ink) 20%, transparent);
+	--rule-strong: color-mix(in oklab, var(--ink) 45%, transparent);
+	--tint: color-mix(in oklab, var(--ink) 5%, transparent);
+	--tint-strong: color-mix(in oklab, var(--ink) 9%, transparent);
+	background-color: var(--paper);
+	color: var(--ink);
+}
 
-	--secondary: oklch(34.74% 0.0295 260.13);
-	--secondary-foreground: oklch(98.38% 0.0035 247.86);
+/* Level II. Ink on slate is 5.16:1 — AA. Bone on slate is 2.68:1 and is
+   therefore never used; the hinge ground always carries ink. */
+.register-slate {
+	--ground: var(--slate);
+	--ground-fg: var(--ink);
+	--ground-muted: #2b2b28;
+	--ground-inverse: var(--void);
+	--ground-inverse-fg: var(--bone);
+	--link: var(--ultra);
+	--stamp-fg: #4a0f0c;
+	--rule: color-mix(in oklab, var(--ink) 30%, transparent);
+	--rule-strong: color-mix(in oklab, var(--ink) 55%, transparent);
+	--tint: color-mix(in oklab, var(--ink) 8%, transparent);
+	--tint-strong: color-mix(in oklab, var(--ink) 14%, transparent);
+	background-color: var(--slate);
+	color: var(--ink);
+}
 
-	--muted: oklch(22.6% 0.0267 260.02);
-	--muted-foreground: oklch(71.07% 0.0351 256.79);
+.register-void {
+	--ground: var(--void);
+	--ground-fg: var(--bone);
+	--ground-muted: var(--slate-bone);
+	--ground-inverse: var(--paper);
+	--ground-inverse-fg: var(--ink);
+	--link: var(--ultra-lift);
+	--stamp-fg: var(--stamp-lift);
+	--rule: color-mix(in oklab, var(--bone) 20%, transparent);
+	--rule-strong: color-mix(in oklab, var(--bone) 45%, transparent);
+	--tint: color-mix(in oklab, var(--bone) 6%, transparent);
+	--tint-strong: color-mix(in oklab, var(--bone) 11%, transparent);
+	background-color: var(--void);
+	color: var(--bone);
+}
 
-	--accent: oklch(20.56% 0.022816 260.0464);
-	--accent-foreground: oklch(98.38% 0.0035 247.86);
+/* The descent, relative to the resting ground. */
+.register-level-1 {
+	background-color: var(--level-1-bg);
+	color: var(--level-1-fg);
+}
 
-	--border: oklch(28% 0.0369 259.97);
-	--input: oklch(28% 0.0369 259.97);
-	--input-invalid: oklch(39.59% 0.1331 25.72);
+.register-level-3 {
+	--ground: var(--level-3-bg);
+	--ground-fg: var(--level-3-fg);
+	background-color: var(--level-3-bg);
+	color: var(--level-3-fg);
+}
 
-	--destructive: oklch(47.6% 0.159 25.64);
-	--destructive-foreground: oklch(97.1% 0.0127 17.38);
-	/* prefixed with foreground because it should look good on the background */
-	--foreground-destructive: oklch(63.72% 0.2071 21.89);
+/* The descent registers rebind the same vars the absolute registers do; the
+   level-1/level-3 pairs are written twice because their accent set depends on
+   which ground the theme put them on. */
+.register-level-1 {
+	--ground-muted: var(--slate-ink);
+	--link: var(--ultra);
+	--stamp-fg: var(--stamp);
+	--rule: color-mix(in oklab, var(--ink) 20%, transparent);
+	--rule-strong: color-mix(in oklab, var(--ink) 45%, transparent);
+	--tint: color-mix(in oklab, var(--ink) 5%, transparent);
+	--tint-strong: color-mix(in oklab, var(--ink) 9%, transparent);
+}
 
-	--ring: oklch(65.28% 0.0684 260.07);
+.dark .register-level-1 {
+	--ground-muted: var(--slate-bone);
+	--link: var(--ultra-lift);
+	--stamp-fg: var(--stamp-lift);
+	--rule: color-mix(in oklab, var(--bone) 20%, transparent);
+	--rule-strong: color-mix(in oklab, var(--bone) 45%, transparent);
+	--tint: color-mix(in oklab, var(--bone) 6%, transparent);
+	--tint-strong: color-mix(in oklab, var(--bone) 11%, transparent);
+}
+
+.register-level-2 {
+	--ground: var(--slate);
+	--ground-fg: var(--ink);
+	--ground-muted: #2b2b28;
+	--link: var(--ultra);
+	--stamp-fg: #4a0f0c;
+	--rule: color-mix(in oklab, var(--ink) 30%, transparent);
+	--rule-strong: color-mix(in oklab, var(--ink) 55%, transparent);
+	--tint: color-mix(in oklab, var(--ink) 8%, transparent);
+	--tint-strong: color-mix(in oklab, var(--ink) 14%, transparent);
+	background-color: var(--slate);
+	color: var(--ink);
+}
+
+.register-level-3 {
+	--ground-muted: var(--slate-bone);
+	--link: var(--ultra-lift);
+	--stamp-fg: var(--stamp-lift);
+	--rule: color-mix(in oklab, var(--bone) 20%, transparent);
+	--rule-strong: color-mix(in oklab, var(--bone) 45%, transparent);
+	--tint: color-mix(in oklab, var(--bone) 6%, transparent);
+	--tint-strong: color-mix(in oklab, var(--bone) 11%, transparent);
+}
+
+.dark .register-level-3 {
+	--ground-muted: var(--slate-ink);
+	--link: var(--ultra);
+	--stamp-fg: var(--stamp);
+	--rule: color-mix(in oklab, var(--ink) 20%, transparent);
+	--rule-strong: color-mix(in oklab, var(--ink) 45%, transparent);
+	--tint: color-mix(in oklab, var(--ink) 5%, transparent);
+	--tint-strong: color-mix(in oklab, var(--ink) 9%, transparent);
+}
+
+/* Any register also re-binds the shadcn names, so nested stock components
+   follow the ground they are actually sitting on. */
+.register-paper,
+.register-slate,
+.register-void,
+.register-level-1,
+.register-level-2,
+.register-level-3 {
+	--background: var(--ground);
+	--foreground: var(--ground-fg);
+	--card: var(--ground);
+	--card-foreground: var(--ground-fg);
+	--popover: var(--ground);
+	--popover-foreground: var(--ground-fg);
+	--primary: var(--ground-fg);
+	--primary-foreground: var(--ground);
+	--secondary: var(--tint);
+	--secondary-foreground: var(--ground-fg);
+	--muted: var(--tint);
+	--muted-foreground: var(--ground-muted);
+	--accent: var(--tint-strong);
+	--accent-foreground: var(--ground-fg);
+	--border: var(--rule);
+	--input: var(--rule-strong);
+	--input-invalid: var(--stamp-fg);
+	--destructive: var(--stamp-fg);
+	--destructive-foreground: var(--ground);
+	--foreground-destructive: var(--stamp-fg);
+	--ring: var(--link);
 }
 
 @theme inline {
-	--radius-sm: calc(var(--radius) - 4px);
-	--radius-md: calc(var(--radius) - 2px);
-	--radius-lg: var(--radius);
-	--radius-xl: calc(var(--radius) + 4px);
+	/* zero radius, enforced (§9) */
+	--radius-none: 0;
+	--radius-sm: 0;
+	--radius-md: 0;
+	--radius-lg: 0;
+	--radius-xl: 0;
+	--radius-2xl: 0;
+	--radius-3xl: 0;
+	--radius-full: 9999px; /* kept: avatars and the progress bar need it */
+
+	/* raw palette */
+	--color-paper: var(--paper);
+	--color-slate: var(--slate);
+	--color-void: var(--void);
+	--color-ink: var(--ink);
+	--color-bone: var(--bone);
+	--color-ultra: var(--ultra);
+	--color-ultra-lift: var(--ultra-lift);
+	--color-stamp: var(--stamp);
+	--color-stamp-lift: var(--stamp-lift);
+
+	/* register-relative semantics — prefer these when authoring */
+	--color-ground: var(--ground);
+	--color-ground-fg: var(--ground-fg);
+	--color-ground-muted: var(--ground-muted);
+	--color-ground-inverse: var(--ground-inverse);
+	--color-ground-inverse-fg: var(--ground-inverse-fg);
+	--color-link: var(--link);
+	--color-stamp-fg: var(--stamp-fg);
+	--color-rule: var(--rule);
+	--color-rule-strong: var(--rule-strong);
+	--color-tint: var(--tint);
+	--color-tint-strong: var(--tint-strong);
+
+	/* shadcn compatibility */
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
 	--color-card: var(--card);
@@ -93,121 +324,115 @@
 	--color-accent: var(--accent);
 	--color-accent-foreground: var(--accent-foreground);
 	--color-destructive: var(--destructive);
-	--color-border: var(--border);
-	--color-input: var(--input);
-	--color-ring: var(--ring);
-	--color-input-invalid: var(--input-invalid);
 	--color-destructive-foreground: var(--destructive-foreground);
 	--color-foreground-destructive: var(--foreground-destructive);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-input-invalid: var(--input-invalid);
+	--color-ring: var(--ring);
 }
 
 @theme {
-	--text-mega: 5rem;
-	--text-mega--line-height: 5.25rem;
-	--text-mega--font-weight: 700;
-	--text-h1: 3.5rem;
-	--text-h1--line-height: 3.875rem;
-	--text-h1--font-weight: 700;
-	--text-h2: 2.5rem;
-	--text-h2--line-height: 3rem;
-	--text-h2--font-weight: 700;
-	--text-h3: 2rem;
-	--text-h3--line-height: 2.25rem;
-	--text-h3--font-weight: 700;
-	--text-h4: 1.75rem;
-	--text-h4--line-height: 2.25rem;
-	--text-h4--font-weight: 700;
-	--text-h5: 1.5rem;
-	--text-h5--line-height: 2rem;
-	--text-h5--font-weight: 700;
-	--text-h6: 1rem;
-	--text-h6--line-height: 1.25rem;
-	--text-h6--font-weight: 700;
-	--text-body-2xl: 2rem;
-	--text-body-2xl--line-height: 2.25rem;
-	--text-body-xl: 1.75rem;
-	--text-body-xl--line-height: 2.25rem;
-	--text-body-lg: 1.5rem;
-	--text-body-lg--line-height: 2rem;
-	--text-body-md: 1.25rem;
-	--text-body-md--line-height: 1.75rem;
+	/* --- three faces, three jobs (§4) --- */
+	--font-display: 'Archivo Black', 'Display Fallback', Impact, sans-serif;
+	--font-body: 'Times New Roman', Times, Tinos, serif;
+	--font-data:
+		'IBM Plex Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+	/* Tailwind's own defaults, rebound so bare `font-sans`/`font-mono` land in
+	   the brand rather than outside it. */
+	--font-sans: var(--font-body);
+	--font-serif: var(--font-body);
+	--font-mono: var(--font-data);
+
+	/* --- display: curatorial assertion --- */
+	--text-display: clamp(2.5rem, 9vw, 7rem);
+	--text-display--line-height: 0.9;
+	--text-display--letter-spacing: -0.02em;
+	--text-display--font-weight: 400;
+	--text-chapter: clamp(1.75rem, 4.5vw, 3.25rem);
+	--text-chapter--line-height: 0.98;
+	--text-chapter--letter-spacing: -0.015em;
+	--text-chapter--font-weight: 400;
+	--text-title: clamp(1.25rem, 2.4vw, 1.875rem);
+	--text-title--line-height: 1.05;
+	--text-title--letter-spacing: -0.01em;
+	--text-title--font-weight: 400;
+
+	/* --- body: scholarly prose (§4: 1.06–1.125rem, 1.6 leading) --- */
+	--text-prose: 1.0625rem;
+	--text-prose--line-height: 1.6;
+	--text-prose-lg: 1.125rem;
+	--text-prose-lg--line-height: 1.6;
+	--text-prose-sm: 0.9375rem;
+	--text-prose-sm--line-height: 1.55;
+
+	/* --- data: machine output --- */
+	--text-data: 0.8125rem;
+	--text-data--line-height: 1.45;
+	--text-data--letter-spacing: 0.08em;
+	--text-data-sm: 0.6875rem;
+	--text-data-sm--line-height: 1.4;
+	--text-data-sm--letter-spacing: 0.1em;
+	--text-data-lg: 0.9375rem;
+	--text-data-lg--line-height: 1.5;
+	--text-data-lg--letter-spacing: 0.04em;
+
+	/* --- legacy Epic Stack scale, retuned into the brand ---
+	   Kept so untouched components keep compiling; the 700 weights are dropped
+	   because the display face carries its own weight. */
+	--text-mega: var(--text-display);
+	--text-mega--line-height: 0.9;
+	--text-mega--font-weight: 400;
+	--text-h1: clamp(2rem, 5vw, 3.5rem);
+	--text-h1--line-height: 1;
+	--text-h1--font-weight: 400;
+	--text-h2: clamp(1.625rem, 3.5vw, 2.5rem);
+	--text-h2--line-height: 1.02;
+	--text-h2--font-weight: 400;
+	--text-h3: clamp(1.375rem, 2.6vw, 1.875rem);
+	--text-h3--line-height: 1.08;
+	--text-h3--font-weight: 400;
+	--text-h4: 1.375rem;
+	--text-h4--line-height: 1.15;
+	--text-h4--font-weight: 400;
+	--text-h5: 1.125rem;
+	--text-h5--line-height: 1.25;
+	--text-h5--font-weight: 400;
+	--text-h6: 0.8125rem;
+	--text-h6--line-height: 1.4;
+	--text-h6--font-weight: 400;
+	--text-body-2xl: 1.5rem;
+	--text-body-2xl--line-height: 1.4;
+	--text-body-xl: 1.3125rem;
+	--text-body-xl--line-height: 1.45;
+	--text-body-lg: 1.1875rem;
+	--text-body-lg--line-height: 1.55;
+	--text-body-md: 1.0625rem;
+	--text-body-md--line-height: 1.6;
 	--text-body-sm: 1rem;
-	--text-body-sm--line-height: 1.25rem;
+	--text-body-sm--line-height: 1.55;
 	--text-body-xs: 0.875rem;
-	--text-body-xs--line-height: 1.125rem;
+	--text-body-xs--line-height: 1.5;
 	--text-body-2xs: 0.75rem;
-	--text-body-2xs--line-height: 1rem;
-	--text-caption: 1.125rem;
-	--text-caption--line-height: 1.5rem;
-	--text-caption--font-weight: 600;
-	--text-button: 0.75rem;
-	--text-button--line-height: 1rem;
-	--text-button--font-weight: 700;
-	--animate-roll-reveal: roll-reveal 0.4s cubic-bezier(0.22, 1.28, 0.54, 0.99);
-	--animate-slide-left: slide-left 0.3s ease-out;
-	--animate-slide-top: slide-top 0.3s ease-out;
-	--animate-caret-blink: caret-blink 1.25s ease-out infinite;
+	--text-body-2xs--line-height: 1.4;
+	--text-caption: 0.8125rem;
+	--text-caption--line-height: 1.45;
+	--text-caption--font-weight: 400;
+	--text-button: 0.8125rem;
+	--text-button--line-height: 1;
+	--text-button--font-weight: 500;
 
-	@keyframes roll-reveal {
-		from {
-			transform: rotate(12deg) scale(0);
-			opacity: 0;
-		}
+	/* §5: measure of 65–72ch for edited prose */
+	--container-measure: 68ch;
+	--container-measure-wide: 78ch;
 
-		to {
-			transform: rotate(0deg) scale(1);
-			opacity: 1;
-		}
-	}
-
-	@keyframes slide-left {
-		from {
-			transform: translateX(20px);
-			opacity: 0;
-		}
-
-		to {
-			transform: translateX(0px);
-			opacity: 1;
-		}
-	}
-
-	@keyframes slide-top {
-		from {
-			transform: translateY(20px);
-			opacity: 0;
-		}
-
-		to {
-			transform: translateY(0px);
-			opacity: 1;
-		}
-	}
-
-	@keyframes caret-blink {
-		0%,
-		70%,
-		100% {
-			opacity: 1;
-		}
-
-		20%,
-		50% {
-			opacity: 0;
-		}
-	}
+	/* §8: motion is almost none. The descent transition is the exception. */
+	--animate-ground-shift: none;
 }
 
-@utility container {
-	margin-inline: auto;
-	padding-inline: 2rem;
-
-	@media (width >=1400px) {
-		& {
-			max-width: 1400px;
-		}
-	}
-}
+/* ==========================================================================
+   Base
+   ========================================================================== */
 
 @layer base {
 	*,
@@ -215,6 +440,190 @@
 	::before,
 	::backdrop,
 	::file-selector-button {
-		border-color: hsl(var(--border));
+		border-color: var(--rule);
+	}
+
+	html {
+		/* The descent relies on ordinary scrolling; §2 forbids scroll-jacking. */
+		scroll-behavior: smooth;
+		-webkit-text-size-adjust: 100%;
+	}
+
+	body {
+		font-family: var(--font-body);
+		font-size: var(--text-prose);
+		line-height: 1.6;
+		text-rendering: optimizeLegibility;
+		-webkit-font-smoothing: antialiased;
+	}
+
+	/* §8: visible focus rings in ultramarine, everywhere, no exceptions. */
+	:focus-visible {
+		outline: 2px solid var(--link);
+		outline-offset: 2px;
+	}
+
+	/* §8: hover states are ultramarine underlines and nothing else. */
+	a {
+		color: inherit;
+		text-decoration-thickness: 1px;
+		text-underline-offset: 0.18em;
+	}
+
+	::selection {
+		background-color: var(--link);
+		color: var(--ground);
+	}
+
+	/* §5: tables are real tables and are allowed to look like tables. */
+	table {
+		border-collapse: collapse;
+		width: 100%;
+	}
+
+	/* Native controls in the filter console are styled, never replaced (§6). */
+	select,
+	input,
+	textarea,
+	button {
+		font-family: inherit;
+	}
+}
+
+/* ==========================================================================
+   Utilities
+   ========================================================================== */
+
+@utility container {
+	margin-inline: auto;
+	padding-inline: 1.25rem;
+	width: 100%;
+
+	@media (width >= 48rem) {
+		padding-inline: 2rem;
+	}
+
+	@media (width >= 90rem) {
+		max-width: 88rem;
+	}
+}
+
+/* A column set to the reading measure the brand doc asks for. */
+@utility measure {
+	max-width: var(--container-measure);
+}
+
+@utility measure-wide {
+	max-width: var(--container-measure-wide);
+}
+
+/* Machine text: mono, small, uppercase, wide tracking (§9). */
+@utility label-data {
+	font-family: var(--font-data);
+	font-size: var(--text-data-sm);
+	line-height: 1.4;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+/* Curatorial assertion: display caps, tight (§9). */
+@utility heading-display {
+	font-family: var(--font-display);
+	text-transform: uppercase;
+	letter-spacing: -0.015em;
+}
+
+/* Hairline rules (§5). */
+@utility rule-t {
+	border-top: 1px solid var(--rule);
+}
+
+@utility rule-b {
+	border-bottom: 1px solid var(--rule);
+}
+
+/* Editorial prose block — Times at measure, with the citation and emphasis
+   conventions the Level II register uses. */
+@utility prose-editorial {
+	font-family: var(--font-body);
+	font-size: var(--text-prose-lg);
+	line-height: 1.6;
+	max-width: var(--container-measure);
+
+	& p + p {
+		margin-top: 1.15em;
+		text-indent: 0;
+	}
+
+	& a {
+		color: var(--link);
+		text-decoration: underline;
+	}
+
+	& em,
+	& i {
+		font-style: italic;
+	}
+
+	& cite {
+		font-style: italic;
+	}
+
+	& sup {
+		font-family: var(--font-data);
+		font-size: 0.6em;
+		vertical-align: super;
+		letter-spacing: 0.04em;
+	}
+}
+
+/* ==========================================================================
+   §8 Motion: almost none.
+   The ground transition on the descent is the only animated moment.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+	.register-level-1,
+	.register-level-2,
+	.register-level-3 {
+		transition:
+			background-color 600ms linear,
+			color 600ms linear;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
+
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+/* ==========================================================================
+   §8 The print stylesheet is an easter egg.
+   Printing any page yields the wordmark in ASCII and a refusal. The markup for
+   it lives in `PrintColophon` in app/root.tsx; everything else is withheld.
+   ========================================================================== */
+
+@media print {
+	body > *:not(.print-colophon) {
+		display: none !important;
+	}
+
+	body {
+		background: #fff !important;
+		color: #000 !important;
+	}
+
+	.print-colophon {
+		display: block !important;
 	}
 }

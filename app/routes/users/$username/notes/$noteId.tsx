@@ -9,8 +9,8 @@ import { z } from 'zod'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { floatingToolbarClassName } from '#app/components/floating-toolbar.tsx'
 import { ErrorList } from '#app/components/forms.tsx'
+import { Data, Display } from '#app/components/institute/primitives.tsx'
 import { Button } from '#app/components/ui/button.tsx'
-import { Icon } from '#app/components/ui/icon.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
@@ -114,22 +114,28 @@ export default function NoteRoute({
 	return (
 		<section
 			ref={sectionRef}
-			className="absolute inset-0 flex flex-col px-10"
+			className="flex flex-col"
 			aria-labelledby="note-title"
 			tabIndex={-1} // Make the section focusable without keyboard navigation
 		>
-			<h2 id="note-title" className="text-h2 mb-2 pt-12 lg:mb-6">
-				{loaderData.note.title}
-			</h2>
-			<div className={`${displayBar ? 'pb-24' : 'pb-12'} overflow-y-auto`}>
-				<ul className="flex flex-wrap gap-5 py-5">
+			<header className="border-rule border-b pb-4">
+				<Data className="text-ground-muted mb-2 block tracking-[0.2em]">
+					Note · {loaderData.timeAgo} ago
+				</Data>
+				<Display as="h2" id="note-title" size="title">
+					{loaderData.note.title}
+				</Display>
+			</header>
+
+			{loaderData.note.images.length ? (
+				<ul className="flex flex-wrap gap-4 py-6">
 					{loaderData.note.images.map((image) => (
 						<li key={image.id}>
 							<a href={getNoteImgSrc(image.objectKey)}>
 								<Img
 									src={getNoteImgSrc(image.objectKey)}
 									alt={image.altText ?? ''}
-									className="size-32 rounded-lg object-cover"
+									className="border-rule size-32 border object-cover"
 									width={512}
 									height={512}
 								/>
@@ -137,32 +143,23 @@ export default function NoteRoute({
 						</li>
 					))}
 				</ul>
-				<p className="text-sm whitespace-break-spaces md:text-lg">
-					{loaderData.note.content}
-				</p>
-			</div>
+			) : null}
+
+			<p className="font-body text-prose measure mt-6 whitespace-break-spaces">
+				{loaderData.note.content}
+			</p>
+
 			{displayBar ? (
 				<div className={floatingToolbarClassName}>
-					<span className="text-foreground/90 text-sm max-[524px]:hidden">
-						<Icon name="clock" className="scale-125">
-							{loaderData.timeAgo} ago
-						</Icon>
-					</span>
-					<div className="grid flex-1 grid-cols-2 justify-end gap-2 min-[525px]:flex md:gap-4">
-						{canDelete ? (
-							<DeleteNote id={loaderData.note.id} actionData={actionData} />
-						) : null}
-						<Button
-							asChild
-							className="min-[525px]:max-md:aspect-square min-[525px]:max-md:px-0"
-						>
-							<Link to="edit">
-								<Icon name="pencil-1" className="scale-125 max-md:scale-150">
-									<span className="max-md:hidden">Edit</span>
-								</Icon>
-							</Link>
-						</Button>
-					</div>
+					<Data className="text-ground-muted mr-auto normal-case">
+						Filed {loaderData.timeAgo} ago
+					</Data>
+					{canDelete ? (
+						<DeleteNote id={loaderData.note.id} actionData={actionData} />
+					) : null}
+					<Button asChild variant="outline">
+						<Link to="edit">Edit</Link>
+					</Button>
 				</div>
 			) : null}
 		</section>
@@ -192,11 +189,8 @@ export function DeleteNote({
 				variant="destructive"
 				status={isPending ? 'pending' : (form.status ?? 'idle')}
 				disabled={isPending}
-				className="w-full max-md:aspect-square max-md:px-0"
 			>
-				<Icon name="trash" className="scale-125 max-md:scale-150">
-					<span className="max-md:hidden">Delete</span>
-				</Icon>
+				Delete
 			</StatusButton>
 			<ErrorList errors={form.errors} id={form.errorId} />
 		</Form>
@@ -215,7 +209,7 @@ export const meta: Route.MetaFunction = ({ data, params, matches }) => {
 			? data?.note.content.slice(0, 97) + '...'
 			: 'No content'
 	return [
-		{ title: `${noteTitle} | ${displayName}'s Notes | Epic Notes` },
+		{ title: `${noteTitle} · ${displayName} · Candid Garden` },
 		{
 			name: 'description',
 			content: noteContentsSummary,
@@ -227,9 +221,20 @@ export function ErrorBoundary() {
 	return (
 		<GeneralErrorBoundary
 			statusHandlers={{
-				403: () => <p>You are not allowed to do that</p>,
+				403: () => (
+					<p className="font-data text-data text-stamp-fg tracking-widest uppercase">
+						Not permitted
+					</p>
+				),
 				404: ({ params }) => (
-					<p>No note with the id "{params.noteId}" exists</p>
+					<div className="flex flex-col gap-3">
+						<p className="font-display text-chapter uppercase">
+							Note not found
+						</p>
+						<p className="font-data text-data text-stamp-fg tracking-widest uppercase">
+							No note filed under “{params.noteId}”
+						</p>
+					</div>
 				),
 			}}
 		/>

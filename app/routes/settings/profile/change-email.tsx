@@ -4,7 +4,7 @@ import { type SEOHandle } from '@nasa-gcn/remix-seo'
 import { data, redirect, Form } from 'react-router'
 import { z } from 'zod'
 import { ErrorList, Field } from '#app/components/forms.tsx'
-import { Icon } from '#app/components/ui/icon.tsx'
+import { PanelHeading } from '#app/components/institute/document.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import {
 	prepareVerification,
@@ -21,7 +21,7 @@ import { type BreadcrumbHandle } from './_layout.tsx'
 import { EmailChangeEmail } from './change-email.server.tsx'
 
 export const handle: BreadcrumbHandle & SEOHandle = {
-	breadcrumb: <Icon name="envelope-closed">Change Email</Icon>,
+	breadcrumb: 'Email',
 	getSitemapEntries: () => null,
 }
 
@@ -79,7 +79,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const response = await sendEmail({
 		to: submission.value.email,
-		subject: `Epic Notes Email Change Verification`,
+		subject: `Candid Garden · email change verification`,
 		react: <EmailChangeEmail verifyUrl={verifyUrl.toString()} otp={otp} />,
 	})
 
@@ -114,14 +114,13 @@ export default function ChangeEmailIndex({
 
 	const isPending = useIsPending()
 	return (
-		<div>
-			<h1 className="text-h1">Change Email</h1>
-			<p>You will receive an email at the new email address to confirm.</p>
-			<p>
-				An email notice will also be sent to your old address{' '}
-				{loaderData.user.email}.
-			</p>
-			<div className="mx-auto mt-5 max-w-sm">
+		<div className="flex flex-col gap-8">
+			<PanelHeading
+				kind="Credentials"
+				title="Change email"
+				lead={`A confirmation code will be sent to the new address, and a notice to the one we currently hold (${loaderData.user.email}). The change takes effect only after the code is entered.`}
+			/>
+			<div className="max-w-md">
 				<Form method="POST" {...getFormProps(form)}>
 					<Field
 						labelProps={{ children: 'New Email' }}

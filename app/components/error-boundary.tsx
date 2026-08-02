@@ -13,14 +13,35 @@ type StatusHandler = (info: {
 	params: Record<string, string | undefined>
 }) => ReactElement | null
 
+/**
+ * §7: errors and gaps are stated plainly. The status code takes the display
+ * face — an error is still an assertion — and the detail is machine voice in
+ * the provenance red.
+ */
 export function GeneralErrorBoundary({
 	defaultStatusHandler = ({ error }) => (
-		<p>
-			{error.status} {error.data}
-		</p>
+		<div className="flex flex-col gap-3">
+			<p className="font-display text-display leading-none uppercase">
+				{error.status}
+			</p>
+			<p className="font-data text-data text-stamp-fg tracking-[0.12em] uppercase">
+				{error.data}
+			</p>
+		</div>
 	),
 	statusHandlers,
-	unexpectedErrorHandler = (error) => <p>{getErrorMessage(error)}</p>,
+	unexpectedErrorHandler = (error) => (
+		<div className="flex flex-col gap-3">
+			<p className="font-display text-chapter uppercase">Unhandled condition</p>
+			<p className="font-data text-data text-stamp-fg measure tracking-widest">
+				{getErrorMessage(error)}
+			</p>
+			<p className="font-body text-prose measure text-ground-muted">
+				This failure has been recorded. It is a gap in the archive, not in your
+				reading of it.
+			</p>
+		</div>
+	),
 }: {
 	defaultStatusHandler?: StatusHandler
 	statusHandlers?: Record<number, StatusHandler>
@@ -41,7 +62,7 @@ export function GeneralErrorBoundary({
 	}, [error, isResponse])
 
 	return (
-		<div className="text-h2 container flex items-center justify-center p-20">
+		<div className="container flex flex-1 items-start py-24">
 			{isResponse
 				? (statusHandlers?.[error.status] ?? defaultStatusHandler)({
 						error,

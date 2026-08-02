@@ -1,6 +1,6 @@
 import { type SEOHandle } from '@nasa-gcn/remix-seo'
 import { useFetcher } from 'react-router'
-import { Icon } from '#app/components/ui/icon.tsx'
+import { PanelHeading } from '#app/components/institute/document.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { requireRecentVerification } from '#app/routes/_auth/verify.server.ts'
 import { requireUserId } from '#app/utils/auth.server.ts'
@@ -12,7 +12,7 @@ import { type Route } from './+types/disable.ts'
 import { twoFAVerificationType } from './_layout.tsx'
 
 export const handle: BreadcrumbHandle & SEOHandle = {
-	breadcrumb: <Icon name="lock-open-1">Disable</Icon>,
+	breadcrumb: 'Disable',
 	getSitemapEntries: () => null,
 }
 
@@ -38,12 +38,13 @@ export default function TwoFactorDisableRoute() {
 	const dc = useDoubleCheck()
 
 	return (
-		<div className="mx-auto max-w-sm">
+		<div className="flex max-w-md flex-col gap-8">
+			<PanelHeading
+				kind="Credentials"
+				title="Disable two-factor"
+				lead="We do not recommend it. With two-factor off, a stolen password is enough to reach your account."
+			/>
 			<disable2FAFetcher.Form method="POST">
-				<p>
-					Disabling two factor authentication is not recommended. However, if
-					you would like to do so, click here:
-				</p>
 				<StatusButton
 					variant="destructive"
 					status={disable2FAFetcher.state === 'loading' ? 'pending' : 'idle'}
@@ -54,7 +55,7 @@ export default function TwoFactorDisableRoute() {
 						type: 'submit',
 					})}
 				>
-					{dc.doubleCheck ? 'Are you sure?' : 'Disable 2FA'}
+					{dc.doubleCheck ? 'Confirm' : 'Disable two-factor'}
 				</StatusButton>
 			</disable2FAFetcher.Form>
 		</div>

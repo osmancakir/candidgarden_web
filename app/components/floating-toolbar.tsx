@@ -1,2 +1,8 @@
+/**
+ * §10 refuses drop shadows, blur and radius, so the "floating" toolbar stops
+ * floating: it becomes a hairline-ruled footer bar pinned under the record it
+ * acts on. Sticky rather than absolute, so it no longer requires its parent to
+ * be a positioned, fixed-height box.
+ */
 export const floatingToolbarClassName =
-	'absolute bottom-3 inset-x-3 flex items-center gap-2 rounded-lg bg-muted/80 p-4 pl-5 shadow-xl shadow-accent backdrop-blur-xs md:gap-4 md:pl-7 justify-end'
+	'border-rule bg-ground sticky bottom-0 z-10 mt-8 flex flex-wrap items-center justify-end gap-3 border-t py-3'

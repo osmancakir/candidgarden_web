@@ -3,8 +3,8 @@ import { getZodConstraint, parseWithZod } from '@conform-to/zod'
 import { type SEOHandle } from '@nasa-gcn/remix-seo'
 import { data, redirect, Form, Link } from 'react-router'
 import { ErrorList, Field } from '#app/components/forms.tsx'
+import { PanelHeading } from '#app/components/institute/document.tsx'
 import { Button } from '#app/components/ui/button.tsx'
-import { Icon } from '#app/components/ui/icon.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import {
 	checkIsCommonPassword,
@@ -18,7 +18,7 @@ import { type Route } from './+types/password_.create.ts'
 import { type BreadcrumbHandle } from './_layout.tsx'
 
 export const handle: BreadcrumbHandle & SEOHandle = {
-	breadcrumb: <Icon name="dots-horizontal">Password</Icon>,
+	breadcrumb: 'Password',
 	getSitemapEntries: () => null,
 }
 
@@ -101,37 +101,44 @@ export default function CreatePasswordRoute({
 	})
 
 	return (
-		<Form method="POST" {...getFormProps(form)} className="mx-auto max-w-md">
-			<Field
-				labelProps={{ children: 'New Password' }}
-				inputProps={{
-					...getInputProps(fields.password, { type: 'password' }),
-					autoComplete: 'new-password',
-				}}
-				errors={fields.password.errors}
+		<div className="flex flex-col gap-8">
+			<PanelHeading
+				kind="Credentials"
+				title="Create a password"
+				lead="This account currently signs in through a connected provider or a passkey. Setting a password adds another way in; it does not remove the others."
 			/>
-			<Field
-				labelProps={{ children: 'Confirm New Password' }}
-				inputProps={{
-					...getInputProps(fields.confirmPassword, {
-						type: 'password',
-					}),
-					autoComplete: 'new-password',
-				}}
-				errors={fields.confirmPassword.errors}
-			/>
-			<ErrorList id={form.errorId} errors={form.errors} />
-			<div className="grid w-full grid-cols-2 gap-6">
-				<Button variant="secondary" asChild>
-					<Link to="..">Cancel</Link>
-				</Button>
-				<StatusButton
-					type="submit"
-					status={isPending ? 'pending' : (form.status ?? 'idle')}
-				>
-					Create Password
-				</StatusButton>
-			</div>
-		</Form>
+			<Form method="POST" {...getFormProps(form)} className="max-w-md">
+				<Field
+					labelProps={{ children: 'New Password' }}
+					inputProps={{
+						...getInputProps(fields.password, { type: 'password' }),
+						autoComplete: 'new-password',
+					}}
+					errors={fields.password.errors}
+				/>
+				<Field
+					labelProps={{ children: 'Confirm New Password' }}
+					inputProps={{
+						...getInputProps(fields.confirmPassword, {
+							type: 'password',
+						}),
+						autoComplete: 'new-password',
+					}}
+					errors={fields.confirmPassword.errors}
+				/>
+				<ErrorList id={form.errorId} errors={form.errors} />
+				<div className="flex flex-wrap gap-3">
+					<StatusButton
+						type="submit"
+						status={isPending ? 'pending' : (form.status ?? 'idle')}
+					>
+						Create Password
+					</StatusButton>
+					<Button variant="ghost" asChild>
+						<Link to="..">Cancel</Link>
+					</Button>
+				</div>
+			</Form>
+		</div>
 	)
 }

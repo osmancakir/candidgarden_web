@@ -4,8 +4,8 @@ import { type SEOHandle } from '@nasa-gcn/remix-seo'
 import { data, redirect, Form, Link } from 'react-router'
 import { z } from 'zod'
 import { ErrorList, Field } from '#app/components/forms.tsx'
+import { PanelHeading } from '#app/components/institute/document.tsx'
 import { Button } from '#app/components/ui/button.tsx'
-import { Icon } from '#app/components/ui/icon.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import {
 	checkIsCommonPassword,
@@ -21,7 +21,7 @@ import { type Route } from './+types/password.ts'
 import { type BreadcrumbHandle } from './_layout.tsx'
 
 export const handle: BreadcrumbHandle & SEOHandle = {
-	breadcrumb: <Icon name="dots-horizontal">Password</Icon>,
+	breadcrumb: 'Password',
 	getSitemapEntries: () => null,
 }
 
@@ -138,45 +138,52 @@ export default function ChangePasswordRoute({
 	})
 
 	return (
-		<Form method="POST" {...getFormProps(form)} className="mx-auto max-w-md">
-			<Field
-				labelProps={{ children: 'Current Password' }}
-				inputProps={{
-					...getInputProps(fields.currentPassword, { type: 'password' }),
-					autoComplete: 'current-password',
-				}}
-				errors={fields.currentPassword.errors}
+		<div className="flex flex-col gap-8">
+			<PanelHeading
+				kind="Credentials"
+				title="Change password"
+				lead="Confirm the password you have now, then set the one you want. All other sessions stay signed in."
 			/>
-			<Field
-				labelProps={{ children: 'New Password' }}
-				inputProps={{
-					...getInputProps(fields.newPassword, { type: 'password' }),
-					autoComplete: 'new-password',
-				}}
-				errors={fields.newPassword.errors}
-			/>
-			<Field
-				labelProps={{ children: 'Confirm New Password' }}
-				inputProps={{
-					...getInputProps(fields.confirmNewPassword, {
-						type: 'password',
-					}),
-					autoComplete: 'new-password',
-				}}
-				errors={fields.confirmNewPassword.errors}
-			/>
-			<ErrorList id={form.errorId} errors={form.errors} />
-			<div className="grid w-full grid-cols-2 gap-6">
-				<Button variant="secondary" asChild>
-					<Link to="..">Cancel</Link>
-				</Button>
-				<StatusButton
-					type="submit"
-					status={isPending ? 'pending' : (form.status ?? 'idle')}
-				>
-					Change Password
-				</StatusButton>
-			</div>
-		</Form>
+			<Form method="POST" {...getFormProps(form)} className="max-w-md">
+				<Field
+					labelProps={{ children: 'Current Password' }}
+					inputProps={{
+						...getInputProps(fields.currentPassword, { type: 'password' }),
+						autoComplete: 'current-password',
+					}}
+					errors={fields.currentPassword.errors}
+				/>
+				<Field
+					labelProps={{ children: 'New Password' }}
+					inputProps={{
+						...getInputProps(fields.newPassword, { type: 'password' }),
+						autoComplete: 'new-password',
+					}}
+					errors={fields.newPassword.errors}
+				/>
+				<Field
+					labelProps={{ children: 'Confirm New Password' }}
+					inputProps={{
+						...getInputProps(fields.confirmNewPassword, {
+							type: 'password',
+						}),
+						autoComplete: 'new-password',
+					}}
+					errors={fields.confirmNewPassword.errors}
+				/>
+				<ErrorList id={form.errorId} errors={form.errors} />
+				<div className="flex flex-wrap gap-3">
+					<StatusButton
+						type="submit"
+						status={isPending ? 'pending' : (form.status ?? 'idle')}
+					>
+						Change Password
+					</StatusButton>
+					<Button variant="ghost" asChild>
+						<Link to="..">Cancel</Link>
+					</Button>
+				</div>
+			</Form>
+		</div>
 	)
 }

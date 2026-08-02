@@ -1,11 +1,14 @@
 import { useId } from 'react'
 import { Form, useSearchParams, useSubmit } from 'react-router'
 import { useDebounce, useIsPending } from '#app/utils/misc.tsx'
-import { Icon } from './ui/icon.tsx'
 import { Input } from './ui/input.tsx'
 import { Label } from './ui/label.tsx'
-import { StatusButton } from './ui/status-button.tsx'
 
+/**
+ * The masthead search strip. It is a single console row rather than a rounded
+ * search pill: a labelled native input and a mono submit, with the pending
+ * state announced in words (§10 refuses shimmer).
+ */
 export function SearchBar({
 	status,
 	autoFocus = false,
@@ -22,6 +25,7 @@ export function SearchBar({
 		formMethod: 'GET',
 		formAction: '/users',
 	})
+	const isPending = isSubmitting || status === 'pending'
 
 	const handleFormChange = useDebounce(async (form: HTMLFormElement) => {
 		await submit(form)
@@ -31,33 +35,35 @@ export function SearchBar({
 		<Form
 			method="GET"
 			action="/users"
-			className="flex flex-wrap items-center justify-center gap-2"
+			role="search"
+			className="flex items-center gap-3"
 			onChange={(e) => autoSubmit && handleFormChange(e.currentTarget)}
 		>
-			<div className="flex-1">
-				<Label htmlFor={id} className="sr-only">
-					Search
-				</Label>
-				<Input
-					type="search"
-					name="search"
-					id={id}
-					defaultValue={searchParams.get('search') ?? ''}
-					placeholder="Search"
-					className="w-full"
-					autoFocus={autoFocus}
-				/>
-			</div>
-			<div>
-				<StatusButton
-					type="submit"
-					status={isSubmitting ? 'pending' : status}
-					className="flex w-full items-center justify-center"
-				>
-					<Icon name="magnifying-glass" size="md" />
-					<span className="sr-only">Search</span>
-				</StatusButton>
-			</div>
+			<Label htmlFor={id} className="shrink-0">
+				Search
+			</Label>
+			<Input
+				type="search"
+				name="search"
+				id={id}
+				defaultValue={searchParams.get('search') ?? ''}
+				placeholder="name or username"
+				className="h-9 flex-1"
+				autoFocus={autoFocus}
+			/>
+			<button
+				type="submit"
+				className="font-data text-data-sm border-rule-strong text-ground-fg hover:border-link hover:text-link h-9 shrink-0 border px-3 tracking-[0.12em] uppercase transition-colors"
+			>
+				Query
+			</button>
+			<span
+				role="status"
+				aria-live="polite"
+				className="font-data text-data-sm text-ground-muted w-24 shrink-0 tracking-widest uppercase"
+			>
+				{isPending ? 'Working…' : status === 'error' ? 'Query failed' : ''}
+			</span>
 		</Form>
 	)
 }

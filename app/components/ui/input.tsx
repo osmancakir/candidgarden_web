@@ -2,6 +2,11 @@ import * as React from 'react'
 
 import { cn } from '#app/utils/misc.tsx'
 
+/**
+ * Text inputs belong to the console, not to a form-as-product: square, hairline
+ * underline-and-box, mono value text so what the operator typed reads as data
+ * (§6, "laboratory equipment, not e-commerce faceting").
+ */
 const Input = ({
 	className,
 	type,
@@ -12,7 +17,11 @@ const Input = ({
 			data-slot="input"
 			type={type}
 			className={cn(
-				'border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring aria-[invalid]:border-input-invalid flex h-10 w-full rounded-md border px-3 py-2 text-base file:border-0 file:bg-transparent file:text-base file:font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 md:text-sm md:file:text-sm',
+				'font-data text-ground-fg placeholder:text-ground-muted border-rule-strong text-data flex h-10 w-full rounded-none border bg-transparent px-3 py-2 tracking-normal outline-hidden',
+				'focus-visible:border-link focus-visible:outline-link focus-visible:outline-2 focus-visible:outline-offset-0',
+				'aria-[invalid]:border-stamp-fg aria-[invalid]:text-stamp-fg',
+				'file:font-data file:text-data-sm file:border-0 file:bg-transparent file:tracking-[0.12em] file:uppercase',
+				'disabled:cursor-not-allowed disabled:opacity-40',
 				className,
 			)}
 			{...props}

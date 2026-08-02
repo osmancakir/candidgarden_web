@@ -43,7 +43,14 @@ export function ErrorBoundary() {
 		<GeneralErrorBoundary
 			statusHandlers={{
 				404: ({ params }) => (
-					<p>No note with the id "{params.noteId}" exists</p>
+					<div className="flex flex-col gap-3">
+						<p className="font-display text-chapter uppercase">
+							Note not found
+						</p>
+						<p className="font-data text-data text-stamp-fg tracking-widest uppercase">
+							No note filed under “{params.noteId}”
+						</p>
+					</div>
 				),
 			}}
 		/>

@@ -1,6 +1,10 @@
 import { type SEOHandle } from '@nasa-gcn/remix-seo'
 import { redirect, Link, useFetcher } from 'react-router'
-import { Icon } from '#app/components/ui/icon.tsx'
+import {
+	Ledger,
+	LedgerRow,
+	PanelHeading,
+} from '#app/components/institute/document.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
@@ -44,46 +48,56 @@ export default function TwoFactorRoute({ loaderData }: Route.ComponentProps) {
 	const enable2FAFetcher = useFetcher<typeof action>()
 
 	return (
-		<div className="flex flex-col gap-4">
-			{loaderData.is2FAEnabled ? (
-				<>
-					<p className="text-lg">
-						<Icon name="check">
-							You have enabled two-factor authentication.
-						</Icon>
-					</p>
-					<Link to="disable">
-						<Icon name="lock-open-1">Disable 2FA</Icon>
-					</Link>
-				</>
-			) : (
-				<>
-					<p>
-						<Icon name="lock-open-1">
-							You have not enabled two-factor authentication yet.
-						</Icon>
-					</p>
-					<p className="text-sm">
-						Two factor authentication adds an extra layer of security to your
-						account. You will need to enter a code from an authenticator app
-						like{' '}
-						<a className="underline" href="https://1password.com/">
-							1Password
-						</a>{' '}
-						to log in.
-					</p>
-					<enable2FAFetcher.Form method="POST">
-						<StatusButton
-							type="submit"
-							name="intent"
-							value="enable"
-							status={enable2FAFetcher.state === 'loading' ? 'pending' : 'idle'}
-							className="mx-auto"
-						>
-							Enable 2FA
-						</StatusButton>
-					</enable2FAFetcher.Form>
-				</>
+		<div className="flex max-w-2xl flex-col gap-8">
+			<PanelHeading
+				kind="Credentials"
+				title="Two-factor authentication"
+				lead="A second factor means a stolen password is not enough to reach your account."
+			/>
+
+			<Ledger>
+				<LedgerRow
+					label="Status"
+					value={loaderData.is2FAEnabled ? 'Enabled' : 'Not enabled'}
+					action={
+						loaderData.is2FAEnabled ? (
+							<Link
+								to="disable"
+								className="font-data text-data-sm text-link tracking-[0.12em] uppercase underline underline-offset-4"
+							>
+								Disable 2FA
+							</Link>
+						) : (
+							<enable2FAFetcher.Form method="POST">
+								<StatusButton
+									type="submit"
+									name="intent"
+									value="enable"
+									size="sm"
+									status={
+										enable2FAFetcher.state === 'loading' ? 'pending' : 'idle'
+									}
+								>
+									Enable 2FA
+								</StatusButton>
+							</enable2FAFetcher.Form>
+						)
+					}
+				/>
+			</Ledger>
+
+			{loaderData.is2FAEnabled ? null : (
+				<p className="font-body text-prose measure text-ground-muted">
+					You will need an authenticator application —{' '}
+					<a
+						className="text-link underline underline-offset-4"
+						href="https://1password.com/"
+					>
+						1Password
+					</a>
+					, Aegis, or any other TOTP client — and you will be asked for a code
+					from it whenever you sign in.
+				</p>
 			)}
 		</div>
 	)

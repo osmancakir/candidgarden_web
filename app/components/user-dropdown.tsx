@@ -19,23 +19,24 @@ export function UserDropdown() {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button asChild variant="secondary">
+				<Button asChild variant="ghost" size="sm" className="px-2">
 					<Link
 						to={`/users/${user.username}`}
 						// this is for progressive enhancement
 						onClick={(e) => e.preventDefault()}
-						className="flex items-center gap-2"
+						className="flex items-center gap-2 no-underline"
 						aria-label="User menu"
 					>
+						{/* Square, like every other frame in the archive (§5). */}
 						<Img
-							className="size-8 rounded-full object-cover"
+							className="border-rule size-7 border object-cover"
 							alt={user.name ?? user.username}
 							src={getUserImgSrc(user.image?.objectKey)}
 							width={256}
 							height={256}
 							aria-hidden="true"
 						/>
-						<span className="text-body-sm font-bold">
+						<span className="hidden sm:inline">
 							{user.name ?? user.username}
 						</span>
 					</Link>
@@ -58,7 +59,18 @@ export function UserDropdown() {
 						</Link>
 					</DropdownMenuItem>
 					<Form action="/logout" method="POST" ref={formRef}>
-						<DropdownMenuItem asChild>
+						<DropdownMenuItem
+							asChild
+							// Radix unmounts the menu the moment an item is selected. With
+							// no exit animation to hold it in the tree (§8 removed those),
+							// the submit button would disappear before the browser acted on
+							// the click. Submitting the form by ref instead makes logout
+							// independent of how long the menu stays mounted.
+							onSelect={(event) => {
+								event.preventDefault()
+								formRef.current?.requestSubmit()
+							}}
+						>
 							<button type="submit" className="w-full">
 								<Icon className="text-body-md" name="exit">
 									Logout

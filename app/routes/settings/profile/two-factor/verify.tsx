@@ -5,7 +5,8 @@ import * as QRCode from 'qrcode'
 import { data, redirect, Form, useNavigation } from 'react-router'
 import { z } from 'zod'
 import { ErrorList, OTPField } from '#app/components/forms.tsx'
-import { Icon } from '#app/components/ui/icon.tsx'
+import { PanelHeading } from '#app/components/institute/document.tsx'
+import { Data } from '#app/components/institute/primitives.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { isCodeValid } from '#app/routes/_auth/verify.server.ts'
 import { requireUserId } from '#app/utils/auth.server.ts'
@@ -18,7 +19,7 @@ import { type Route } from './+types/verify.ts'
 import { twoFAVerificationType } from './_layout.tsx'
 
 export const handle: BreadcrumbHandle & SEOHandle = {
-	breadcrumb: <Icon name="check">Verify</Icon>,
+	breadcrumb: 'Verify',
 	getSitemapEntries: () => null,
 }
 
@@ -141,32 +142,40 @@ export default function TwoFactorRoute({
 	const lastSubmissionIntent = fields.intent.value
 
 	return (
-		<div>
-			<div className="flex flex-col items-center gap-4">
-				<img alt="qr code" src={loaderData.qrCode} className="size-56" />
-				<p>Scan this QR code with your authenticator app.</p>
-				<p className="text-sm">
-					If you cannot scan the QR code, you can manually add this account to
-					your authenticator app using this code:
-				</p>
-				<div className="p-3">
-					<pre
-						className="text-sm break-all whitespace-pre-wrap"
-						aria-label="One-time Password URI"
-					>
-						{loaderData.otpUri}
-					</pre>
+		<div className="flex flex-col gap-8">
+			<PanelHeading
+				kind="Credentials"
+				title="Enrol an authenticator"
+				lead="Scan the code below, then confirm with the six characters your application produces. Two-factor is not enabled until that confirmation succeeds."
+			/>
+
+			<div className="grid gap-8 md:grid-cols-2">
+				<div className="flex flex-col gap-4">
+					<img
+						alt="qr code"
+						src={loaderData.qrCode}
+						className="border-rule size-56 border"
+					/>
+					<div>
+						<Data className="text-ground-muted mb-1 block">
+							Or enter manually
+						</Data>
+						<pre
+							className="border-rule font-data text-data-sm border p-3 break-all whitespace-pre-wrap"
+							aria-label="One-time Password URI"
+						>
+							{loaderData.otpUri}
+						</pre>
+					</div>
+					<p className="font-body text-prose-sm text-ground-muted">
+						If you lose access to the authenticator, you lose access to this
+						account. Keep a recovery method.
+					</p>
 				</div>
-				<p className="text-sm">
-					Once you've added the account, enter the code from your authenticator
-					app below. Once you enable 2FA, you will need to enter a code from
-					your authenticator app every time you log in or perform important
-					actions. Do not lose access to your authenticator app, or you will
-					lose access to your account.
-				</p>
-				<div className="flex w-full max-w-xs flex-col justify-center gap-4">
-					<Form method="POST" {...getFormProps(form)} className="flex-1">
-						<div className="flex items-center justify-center">
+
+				<div className="flex w-full max-w-xs flex-col gap-4">
+					<Form method="POST" {...getFormProps(form)}>
+						<div>
 							<OTPField
 								labelProps={{
 									htmlFor: fields.code.id,
@@ -181,11 +190,11 @@ export default function TwoFactorRoute({
 							/>
 						</div>
 
-						<div className="min-h-[32px] px-4 pt-1 pb-3">
+						<div className="min-h-8 pt-1 pb-3">
 							<ErrorList id={form.errorId} errors={form.errors} />
 						</div>
 
-						<div className="flex justify-between gap-4">
+						<div className="flex flex-wrap gap-3">
 							<StatusButton
 								className="w-full"
 								status={
@@ -203,7 +212,7 @@ export default function TwoFactorRoute({
 							</StatusButton>
 							<StatusButton
 								className="w-full"
-								variant="secondary"
+								variant="ghost"
 								status={
 									pendingIntent === 'cancel'
 										? 'pending'

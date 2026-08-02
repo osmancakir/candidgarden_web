@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { data, redirect, Form, useNavigation } from 'react-router'
 import { z } from 'zod'
 import { ErrorList } from '#app/components/forms.tsx'
+import { PanelHeading } from '#app/components/institute/document.tsx'
 import { Button } from '#app/components/ui/button.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
@@ -22,7 +23,7 @@ import { type Route } from './+types/photo.ts'
 import { type BreadcrumbHandle } from './_layout.tsx'
 
 export const handle: BreadcrumbHandle & SEOHandle = {
-	breadcrumb: <Icon name="avatar">Photo</Icon>,
+	breadcrumb: 'Photo',
 	getSitemapEntries: () => null,
 }
 
@@ -131,11 +132,16 @@ export default function PhotoRoute({
 	const [newImageSrc, setNewImageSrc] = useState<string | null>(null)
 
 	return (
-		<div>
+		<div className="flex flex-col gap-8">
+			<PanelHeading
+				kind="Personnel record"
+				title="Profile plate"
+				lead="Shown beside anything you contribute to the archive. Square, like every other plate here."
+			/>
 			<Form
 				method="POST"
 				encType="multipart/form-data"
-				className="flex flex-col items-center justify-center gap-10"
+				className="flex flex-col items-start gap-6"
 				onReset={() => setNewImageSrc(null)}
 				{...getFormProps(form)}
 			>
@@ -146,7 +152,7 @@ export default function PhotoRoute({
 							? getUserImgSrc(loaderData.user.image?.objectKey)
 							: '')
 					}
-					className="size-52 rounded-full object-cover"
+					className="border-rule size-52 border object-cover"
 					alt={loaderData.user?.name ?? loaderData.user?.username}
 				/>
 				<ErrorList errors={fields.photoFile.errors} id={fields.photoFile.id} />

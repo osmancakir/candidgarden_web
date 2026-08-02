@@ -2,8 +2,6 @@ import { invariantResponse } from '@epic-web/invariant'
 import { type SEOHandle } from '@nasa-gcn/remix-seo'
 import { Link, Outlet, useMatches } from 'react-router'
 import { z } from 'zod'
-import { Spacer } from '#app/components/spacer.tsx'
-import { Icon } from '#app/components/ui/icon.tsx'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { cn } from '#app/utils/misc.tsx'
@@ -14,7 +12,7 @@ export const BreadcrumbHandle = z.object({ breadcrumb: z.any() })
 export type BreadcrumbHandle = z.infer<typeof BreadcrumbHandle>
 
 export const handle: BreadcrumbHandle & SEOHandle = {
-	breadcrumb: <Icon name="file-text">Edit Profile</Icon>,
+	breadcrumb: 'Record',
 	getSitemapEntries: () => null,
 }
 
@@ -48,35 +46,38 @@ export default function EditUserProfile() {
 		.filter(Boolean)
 
 	return (
-		<div className="m-auto mt-16 mb-24 max-w-3xl">
-			<div className="container">
-				<ul className="flex gap-3">
+		<div className="container py-12 md:py-16">
+			{/* A filing path, not a breadcrumb trail with chevrons — the machine
+			    telling you which drawer you have open. */}
+			<nav aria-label="Breadcrumb" className="border-rule border-b pb-3">
+				<ol className="font-data text-data-sm flex flex-wrap items-center gap-2 tracking-[0.12em] uppercase">
 					<li>
 						<Link
-							className="text-muted-foreground"
+							className="text-ground-muted hover:text-link no-underline hover:underline"
 							to={`/users/${user.username}`}
 						>
-							Profile
+							{user.username}
 						</Link>
 					</li>
 					{breadcrumbs.map((breadcrumb, i, arr) => (
 						<li
 							key={i}
-							className={cn('flex items-center gap-3', {
-								'text-muted-foreground': i < arr.length - 1,
-							})}
+							className={cn(
+								'flex items-center gap-2',
+								i < arr.length - 1 && 'text-ground-muted',
+							)}
 						>
-							<Icon name="arrow-right" size="sm">
-								{breadcrumb}
-							</Icon>
+							<span aria-hidden className="text-ground-muted opacity-50">
+								/
+							</span>
+							{breadcrumb}
 						</li>
 					))}
-				</ul>
-			</div>
-			<Spacer size="xs" />
-			<main className="bg-muted mx-auto px-6 py-8 md:container md:rounded-3xl">
+				</ol>
+			</nav>
+			<div className="mt-10 max-w-3xl">
 				<Outlet />
-			</main>
+			</div>
 		</div>
 	)
 }

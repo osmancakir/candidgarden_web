@@ -27,34 +27,29 @@ export const StatusButton = ({
 		minDuration: 300,
 		...spinDelay,
 	})
+	// §10 refuses skeleton-shimmer loaders in favour of mono status text, so the
+	// pending state announces itself in words rather than spinning.
 	const companion = {
 		pending: delayedPending ? (
-			<div
-				role="status"
-				className="inline-flex size-6 items-center justify-center"
-			>
-				<Icon name="update" className="animate-spin" title="loading" />
-			</div>
+			<span role="status" className="font-data text-data-sm tracking-[0.12em]">
+				WORKING…
+			</span>
 		) : null,
 		success: (
-			<div
+			<span
 				role="status"
 				className="inline-flex size-6 items-center justify-center"
 			>
 				<Icon name="check" title="success" />
-			</div>
+			</span>
 		),
 		error: (
-			<div
+			<span
 				role="status"
-				className="bg-destructive inline-flex size-6 items-center justify-center rounded-full"
+				className="border-stamp-fg text-stamp-fg inline-flex size-6 items-center justify-center border"
 			>
-				<Icon
-					name="cross-1"
-					className="text-destructive-foreground"
-					title="error"
-				/>
-			</div>
+				<Icon name="cross-1" title="error" />
+			</span>
 		),
 		idle: null,
 	}[status]

@@ -7,6 +7,7 @@ import { HoneypotInputs } from 'remix-utils/honeypot/react'
 import { z } from 'zod'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { ErrorList, Field } from '#app/components/forms.tsx'
+import { AccessDivider, AccessPage } from '#app/components/institute/access.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { requireAnonymous } from '#app/utils/auth.server.ts'
 import {
@@ -72,7 +73,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const response = await sendEmail({
 		to: email,
-		subject: `Welcome to Epic Notes!`,
+		subject: `Candid Garden · verify your address`,
 		react: <SignupEmail onboardingUrl={verifyUrl.toString()} otp={otp} />,
 	})
 
@@ -101,7 +102,7 @@ export function SignupEmail({
 		<E.Html lang="en" dir="ltr">
 			<E.Container>
 				<h1>
-					<E.Text>Welcome to Epic Notes!</E.Text>
+					<E.Text>Candid Garden · Institute for Machine Iconography</E.Text>
 				</h1>
 				<p>
 					<E.Text>
@@ -118,7 +119,7 @@ export function SignupEmail({
 }
 
 export const meta: Route.MetaFunction = () => {
-	return [{ title: 'Sign Up | Epic Notes' }]
+	return [{ title: 'Registration · Candid Garden' }]
 }
 
 export default function SignupRoute({ actionData }: Route.ComponentProps) {
@@ -138,42 +139,40 @@ export default function SignupRoute({ actionData }: Route.ComponentProps) {
 	})
 
 	return (
-		<div className="container flex flex-col justify-center pt-20 pb-32">
-			<div className="text-center">
-				<h1 className="text-h1">Let's start your journey!</h1>
-				<p className="text-body-md text-muted-foreground mt-3">
-					Please enter your email.
-				</p>
-			</div>
-			<div className="mx-auto mt-16 max-w-sm min-w-full sm:min-w-[368px]">
-				<Form method="POST" {...getFormProps(form)}>
-					<HoneypotInputs />
-					<Field
-						labelProps={{
-							htmlFor: fields.email.id,
-							children: 'Email',
-						}}
-						inputProps={{
-							...getInputProps(fields.email, { type: 'email' }),
-							autoFocus: true,
-							autoComplete: 'email',
-						}}
-						errors={fields.email.errors}
-					/>
-					<ErrorList errors={form.errors} id={form.errorId} />
-					<StatusButton
-						className="w-full"
-						status={isPending ? 'pending' : (form.status ?? 'idle')}
-						type="submit"
-						disabled={isPending}
-					>
-						Submit
-					</StatusButton>
-				</Form>
-				<ul className="flex flex-col gap-4 py-4">
-					{providerNames.map((providerName) => (
-						<>
-							<hr />
+		<AccessPage
+			kind="Registration"
+			title="Register with the institute"
+			lead="We will send a verification code to the address you give us. We keep the address, and nothing else you have not offered."
+		>
+			<Form method="POST" {...getFormProps(form)}>
+				<HoneypotInputs />
+				<Field
+					labelProps={{
+						htmlFor: fields.email.id,
+						children: 'Email',
+					}}
+					inputProps={{
+						...getInputProps(fields.email, { type: 'email' }),
+						autoFocus: true,
+						autoComplete: 'email',
+					}}
+					errors={fields.email.errors}
+				/>
+				<ErrorList errors={form.errors} id={form.errorId} />
+				<StatusButton
+					className="w-full"
+					status={isPending ? 'pending' : (form.status ?? 'idle')}
+					type="submit"
+					disabled={isPending}
+				>
+					Submit
+				</StatusButton>
+			</Form>
+			{providerNames.length ? (
+				<>
+					<AccessDivider>via</AccessDivider>
+					<ul className="flex flex-col gap-3">
+						{providerNames.map((providerName) => (
 							<li key={providerName}>
 								<ProviderConnectionForm
 									type="Signup"
@@ -181,11 +180,11 @@ export default function SignupRoute({ actionData }: Route.ComponentProps) {
 									redirectTo={redirectTo}
 								/>
 							</li>
-						</>
-					))}
-				</ul>
-			</div>
-		</div>
+						))}
+					</ul>
+				</>
+			) : null}
+		</AccessPage>
 	)
 }
 

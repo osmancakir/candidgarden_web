@@ -91,7 +91,9 @@ test('The user profile when logged in as self', async () => {
 
 	await screen.findByRole('heading', { level: 1, name: user.name! })
 	await screen.findByRole('img', { name: user.name! })
-	await screen.findByRole('button', { name: /logout/i })
+	// The controls are worded in the institutional register now: "Log out" and
+	// "Edit record" rather than "Logout" and "Edit profile".
+	await screen.findByRole('button', { name: /log ?out/i })
 	await screen.findByRole('link', { name: /my notes/i })
-	await screen.findByRole('link', { name: /edit profile/i })
+	await screen.findByRole('link', { name: /edit record/i })
 })

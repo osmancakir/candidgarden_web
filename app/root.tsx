@@ -8,15 +8,19 @@ import {
 	Scripts,
 	ScrollRestoration,
 	useLoaderData,
-	useMatches,
 } from 'react-router'
 import { HoneypotProvider } from 'remix-utils/honeypot/react'
 import { type Route } from './+types/root.ts'
 import appleTouchIconAssetUrl from './assets/favicons/apple-touch-icon.png'
 import faviconAssetUrl from './assets/favicons/favicon.svg'
 import { GeneralErrorBoundary } from './components/error-boundary.tsx'
+import {
+	Colophon,
+	InstituteNav,
+	PrintColophon,
+	Wordmark,
+} from './components/institute/chrome.tsx'
 import { EpicProgress } from './components/progress-bar.tsx'
-import { SearchBar } from './components/search-bar.tsx'
 import { useToast } from './components/toaster.tsx'
 import { Button } from './components/ui/button.tsx'
 import { href as iconsHref } from './components/ui/icon.tsx'
@@ -63,8 +67,16 @@ export const links: Route.LinksFunction = () => {
 
 export const meta: Route.MetaFunction = ({ data }) => {
 	return [
-		{ title: data ? 'Epic Notes' : 'Error | Epic Notes' },
-		{ name: 'description', content: `Your own captain's log` },
+		{
+			title: data
+				? 'Candid Garden · Institute for Machine Iconography'
+				: 'Error | Candid Garden',
+		},
+		{
+			name: 'description',
+			content:
+				'Machine-generated iconographic metadata for the ARTigo corpus, structured by Panofsky’s three levels of meaning and presented for scholarly correction.',
+		},
 	]
 }
 
@@ -189,9 +201,6 @@ function App() {
 	const data = useLoaderData<typeof loader>()
 	const user = useOptionalUser()
 	const theme = useTheme()
-	const matches = useMatches()
-	const isOnSearchPage = matches.find((m) => m.id === 'routes/users/index')
-	const searchBar = isOnSearchPage ? null : <SearchBar status="idle" />
 	useToast(data.toast)
 
 	return (
@@ -199,51 +208,44 @@ function App() {
 			optimizerEndpoint="/resources/images"
 			getSrc={getImgSrc}
 		>
-			<div className="flex min-h-screen flex-col justify-between">
-				<header className="container py-6">
-					<nav className="flex flex-wrap items-center justify-between gap-4 sm:flex-nowrap md:gap-8">
-						<Logo />
-						<div className="ml-auto hidden max-w-sm flex-1 sm:block">
-							{searchBar}
-						</div>
-						<div className="flex items-center gap-10">
+			{/*
+			 * The masthead is the Institute register: hairline-ruled, mono, and the
+			 * same on every page (§5). It never becomes a hero.
+			 */}
+			<div className="bg-ground text-ground-fg flex min-h-screen flex-col">
+				<header className="border-rule border-b">
+					<div className="container flex flex-wrap items-center justify-between gap-x-8 gap-y-4 py-4">
+						<Wordmark />
+						<InstituteNav className="order-3 w-full md:order-0 md:w-auto" />
+						<div className="ml-auto flex items-center gap-4">
 							{user ? (
 								<UserDropdown />
 							) : (
-								<Button asChild variant="default" size="lg">
-									<Link to="/login">Log In</Link>
+								<Button asChild variant="outline" size="sm">
+									<Link to="/login">Log in</Link>
 								</Button>
 							)}
+							<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
 						</div>
-						<div className="block w-full sm:hidden">{searchBar}</div>
-					</nav>
+					</div>
+					{/*
+					 * No global search strip. §5 gives the archive one search surface —
+					 * the filter console on the index — and a second, differently-shaped
+					 * box in the masthead would compete with it. The contributor register
+					 * carries its own search on /users, where it is about people.
+					 */}
 				</header>
 
-				<div className="flex flex-1 flex-col">
+				<main className="flex flex-1 flex-col">
 					<Outlet />
-				</div>
+				</main>
 
-				<div className="container flex justify-between pb-5">
-					<Logo />
-					<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
-				</div>
+				<Colophon />
 			</div>
 			<EpicToaster closeButton position="top-center" theme={theme} />
 			<EpicProgress />
+			<PrintColophon />
 		</OpenImgContextProvider>
-	)
-}
-
-function Logo() {
-	return (
-		<Link to="/" className="group grid leading-snug">
-			<span className="font-light transition group-hover:-translate-x-1">
-				epic
-			</span>
-			<span className="font-bold transition group-hover:translate-x-1">
-				notes
-			</span>
-		</Link>
 	)
 }
 
