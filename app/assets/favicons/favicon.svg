@@ -1,13 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" fill="none" viewBox="0 0 65 65">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Candid Garden CD monogram</title>
   <style>
-    path {
-      fill: #000;
-    }
+    .ground { fill: #f2f0eb; }
+    .mark { fill: #1f00e0; }
+
     @media (prefers-color-scheme: dark) {
-      path {
-        fill: #FFF;
-      }
+      .ground { fill: #0d0d0d; }
+      .mark { fill: #8b87ff; }
     }
   </style>
-  <path d="M39.445 25.555 37 17.163 65 0 47.821 28l-8.376-2.445Zm-13.89 0L28 17.163 0 0l17.179 28 8.376-2.445Zm13.89 13.89L37 47.837 65 65 47.821 37l-8.376 2.445Zm-13.89 0L28 47.837 0 65l17.179-28 8.376 2.445Z"></path>
+  <path class="ground" d="M0 0h64v64H0z"/>
+  <path class="mark" d="M29 14H19C11.8 14 7 18.8 7 26v12c0 7.2 4.8 12 12 12h10v-8h-9c-3.2 0-5-1.8-5-5V27c0-3.2 1.8-5 5-5h9v-8Z"/>
+  <path class="mark" fill-rule="evenodd" d="M33 14h9c9.5 0 15 6.6 15 18s-5.5 18-15 18h-9V14Zm8 8v20h1c4.5 0 7-3.3 7-10s-2.5-10-7-10h-1Z"/>
 </svg>
