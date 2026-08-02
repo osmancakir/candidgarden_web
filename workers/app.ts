@@ -1,5 +1,11 @@
 import { createRequestHandler, type ServerBuild } from 'react-router'
+import { runWithCloudflare } from '#app/utils/cloudflare.server.ts'
 import { createPrismaClient, runWithPrisma } from '#app/utils/db.server.ts'
+import {
+	getRateLimitTier,
+	type RateLimitTier,
+} from '#app/utils/rate-limit.server.ts'
+import { withSecurityHeaders } from '#app/utils/security-headers.server.ts'
 
 declare module 'react-router' {
 	interface AppLoadContext {
@@ -14,21 +20,37 @@ declare module 'react-router' {
 const loadBuild = () => import('virtual:react-router/server-build')
 const requestHandler = createRequestHandler(loadBuild, import.meta.env.MODE)
 
-function applySecurityHeaders(response: Response) {
-	const headers = new Headers(response.headers)
-	headers.set('Cross-Origin-Opener-Policy', 'same-origin')
-	headers.set('X-Content-Type-Options', 'nosniff')
-	headers.set('X-Frame-Options', 'SAMEORIGIN')
-	headers.set('X-DNS-Prefetch-Control', 'off')
-	headers.set('X-Permitted-Cross-Domain-Policies', 'none')
-	if (process.env.ALLOW_INDEXING === 'false') {
-		headers.set('X-Robots-Tag', 'noindex, nofollow')
+/**
+ * Cloudflare rate-limiting bindings, one per tier. Keeping the limits in the
+ * Worker rather than in dashboard WAF rules means they are versioned with the
+ * code and apply to preview deployments too.
+ */
+function getRateLimiter(env: Env, tier: RateLimitTier) {
+	switch (tier) {
+		case 'strongest':
+			return env.STRONGEST_RATE_LIMIT
+		case 'strong':
+			return env.STRONG_RATE_LIMIT
+		case 'general':
+			return env.GENERAL_RATE_LIMIT
 	}
+}
 
-	return new Response(response.body, {
-		headers,
-		status: response.status,
-		statusText: response.statusText,
+async function checkRateLimit(request: Request, env: Env) {
+	const url = new URL(request.url)
+	const tier = getRateLimitTier(request.method, url.pathname)
+	const limiter = getRateLimiter(env, tier)
+	if (!limiter) return null
+
+	// Cloudflare sets `CF-Connecting-IP` itself and strips any client-supplied
+	// value, so unlike `X-Forwarded-For` it cannot be spoofed.
+	const key = `${tier}:${request.headers.get('cf-connecting-ip') ?? 'unknown'}`
+	const { success } = await limiter.limit({ key })
+	if (success) return null
+
+	return new Response('Too many requests', {
+		status: 429,
+		headers: { 'Retry-After': '60' },
 	})
 }
 
@@ -76,18 +98,25 @@ export default {
 			return Response.redirect(url, 302)
 		}
 
+		// Rate limit before opening a Hyperdrive client so a flood cannot exhaust
+		// the connection pool.
+		const rateLimited = await checkRateLimit(request, env)
+		if (rateLimited) return withSecurityHeaders(rateLimited)
+
 		const client = createPrismaClient(env.HYPERDRIVE.connectionString)
-		return runWithPrisma(client, async () => {
-			const serverBuild = await loadBuild()
-			const response = await requestHandler(request, {
-				serverBuild,
-				cloudflare: { env, ctx },
-			})
-			return closePrismaAfterResponse(
-				applySecurityHeaders(response),
-				client,
-				ctx,
-			)
-		})
+		return runWithCloudflare({ env, ctx }, () =>
+			runWithPrisma(client, async () => {
+				const serverBuild = await loadBuild()
+				const response = await requestHandler(request, {
+					serverBuild,
+					cloudflare: { env, ctx },
+				})
+				return closePrismaAfterResponse(
+					withSecurityHeaders(response),
+					client,
+					ctx,
+				)
+			}),
+		)
 	},
 } satisfies ExportedHandler<Env>

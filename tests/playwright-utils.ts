@@ -1,7 +1,6 @@
 import { test as base, type Response } from '@playwright/test'
 import { href, type Register } from 'react-router'
 import * as setCookieParser from 'set-cookie-parser'
-import { type User as UserModel } from '#app/generated/prisma/client.ts'
 import {
 	getPasswordHash,
 	getSessionExpirationDate,
@@ -11,6 +10,7 @@ import { prisma } from '#app/utils/db.server.ts'
 import { MOCK_CODE_GITHUB_HEADER } from '#app/utils/providers/constants.ts'
 import { normalizeEmail } from '#app/utils/providers/provider.ts'
 import { authSessionStorage } from '#app/utils/session.server.ts'
+import { type User as UserModel } from '#prisma-client'
 import { createUser } from './db-utils.ts'
 import {
 	type GitHubUser,

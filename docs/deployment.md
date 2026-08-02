@@ -46,6 +46,21 @@ Replace the all-zero Hyperdrive IDs under `env.production` and `env.staging` in
 deliberately prevent a real deployment from connecting to an unintended
 database.
 
+## 1b. Create the KV cache namespaces
+
+The application cache is a per-isolate LRU in front of a Workers KV namespace.
+Without the binding the cache still works, but degrades to isolate-local memory
+with a near-zero hit rate.
+
+```sh
+npx wrangler kv namespace create CACHE_KV --env production
+npx wrangler kv namespace create CACHE_KV --env staging
+```
+
+Replace the all-zero `kv_namespaces` IDs in `wrangler.jsonc` with the returned
+IDs. Nothing authoritative may live in KV: it is eventually consistent, so a
+write can take up to a minute to become visible elsewhere.
+
 ## 2. Prepare Amazon S3
 
 Create separate private buckets and IAM users for production and staging. Keep
@@ -153,10 +168,14 @@ Attach production and staging custom domains in the Cloudflare dashboard or add
 environment-specific routes to `wrangler.jsonc`. Update OAuth callback URLs
 after the domains are final.
 
-The former Express rate limiter does not run in production. Configure Cloudflare
-WAF/rate-limiting rules for authentication, verification, password reset,
-onboarding, settings mutations, and administrative paths before public launch.
+Rate limiting runs in the Worker itself through the three rate-limiting bindings
+declared in `wrangler.jsonc` (10/100/1000 requests per minute). The tiers are
+enforced before a Hyperdrive client is opened, so a flood cannot exhaust the
+connection pool. Which paths are sensitive is decided in
+`app/utils/rate-limit.server.ts`, shared with the Node harness — edit that one
+list rather than adding dashboard rules. Cloudflare WAF rules remain useful for
+coarser protection (country blocks, bot scoring) but are no longer required for
+basic abuse protection.
 
 Workers Logs and traces are enabled at a 10% sampling rate in `wrangler.jsonc`.
-Adjust the sampling rate after observing production traffic and cost. The small
-application LRU is isolate-local, opportunistic, and never authoritative.
+Adjust the sampling rate after observing production traffic and cost.

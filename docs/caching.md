@@ -1,19 +1,31 @@
 # Caching
 
-The application has one process-local LRU cache, exposed through
-`app/utils/cache.server.ts`. It is used through
+The application has a two-tier cache, exposed as `cache` from
+`app/utils/cache.server.ts` and used through
 [`cachified`](https://www.npmjs.com/package/@epic-web/cachified) for values that
 are slow or rate-limited to retrieve.
 
-The cache is intentionally ephemeral:
+1. **Per-isolate LRU** — read first, written on every set, and populated on a KV
+   hit. A Worker isolate can live for only seconds, so this tier mostly serves
+   repeat lookups within a single request.
+2. **Workers KV (`CACHE_KV`)** — shared across isolates and regions. This is
+   what makes caching worthwhile on Workers at all; writes go through
+   `ctx.waitUntil`, so they never delay the response.
 
-- each application instance has its own entries;
-- entries disappear when an instance restarts;
-- no application correctness may depend on a cached value existing.
+Outside the Worker runtime — the Node harness, Vitest — there is no KV binding
+and the cache degrades to LRU-only. No application correctness may depend on a
+cached value existing.
 
-This is sufficient for the current GitHub profile lookup. If shared caching
-becomes necessary later, replace the cache adapter with a managed service such
-as Amazon ElastiCache rather than storing cache data on the application host.
+### KV constraints worth knowing
+
+- **Eventually consistent.** A write can take up to a minute to become visible
+  elsewhere, and deletes are not immediate. Never read-modify-write through the
+  cache; PostgreSQL is the only source of truth.
+- **JSON only.** A `Date` round-trips as a string. Cache plain data, or revive
+  it in the consumer.
+- **60 second minimum TTL.** Shorter-lived entries stay in the LRU only.
+- **No bulk delete.** Delete keys you know about, or let a short TTL age a bad
+  value out.
 
 ## Usage
 
@@ -29,5 +41,7 @@ const result = await cachified({
 })
 ```
 
-Administrators can inspect or evict entries at `/admin/cache` on the instance
-serving that request.
+Administrators can inspect or evict entries at `/admin/cache`. That view lists
+keys from the LRU of the isolate serving the request only — KV has no cheap
+enumeration, and every isolate holds a different subset. Treat it as a debugging
+aid, not an inventory.

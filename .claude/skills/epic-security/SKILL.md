@@ -114,21 +114,38 @@ export async function checkHoneypot(formData: FormData) {
 
 ### Content Security Policy (CSP)
 
-Epic Stack uses CSP to prevent XSS and other attacks.
+CSP prevents XSS and other injection attacks.
 
-**Configuration in `server/index.ts`:**
+**The CSP is nonce-based and built per render** in `app/entry.server.tsx` using
+`contentSecurity` from `@nichtsam/helmet/content`. Because it lives in the app
+rather than in server middleware, it is identical in both runtimes with no extra
+work:
 
 ```typescript
-import { helmet } from '@nichtsam/helmet/node-http'
+// app/entry.server.tsx
+const nonce = crypto.randomUUID()
 
-app.use((_, res, next) => {
-	helmet(res, { general: { referrerPolicy: false } })
-	next()
+contentSecurity(headers, {
+	contentSecurityPolicy: {
+		directives: {
+			'script-src': ["'strict-dynamic'", "'self'", `'nonce-${nonce}'`],
+			'script-src-attr': [`'nonce-${nonce}'`],
+		},
+	},
 })
 ```
 
-**Note:** By default, CSP is in `report-only` mode to avoid blocking resources
-during development. In production, remove `reportOnly: true` to enable it fully.
+Any inline `<script>` must carry the nonce from `useNonce()`. Never add
+`'unsafe-inline'` to `script-src` to make something work.
+
+**All other security headers** come from `app/utils/security-headers.server.ts`
+— HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `X-DNS-Prefetch-Control`,
+`X-Permitted-Cross-Domain-Policies`, `Cross-Origin-Opener-Policy`, and
+`X-Robots-Tag`. Both `workers/app.ts` and `server/index.ts` apply that one map,
+so they cannot drift.
+
+**Note:** `Referrer-Policy` is deliberately omitted — it breaks the `redirectTo`
+flow. Add a header to the shared module, never to one runtime only.
 
 ### Honeypot Fields
 
@@ -190,66 +207,45 @@ export async function checkHoneypot(formData: FormData) {
 
 ### Rate Limiting
 
-Epic Stack uses `express-rate-limit` para prevenir abuso.
+Rate limiting is enforced in **both** runtimes, at three tiers:
 
-**Basic configuration:**
+| Tier        | Limit    | Applies to                                     |
+| ----------- | -------- | ---------------------------------------------- |
+| `strongest` | 10/min   | Non-GET on auth/admin paths, and GET `/verify` |
+| `strong`    | 100/min  | All other non-GET requests                     |
+| `general`   | 1000/min | Everything else                                |
 
-```typescript
-// server/index.ts
-import rateLimit from 'express-rate-limit'
-
-const rateLimitDefault = {
-	windowMs: 60 * 1000, // 1 minute
-	limit: 1000, // 1000 requests per minute
-	standardHeaders: true,
-	legacyHeaders: false,
-	validate: { trustProxy: false },
-	keyGenerator: (req: express.Request) => {
-		return req.get('fly-client-ip') ?? `${req.ip}`
-	},
-}
-
-const generalRateLimit = rateLimit(rateLimitDefault)
-```
-
-**Different levels of rate limiting:**
+**Which tier a request gets is decided in one shared place**,
+`app/utils/rate-limit.server.ts`. Add a sensitive path there and both runtimes
+pick it up. Never duplicate the path list.
 
 ```typescript
-// Stricter rate limit for sensitive routes
-const strongestRateLimit = rateLimit({
-	...rateLimitDefault,
-	limit: 10, // Only 10 requests per minute
-})
-
-// Strong rate limit for important actions
-const strongRateLimit = rateLimit({
-	...rateLimitDefault,
-	limit: 100, // 100 requests per minute
-})
+// app/utils/rate-limit.server.ts
+export function getRateLimitTier(
+	method: string,
+	pathname: string,
+): RateLimitTier
 ```
 
-**Apply to specific routes:**
+**Production (Worker):** Cloudflare rate-limiting bindings declared in
+`wrangler.jsonc` (`STRONGEST_RATE_LIMIT`, `STRONG_RATE_LIMIT`,
+`GENERAL_RATE_LIMIT`). `workers/app.ts` checks the limit _before_ opening a
+Hyperdrive client, so a flood cannot exhaust the connection pool.
 
 ```typescript
-app.use((req, res, next) => {
-	const strongPaths = [
-		'/login',
-		'/signup',
-		'/verify',
-		'/admin',
-		'/reset-password',
-	]
-
-	if (req.method !== 'GET' && req.method !== 'HEAD') {
-		if (strongPaths.some((p) => req.path.includes(p))) {
-			return strongestRateLimit(req, res, next)
-		}
-		return strongRateLimit(req, res, next)
-	}
-
-	return generalRateLimit(req, res, next)
-})
+const { success } = await limiter.limit({ key })
+if (!success) return new Response('Too many requests', { status: 429 })
 ```
+
+The key is derived from `CF-Connecting-IP`, which Cloudflare sets itself and
+strips from client input — unlike `X-Forwarded-For`, it cannot be spoofed.
+Cloudflare's `simple.period` accepts only `10` or `60` seconds.
+
+**Node harness:** `express-rate-limit` in `server/index.ts` with the same tiers,
+so local and e2e runs behave like production.
+
+**Adding a new sensitive route:** add the path to `STRONG_PATHS` in
+`app/utils/rate-limit.server.ts`. Nothing else needs to change.
 
 **Note:** In tests and development, rate limiting is effectively disabled to
 allow fast tests.
@@ -416,27 +412,38 @@ app.use((req, res, next) => {
 
 ### Secrets Management
 
-**Variables de entorno:**
+**Local (Node harness) — `.env`:**
 
 ```bash
-# .env
 SESSION_SECRET=secret1,secret2,secret3 # Secret rotation
 HONEYPOT_SECRET=your-honeypot-secret
-DATABASE_URL=file:./data/db.sqlite
+DATABASE_URL="postgresql://candidgarden:candidgarden@localhost:5432/candidgarden?schema=public"
 ```
 
-**En Fly.io:**
+**Local (Worker runtime) — `.dev.vars`:** same secrets, read by `wrangler dev`
+rather than by `dotenv`. Both files are gitignored; `.env.example` and
+`.dev.vars.example` document what is needed.
+
+**Production — Worker secrets:**
 
 ```bash
-fly secrets set SESSION_SECRET="secret1,secret2,secret3"
-fly secrets set HONEYPOT_SECRET="your-secret"
+npx wrangler secret put SESSION_SECRET --env production
+npx wrangler secret put HONEYPOT_SECRET --env production
 ```
+
+`wrangler.jsonc` lists the required secret names under `secrets.required`, so a
+deploy fails loudly if one was never set.
+
+**AWS credentials:** the Worker cannot assume an EC2 instance role, so S3 access
+uses a scoped IAM access key stored as a Worker secret. Scope that IAM user
+tightly to the one bucket — it is a long-lived credential.
 
 **Never commit secrets:**
 
-- Use `.env.example` to document required variables
-- `.env` is in `.gitignore`
-- Use `fly secrets` for production
+- Document required variables in `.env.example` / `.dev.vars.example`
+- `.env` and `.dev.vars` are in `.gitignore`
+- Use `wrangler secret put` for production, never `vars` in `wrangler.jsonc`
+  (those are plaintext in the config and visible in the dashboard)
 
 ### Validación de Session Expiration (Fail Fast)
 
@@ -514,7 +521,7 @@ const apiRateLimit = rateLimit({
 	limit: 100, // 100 requests per minute for API
 	keyGenerator: (req) => {
 		const apiKey = req.get('X-API-Key')
-		return apiKey ?? req.get('fly-client-ip') ?? req.ip
+		return apiKey ?? req.get('cf-connecting-ip') ?? req.ip
 	},
 })
 

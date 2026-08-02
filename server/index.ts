@@ -1,5 +1,4 @@
 import { styleText } from 'node:util'
-import { helmet } from '@nichtsam/helmet/node-http'
 import * as Sentry from '@sentry/react-router'
 import { ip as ipAddress } from 'address'
 import closeWithGrace from 'close-with-grace'
@@ -8,11 +7,12 @@ import express from 'express'
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 import getPort, { portNumbers } from 'get-port'
 import morgan from 'morgan'
+import { getRateLimitTier } from '../app/utils/rate-limit.server.ts'
+import { getSecurityHeaders } from '../app/utils/security-headers.server.ts'
 
 const MODE = process.env.NODE_ENV ?? 'development'
 const IS_PROD = MODE === 'production'
 const IS_DEV = MODE === 'development'
-const ALLOW_INDEXING = process.env.ALLOW_INDEXING !== 'false'
 const SENTRY_ENABLED = IS_PROD && process.env.SENTRY_DSN
 const BUILD_PATH = '../build/server/index.js'
 
@@ -58,9 +58,13 @@ app.use(compression())
 // http://expressjs.com/en/advanced/best-practice-security.html#at-a-minimum-disable-x-powered-by-header
 app.disable('x-powered-by')
 
+// The same header set the Worker applies, from the same module, so the two
+// runtimes cannot drift. The nonce-based CSP is added per-render in
+// `app/entry.server.tsx` and is already shared.
 app.use((_, res, next) => {
-	// The referrerPolicy breaks our redirectTo logic
-	helmet(res, { general: { referrerPolicy: false } })
+	for (const [name, value] of Object.entries(getSecurityHeaders())) {
+		res.setHeader(name, value)
+	}
 	next()
 })
 
@@ -97,8 +101,8 @@ const rateLimitDefault = {
 	standardHeaders: true,
 	legacyHeaders: false,
 	validate: { trustProxy: false },
-	// The production Worker uses Cloudflare rate-limiting rules. This local/test
-	// harness accepts Cloudflare's connecting-IP header when one is present.
+	// The Worker enforces the same tiers through Cloudflare rate-limiting
+	// bindings; this harness accepts the connecting-IP header when present.
 	keyGenerator: (req: express.Request) => {
 		const ip = req.ip ?? req.socket?.remoteAddress
 		return req.get('cf-connecting-ip') ?? ipKeyGenerator(ip ?? '0.0.0.0')
@@ -119,39 +123,18 @@ const strongRateLimit = rateLimit({
 
 const generalRateLimit = rateLimit(rateLimitDefault)
 app.use((req, res, next) => {
-	const strongPaths = [
-		'/login',
-		'/signup',
-		'/verify',
-		'/admin',
-		'/onboarding',
-		'/reset-password',
-		'/settings/profile',
-		'/resources/login',
-		'/resources/verify',
-	]
-	if (req.method !== 'GET' && req.method !== 'HEAD') {
-		if (strongPaths.some((p) => req.path.includes(p))) {
+	switch (getRateLimitTier(req.method, req.path)) {
+		case 'strongest':
 			return strongestRateLimit(req, res, next)
-		}
-		return strongRateLimit(req, res, next)
+		case 'strong':
+			return strongRateLimit(req, res, next)
+		case 'general':
+			return generalRateLimit(req, res, next)
 	}
-
-	// the verify route is a special case because it's a GET route that
-	// can have a token in the query string
-	if (req.path.includes('/verify')) {
-		return strongestRateLimit(req, res, next)
-	}
-
-	return generalRateLimit(req, res, next)
 })
 
-if (!ALLOW_INDEXING) {
-	app.use((_, res, next) => {
-		res.set('X-Robots-Tag', 'noindex, nofollow')
-		next()
-	})
-}
+// X-Robots-Tag is part of the shared header set above, so there is no separate
+// ALLOW_INDEXING middleware here any more.
 
 if (IS_DEV) {
 	console.log('Starting development server')

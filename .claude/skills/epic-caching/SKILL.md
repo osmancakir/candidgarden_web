@@ -1,7 +1,8 @@
 ---
 name: epic-caching
 description:
-  Guide on caching with cachified, SQLite cache, and LRU cache for Epic Stack
+  Guide on caching with cachified, the Workers KV cache, and the per-isolate LRU
+  cache
 categories:
   - caching
   - performance
@@ -86,19 +87,26 @@ export async function getUser({ userId }: { userId: string }) {
 }
 ```
 
-### Two Types of Cache
+### Two Tiers of Cache
 
-Epic Stack provides two types of cache:
+`cache` in `app/utils/cache.server.ts` is a single two-tier cache. You almost
+always want `cache`; the tiers are exported separately only for special cases.
 
-1. **SQLite Cache** - Long-lived, replicated with LiteFS
-   - Persistent across restarts
-   - Replicated across all instances
-   - Ideal for data that changes infrequently
+1. **LRU (`lruCache`)** - per-isolate, in memory
+   - Read first, and populated on a KV hit
+   - Dies with the isolate, which on Workers can be seconds
+   - Good for deduplication within a request
 
-2. **LRU Cache** - Short-lived, in-memory
-   - Cleared on restart
-   - Not replicated (only on current instance)
-   - Ideal for deduplication and temporary cache
+2. **Workers KV (`kvCache`)** - shared across isolates and regions
+   - Survives isolate churn; this is what makes caching worth doing at all here
+   - Written through `ctx.waitUntil`, so it never blocks the response
+   - **Eventually consistent**: a write can take up to a minute to be visible
+     elsewhere, and deletes are not immediate
+   - Values are JSON, so a `Date` comes back as a string
+   - Entries with a TTL under 60s are skipped — KV's minimum
+
+Outside the Worker runtime (the Node harness, tests) there is no KV binding and
+`cache` silently degrades to LRU-only. Never rely on the cache for correctness.
 
 ### Using cachified
 
@@ -266,61 +274,39 @@ const keys = await searchCacheKeys('user:123', 100)
 await Promise.all(keys.map((key) => cache.delete(key)))
 ```
 
-**Invalidate entire SQLite cache:**
+**There is no "clear everything":** KV has no bulk delete. Delete keys you know
+about, or give entries a short enough TTL that a bad value ages out on its own.
+
+### Using the LRU tier directly
+
+For data that must not outlive the request, skip KV:
 
 ```typescript
-// Use admin dashboard or
-await cache.clear() // If available
-```
+import { lruCache } from '#app/utils/cache.server.ts'
 
-### Using LRU Cache
-
-For temporary data, use LRU cache directly:
-
-```typescript
-import { lru } from '#app/utils/cache.server.ts'
-
-// LRU cache is useful for:
+// The LRU tier is useful for:
 // - Request deduplication
-// - Very temporary cache (< 5 minutes)
-// - Data that doesn't need to persist
+// - Values too short-lived for KV's 60s minimum TTL
+// - Values that are not JSON-serialisable
 
-const cachedValue = lru.get('temp-key')
-if (!cachedValue) {
-	const freshValue = await computeExpensiveValue()
-	lru.set('temp-key', freshValue, { ttl: 1000 * 60 * 5 }) // 5 minutes
-	return freshValue
-}
-return cachedValue
+const cachedValue = lruCache.get('temp-key')
 ```
 
-### Multi-Region Cache
+### Cache consistency across isolates
 
-With LiteFS, SQLite cache is automatically replicated:
+KV replicates asynchronously, so after `cache.delete(key)`:
 
-**Behavior:**
-
-- Only the primary instance writes to cache
-- Replicas can read from cache
-- Writes are automatically synchronized
+- The isolate that ran the delete sees it immediately (its LRU is cleared)
+- Other isolates may serve the old value for up to a minute — both from KV and
+  from their own warm LRU entries
 
 **Best practices:**
 
-- Don't assume all writes are immediate
-- Use `ensurePrimary()` if you need to guarantee writes
-
-```typescript
-import { ensurePrimary } from '#app/utils/litefs.server.ts'
-
-export async function action({ request }: Route.ActionArgs) {
-	await ensurePrimary() // Ensure we're on primary instance
-
-	// Invalidate cache
-	await cache.delete('my-key')
-
-	// ...
-}
-```
+- Never read-modify-write through the cache; treat PostgreSQL as the only source
+  of truth
+- Prefer a short TTL over aggressive invalidation
+- After a mutation, load fresh data for the current response rather than relying
+  on the delete having propagated
 
 ### Error Handling
 

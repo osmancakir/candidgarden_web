@@ -1,12 +1,12 @@
 ---
 name: epic-deployment
 description:
-  Guide on deployment with Fly.io, multi-region setup, and CI/CD for Epic Stack
+  Guide on deployment with Cloudflare Workers, Amazon RDS, S3, and CI/CD
 categories:
   - deployment
-  - fly-io
+  - cloudflare
+  - workers
   - ci-cd
-  - docker
 ---
 
 # Epic Stack: Deployment
@@ -15,239 +15,48 @@ categories:
 
 Use this skill when you need to:
 
-- Configure deployment on Fly.io
-- Setup multi-region deployment
-- Configure CI/CD with GitHub Actions
-- Manage secrets in production
-- Configure healthchecks
-- Work with LiteFS and volumes
-- Local deployment with Docker
+- Deploy to Cloudflare Workers (staging or production)
+- Configure Wrangler bindings, secrets, or environments
+- Set up or change the CI/CD workflow
+- Apply database migrations as part of a deploy
+- Debug a deploy that built locally but failed on Cloudflare
+- Roll back a bad release
+
+## The shape of the deployment
+
+One React Router application, two runtimes:
+
+|                        | Runtime            | Entry                          | Used for                  |
+| ---------------------- | ------------------ | ------------------------------ | ------------------------- |
+| **Production/staging** | Cloudflare Workers | `workers/app.ts`               | Real traffic              |
+| **Local/test**         | Node + Express     | `index.ts` → `server/index.ts` | `npm run dev`, Playwright |
+
+Persistence lives outside Cloudflare: **PostgreSQL on Amazon RDS** (reached
+through Hyperdrive) and **Amazon S3** for uploaded images, resized on the fly by
+Cloudflare Image Transformations.
+
+There is no container image, no volume, no primary region, and no instance to
+SSH into. A Worker isolate is created and destroyed constantly — never assume
+anything survives between requests except what is in Postgres, S3, or KV.
+
+### Bindings
+
+Declared in `wrangler.jsonc`. **Wrangler environments do not inherit top-level
+bindings**, so every binding is repeated verbatim under `env.staging` and
+`env.production`. Forgetting to add a new binding to all three places is the
+single most common configuration bug here.
+
+| Binding                                                             | Purpose                                      |
+| ------------------------------------------------------------------- | -------------------------------------------- |
+| `HYPERDRIVE`                                                        | Pooled Postgres connection string for RDS    |
+| `CACHE_KV`                                                          | Shared cache tier behind the per-isolate LRU |
+| `STRONGEST_RATE_LIMIT` / `STRONG_RATE_LIMIT` / `GENERAL_RATE_LIMIT` | 10 / 100 / 1000 requests per minute          |
+| `ASSETS`                                                            | Static client build                          |
+
+Placeholder ids are all-zero on purpose, so a misconfigured deploy fails instead
+of silently connecting to the wrong database.
 
 ## Patterns and conventions
-
-### Fly.io Configuration
-
-Epic Stack uses Fly.io for hosting with configuration in `fly.toml`.
-
-**Basic configuration:**
-
-```toml
-# fly.toml
-app = "your-app-name"
-primary_region = "sjc"
-kill_signal = "SIGINT"
-kill_timeout = 5
-
-[build]
-dockerfile = "/other/Dockerfile"
-ignorefile = "/other/Dockerfile.dockerignore"
-
-[mounts]
-source = "data"
-destination = "/data"
-```
-
-### Primary Region
-
-**Configure primary region:**
-
-```toml
-primary_region = "sjc" # Change according to your location
-```
-
-**Important:** The primary region must be the same for:
-
-- `primary_region` en `fly.toml`
-- Region del volume `data`
-- `PRIMARY_REGION` en variables de entorno
-
-### LiteFS Configuration
-
-**Configuration in `other/litefs.yml`:**
-
-```yaml
-fuse:
-  dir: '${LITEFS_DIR}'
-
-data:
-  dir: '/data/litefs'
-
-proxy:
-  addr: ':${INTERNAL_PORT}'
-  target: 'localhost:${PORT}'
-  db: '${DATABASE_FILENAME}'
-
-lease:
-  type: 'consul'
-  candidate: ${FLY_REGION == PRIMARY_REGION}
-  promote: true
-  advertise-url: 'http://${HOSTNAME}.vm.${FLY_APP_NAME}.internal:20202'
-  consul:
-    url: '${FLY_CONSUL_URL}'
-    key: 'epic-stack-litefs_20250222/${FLY_APP_NAME}'
-
-exec:
-  - cmd: npx prisma migrate deploy
-    if-candidate: true
-  - cmd: sqlite3 $DATABASE_PATH "PRAGMA journal_mode = WAL;"
-    if-candidate: true
-  - cmd: sqlite3 $CACHE_DATABASE_PATH "PRAGMA journal_mode = WAL;"
-    if-candidate: true
-  - cmd: npx prisma generate --sql
-  - cmd: npm start
-```
-
-### Healthchecks
-
-**Configuration in `fly.toml`:**
-
-```toml
-[[services.http_checks]]
-interval = "10s"
-grace_period = "5s"
-method = "get"
-path = "/resources/healthcheck"
-protocol = "http"
-timeout = "2s"
-tls_skip_verify = false
-```
-
-**Healthcheck implementation:**
-
-```typescript
-// app/routes/resources/healthcheck.tsx
-export async function loader({ request }: Route.LoaderArgs) {
-	const host =
-		request.headers.get('X-Forwarded-Host') ?? request.headers.get('host')
-
-	try {
-		await Promise.all([
-			prisma.$queryRaw`SELECT 1`, // Verify DB
-			fetch(`${new URL(request.url).protocol}${host}`, {
-				method: 'HEAD',
-				headers: { 'X-Healthcheck': 'true' },
-			}),
-		])
-		return new Response('OK')
-	} catch (error) {
-		console.log('healthcheck ❌', { error })
-		return new Response('ERROR', { status: 500 })
-	}
-}
-```
-
-### Environment Variables
-
-**Secrets in Fly.io:**
-
-```bash
-# Generate secrets
-fly secrets set SESSION_SECRET=$(openssl rand -hex 32) --app [YOUR_APP_NAME]
-fly secrets set HONEYPOT_SECRET=$(openssl rand -hex 32) --app [YOUR_APP_NAME]
-
-# List secrets
-fly secrets list --app [YOUR_APP_NAME]
-
-# Delete secret
-fly secrets unset SECRET_NAME --app [YOUR_APP_NAME]
-```
-
-**Common secrets:**
-
-- `SESSION_SECRET` - Secret for signing session cookies
-- `HONEYPOT_SECRET` - Secret for honeypot fields
-- `DATABASE_URL` - Automatically configured by LiteFS
-- `CACHE_DATABASE_PATH` - Automatically configured
-- `RESEND_API_KEY` - For sending emails (optional)
-- `AWS_REGION` - Region containing the image bucket
-- `AWS_S3_BUCKET` - Private image bucket name
-- `AWS_ACCESS_KEY_ID` - AWS credential when an IAM role is unavailable
-- `AWS_SECRET_ACCESS_KEY` - AWS credential when an IAM role is unavailable
-- `SENTRY_DSN` - For error monitoring (optional)
-
-### Volumes
-
-**Create volume:**
-
-```bash
-fly volumes create data --region sjc --size 1 --app [YOUR_APP_NAME]
-```
-
-**List volumes:**
-
-```bash
-fly volumes list --app [YOUR_APP_NAME]
-```
-
-**Expand volume:**
-
-```bash
-fly volumes extend <volume-id> --size 10 --app [YOUR_APP_NAME]
-```
-
-### Multi-Region Deployment
-
-**Deploy to multiple regions:**
-
-```bash
-# Deploy in primary region (more instances)
-fly scale count 2 --region sjc --app [YOUR_APP_NAME]
-
-# Deploy in secondary regions (read-only)
-fly scale count 1 --region ams --app [YOUR_APP_NAME]
-fly scale count 1 --region syd --app [YOUR_APP_NAME]
-```
-
-**Verify instances:**
-
-```bash
-fly status --app [YOUR_APP_NAME]
-# The ROLE column will show "primary" or "replica"
-```
-
-### Consul Setup
-
-**Attach Consul:**
-
-```bash
-fly consul attach --app [YOUR_APP_NAME]
-```
-
-**Consul manages:**
-
-- Which instance is primary
-- Automatic failover
-- Data replication
-
-### GitHub Actions CI/CD
-
-**Basic workflow:**
-
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy
-
-on:
-  push:
-    branches: [main, dev]
-
-jobs:
-  deploy:
-    name: Deploy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-```
-
-**Complete configuration:**
-
-- Deploy to `production` from `main` branch
-- Deploy to `staging` from `dev` branch
-- Tests before deploy (optional)
 
 ### Deployable Commits
 
@@ -260,24 +69,6 @@ This means:
 - Tests should pass
 - The application should build successfully
 - No "WIP" or "TODO" commits that break the build
-
-**Example - Deployable commit workflow:**
-
-```bash
-# ✅ Good - Each commit is deployable
-git commit -m "Add user profile page"
-# This commit is complete, tested, and deployable
-
-git commit -m "Fix login redirect bug"
-# This commit fixes a bug and is deployable
-
-# ❌ Avoid - Non-deployable commits
-git commit -m "WIP: working on feature"
-# This commit might not work, not deployable
-
-git commit -m "Add feature (tests failing)"
-# This commit breaks the build, not deployable
-```
 
 **Benefits:**
 
@@ -300,503 +91,163 @@ quickly. Large PRs are hard to review, risky to merge, and slow down the team.
 - **Reviewable** - PRs should be reviewable in 30 minutes or less
 - **Independent** - Each PR should be independently deployable
 
-**Example - Small, focused PR:**
-
-```bash
-# ✅ Good - Small, focused PR
-# PR: "Add email validation to signup form"
-# - Only changes signup validation
-# - Includes tests
-# - Can be reviewed quickly
-# - Can be merged and deployed independently
-
-# ❌ Avoid - Large, complex PR
-# PR: "Refactor authentication system and add 2FA and OAuth"
-# - Too many changes at once
-# - Hard to review
-# - Risky to merge
-# - Takes days to review
-```
-
-**Benefits:**
-
-- Faster reviews - easier to understand and review
-- Lower risk - smaller changes are less risky
-- Faster feedback - get feedback sooner
-- Easier rollback - smaller changes are easier to revert
-- Better collaboration - team can work in parallel on different small PRs
-
 **When PRs get too large:**
 
 - Split into multiple smaller PRs
 - Use feature flags to merge incrementally
 - Break down into logical pieces
 
-### Amazon S3 Object Storage
+### Building
 
-**Create storage and configure Fly:**
+`CLOUDFLARE_ENV` must be set **at build time**, not only at deploy time. The
+Vite plugin flattens the selected Worker environment into the bundle; running
+`wrangler deploy --env X` after a build made without `CLOUDFLARE_ENV=X` deploys
+the wrong configuration.
+
+```bash
+npm run build:worker            # default environment
+npm run build:worker:staging
+npm run build:worker:production
+
+npm run deploy:staging          # builds, then deploys
+npm run deploy:production
+```
+
+`CLOUDFLARE_WORKERS=true` additionally switches `#prisma-client` to the
+Cloudflare-runtime Prisma client. That is why there are two build scripts rather
+than one.
+
+**Validate without touching Cloudflare state:**
+
+```bash
+npm run build:worker:staging
+CLOUDFLARE_ENV=staging npx wrangler deploy --dry-run
+```
+
+### Local development
+
+```bash
+npm run db:start      # Postgres via compose.yaml
+npm run dev           # Node harness + MSW mocks, reads .env
+npm run dev:worker    # real workerd runtime, reads .dev.vars
+```
+
+Use `dev:worker` when the change touches anything runtime-specific: Hyperdrive,
+KV, rate limiting, `cf: { image }` transformations, or the Worker's response
+headers. `npm run dev` does not exercise any of those.
+
+### Secrets
+
+Secrets live in Cloudflare, never in `wrangler.jsonc` (`vars` are plaintext and
+visible in the dashboard).
+
+```bash
+npx wrangler secret put SESSION_SECRET --env production
+npx wrangler secret bulk .secrets.production --env production
+```
+
+`wrangler.jsonc` declares required secret names under `secrets.required`, so a
+deploy fails loudly when one was never set. GitHub only needs
+`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `PRODUCTION_DATABASE_URL`, and
+`STAGING_DATABASE_URL`.
+
+### Amazon S3 Object Storage
 
 ```bash
 aws s3 mb s3://[YOUR_BUCKET_NAME] --region [YOUR_AWS_REGION]
-fly secrets set AWS_REGION=[YOUR_AWS_REGION] AWS_S3_BUCKET=[YOUR_BUCKET_NAME] AWS_ACCESS_KEY_ID=[YOUR_ACCESS_KEY] AWS_SECRET_ACCESS_KEY=[YOUR_SECRET_KEY] --app [YOUR_APP_NAME]
 ```
 
-Keep Block Public Access enabled and grant the application identity only
-`s3:GetObject` and `s3:PutObject` on the bucket's objects.
+Keep Block Public Access enabled and grant the IAM user only `s3:GetObject` and
+`s3:PutObject` on that bucket's objects. Workers cannot assume an EC2 instance
+role, so this is a long-lived access key stored as a Worker secret — scope it
+tightly and rotate it.
 
 ### Database Migrations
 
-**Automatic migrations:** Migrations are automatically applied on deploy via
-`litefs.yml`:
+Prisma CLI cannot run inside a Worker, and Hyperdrive is a runtime pool, not a
+migration path. Migrations run from CI over a **direct** `DATABASE_URL` before
+`wrangler deploy`:
 
 ```yaml
-exec:
-  - cmd: npx prisma migrate deploy
-    if-candidate: true
+- name: Apply production migrations
+  if: github.ref == 'refs/heads/main'
+  run: npx prisma migrate deploy
+  env:
+    DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
 ```
 
-**Note:** Only the primary instance runs migrations (`if-candidate: true`).
+Because migrations land before the new code, use **"widen then narrow"** for
+anything destructive: add the new column, deploy code that writes both,
+backfill, then remove the old column in a later deploy.
+
+Do not make RDS publicly reachable just to let a hosted runner connect. Use a
+self-hosted runner or private connectivity.
 
 ### Database Backups
 
-**Create backup:**
+Backups are RDS automated backups and snapshots, configured in AWS — not
+something this repo does. Verify the retention window and **test a restore**
+before launch; an untested backup is not a backup.
 
-```bash
-# SSH to instance
-fly ssh console --app [YOUR_APP_NAME]
+### CI/CD
 
-# Create backup
-mkdir /backups
-litefs export -name sqlite.db /backups/backup-$(date +%Y-%m-%d).db
-exit
-
-# Download backup
-fly ssh sftp get /backups/backup-2024-01-01.db --app [YOUR_APP_NAME]
-```
-
-**Restore backup:**
-
-```bash
-# Upload backup
-fly ssh sftp shell --app [YOUR_APP_NAME]
-put backup-2024-01-01.db
-# Ctrl+C to exit
-
-# SSH and restore
-fly ssh console --app [YOUR_APP_NAME]
-litefs import -name sqlite.db /backup-2024-01-01.db
-exit
-```
-
-### Deployment Local
-
-**Deploy con Fly CLI:**
-
-```bash
-fly deploy
-```
-
-**Deploy con Docker:**
-
-```bash
-# Build
-docker build -t epic-stack . -f other/Dockerfile \
-  --build-arg COMMIT_SHA=$(git rev-parse --short HEAD)
-
-# Run
-docker run -d \
-  -p 8081:8081 \
-  -e SESSION_SECRET='secret' \
-  -e HONEYPOT_SECRET='secret' \
-  -e FLY='false' \
-  -v ~/litefs:/litefs \
-  epic-stack
-```
-
-### Zero-Downtime Deploys
-
-**Strategy:**
-
-- Deploy to multiple instances
-- Automatic blue-green deployment
-- Healthchecks verify app is ready
-- Auto-rollback if healthcheck fails
-
-**Configuration:**
-
-```toml
-[experimental]
-auto_rollback = true
-```
-
-### Monitoring
-
-**View logs:**
-
-```bash
-fly logs --app [YOUR_APP_NAME]
-```
-
-**View metrics:**
-
-```bash
-fly dashboard --app [YOUR_APP_NAME]
-# Or visit: https://fly.io/apps/[YOUR_APP_NAME]/monitoring
-```
-
-**Sentry (opcional):**
-
-```bash
-fly secrets set SENTRY_DSN=your-sentry-dsn --app [YOUR_APP_NAME]
-```
-
-## Common examples
-
-### Example 1: Complete initial setup
-
-```bash
-# 1. Create apps
-fly apps create my-app
-fly apps create my-app-staging
-
-# 2. Configure secrets
-fly secrets set \
-  SESSION_SECRET=$(openssl rand -hex 32) \
-  HONEYPOT_SECRET=$(openssl rand -hex 32) \
-  --app my-app
-
-fly secrets set \
-  SESSION_SECRET=$(openssl rand -hex 32) \
-  HONEYPOT_SECRET=$(openssl rand -hex 32) \
-  ALLOW_INDEXING=false \
-  --app my-app-staging
-
-# 3. Create volumes
-fly volumes create data --region sjc --size 1 --app my-app
-fly volumes create data --region sjc --size 1 --app my-app-staging
-
-# 4. Attach Consul
-fly consul attach --app my-app
-fly consul attach --app my-app-staging
-
-# 5. Create storage
-fly storage create --app my-app
-fly storage create --app my-app-staging
-
-# 6. Deploy
-fly deploy --app my-app
-```
-
-### Example 2: Multi-region setup
-
-```bash
-# First region (primary) - 2 instances
-fly scale count 2 --region sjc --app my-app
-
-# Secondary regions - 1 instance each
-fly scale count 1 --region ams --app my-app
-fly scale count 1 --region syd --app my-app
-
-# Verify
-fly status --app my-app
-```
-
-### Example 3: GitHub Actions workflow
-
-```yaml
-# .github/workflows/deploy.yml
-name: Deploy
-
-on:
-  push:
-    branches: [main, dev]
-
-jobs:
-  deploy-production:
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only --app my-app
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
-  deploy-staging:
-    if: github.ref == 'refs/heads/dev'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only --app my-app-staging
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-```
-
-### Example 4: Deploy with migrations
-
-```bash
-# Create migration
-npx prisma migrate dev --name add_field
-
-# Commit and push
-git add .
-git commit -m "Add field"
-git push origin main
-
-# GitHub Actions automatically runs:
-# 1. Build
-# 2. Deploy
-# 3. litefs.yml runs: npx prisma migrate deploy (only on primary)
-```
-
-## Common mistakes to avoid
-
-- ❌ **Non-deployable commits**: Every commit to main should be deployable - no
-  WIP or broken commits
-- ❌ **Large, long-lived PRs**: Keep PRs small and merge quickly - large PRs are
-  hard to review and risky
-- ❌ **Inconsistent primary region**: Make sure `primary_region` in `fly.toml`
-  matches the volume region
-- ❌ **Secrets not configured**: Configure all secrets before first deploy
-- ❌ **Volume not created**: Create the `data` volume before deploy
-- ❌ **Consul not attached**: Attach Consul before first deploy
-- ❌ **Migrations on replicas**: Only the primary instance should run migrations
-- ❌ **Not using healthchecks**: Healthchecks are critical for zero-downtime
-  deploys
-- ❌ **Deploy breaking changes without strategy**: Use "widen then narrow" for
-  migrations
-- ❌ **Secrets in code**: Never commit secrets, use `fly secrets`
-- ❌ **Not making backups**: Make regular database backups
-- ❌ **FLY_API_TOKEN exposed**: Never commit the token, only in GitHub Secrets
-
-## References
-
-- [Epic Stack Deployment Docs](../epic-stack/docs/deployment.md)
-- [Epic Web Principles](https://www.epicweb.dev/principles)
-- [Fly.io Documentation](https://fly.io/docs)
-- [LiteFS Documentation](https://fly.io/docs/litefs/)
-- [Fly.io CLI Reference](https://fly.io/docs/flyctl/)
-- `fly.toml` - Fly.io configuration
-- `other/litefs.yml` - LiteFS configuration
-- `other/Dockerfile` - Deployment Dockerfile
-- `.github/workflows/deploy.yml` - CI/CD workflow
-
-### Preview Deployments (Inspired by Vercel Deploy Claimable)
-
-Epic Stack can implement preview deployments similar to Vercel's deploy
-claimable pattern.
-
-**✅ Good - Preview deployments for pull requests:**
-
-```yaml
-# .github/workflows/preview-deploy.yml
-name: Preview Deploy
-
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-
-jobs:
-  preview:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - name: Deploy preview
-        run: |
-          # Create or reuse preview app
-          PREVIEW_APP="my-app-pr-${{ github.event.pull_request.number }}"
-          flyctl apps list | grep "$PREVIEW_APP" || flyctl apps create "$PREVIEW_APP"
-
-          # Deploy to preview app
-          flyctl deploy --app "$PREVIEW_APP" --remote-only
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-      - name: Comment preview URL
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `🚀 Preview deployment: https://$PREVIEW_APP.fly.dev`
-            })
-```
-
-**✅ Good - Auto-cleanup preview deployments:**
-
-```yaml
-# .github/workflows/cleanup-preview.yml
-name: Cleanup Preview
-
-on:
-  pull_request:
-    types: [closed]
-
-jobs:
-  cleanup:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - name: Destroy preview app
-        run: |
-          PREVIEW_APP="my-app-pr-${{ github.event.pull_request.number }}"
-          flyctl apps destroy "$PREVIEW_APP" --yes
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-```
+`.github/workflows/deploy.yml` runs lint, typecheck, both builds, Vitest, and
+Playwright. On success, a push to `dev` deploys staging and a push to `main`
+deploys production. Both test jobs run a real Postgres service container — there
+is no in-memory database to fall back on.
 
 ### Environment Detection
 
-**✅ Good - Detect deployment environment:**
-
 ```typescript
-// app/utils/env.server.ts
-export function getDeploymentEnv():
-	| 'production'
-	| 'staging'
-	| 'preview'
-	| 'development' {
-	if (process.env.NODE_ENV === 'development') {
-		return 'development'
-	}
-
-	// Preview deployments
-	if (process.env.FLY_APP_NAME?.includes('pr-')) {
-		return 'preview'
-	}
-
-	// Staging environment
-	if (process.env.FLY_APP_NAME?.includes('staging')) {
-		return 'staging'
-	}
-
-	// Production
-	return 'production'
-}
+// Worker vars, not FLY_* — see app/utils/env.server.ts
+const isProduction = process.env.ALLOW_INDEXING === 'true'
 ```
 
-**✅ Good - Environment-specific configuration:**
+Prefer explicit Worker `vars` in `wrangler.jsonc` over inferring the environment
+from a name. Add a var to all three config blocks when you introduce one.
 
-```typescript
-const env = getDeploymentEnv()
+### Rollback
 
-export const config = {
-	production: env === 'production',
-	staging: env === 'staging',
-	preview: env === 'preview',
-	development: env === 'development',
-
-	// Preview deployments might have limited features
-	features: {
-		analytics: env === 'production',
-		sentry: env !== 'development',
-		indexing: env === 'production',
-	},
-}
-```
-
-### Build Artifact Exclusion
-
-**✅ Good - Optimize Docker builds:**
-
-```dockerfile
-# other/Dockerfile
-# Multi-stage build for smaller image size
-FROM node:20-alpine AS base
-WORKDIR /app
-
-# Install dependencies
-FROM base AS deps
-COPY package*.json ./
-RUN npm ci --only=production
-
-# Build application
-FROM base AS builder
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-# Production image
-FROM base AS runner
-ENV NODE_ENV=production
-
-# Copy only what's needed
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/build ./build
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/server ./server
-COPY --from=builder /app/other ./other
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/package.json ./
-
-# Exclude unnecessary files
-# node_modules/.cache, .git, etc. are already excluded via .dockerignore
-
-CMD ["npm", "start"]
-```
-
-**✅ Good - Docker ignore file:**
-
-```dockerignore
-# .dockerignore (in other/)
-node_modules
-.git
-.env
-.env.*
-!.env.example
-*.log
-.DS_Store
-coverage
-.vscode
-.idea
-*.swp
-*.swo
-*~
-.cache
-dist
-build
-```
-
-### Deployment Status and Monitoring
-
-**✅ Good - Deployment status tracking:**
-
-```typescript
-// app/routes/admin/deployment-status.tsx
-export async function loader({ request }: Route.LoaderArgs) {
-	const deploymentInfo = {
-		appName: process.env.FLY_APP_NAME,
-		region: process.env.FLY_REGION,
-		environment: getDeploymentEnv(),
-		commitSha: process.env.COMMIT_SHA,
-		deployedAt: process.env.DEPLOYED_AT,
-	}
-
-	return { deploymentInfo }
-}
-```
-
-### Rollback Strategies
-
-**✅ Good - Quick rollback with Fly.io:**
+Deploys are immutable versions. Roll back through the dashboard, or:
 
 ```bash
-# List recent releases
-fly releases list --app my-app
-
-# Rollback to previous release
-fly releases rollback --app my-app
+npx wrangler deployments list --env production
+npx wrangler rollback [VERSION_ID] --env production
 ```
 
-**✅ Good - Automated rollback on failure:**
+**A code rollback does not undo a migration.** If the bad deploy included a
+schema change, roll the schema forward with a new migration instead of reverting
+it.
 
-```toml
-# fly.toml
-[experimental]
-  auto_rollback = true
-  min_machines_running = 1
-```
+## Common mistakes to avoid
+
+- ❌ **Adding a binding only at the top level**: environments do not inherit;
+  add it to `env.staging` and `env.production` too
+- ❌ **Deploying without `CLOUDFLARE_ENV` at build time**:
+  `wrangler deploy --env` alone deploys a bundle built for the wrong environment
+- ❌ **Leaving placeholder all-zero ids**: replace them with real Hyperdrive and
+  KV ids before deploying
+- ❌ **Testing runtime behaviour with `npm run dev`**: use `npm run dev:worker`
+  for Hyperdrive, KV, rate limits, or image transformations
+- ❌ **Running migrations through Hyperdrive**: use a direct `DATABASE_URL`
+- ❌ **Assuming a rollback reverts the database**: roll schema changes forward
+- ❌ **Non-deployable commits**: every commit to main should be deployable
+- ❌ **Large, long-lived PRs**: keep PRs small and merge quickly
+- ❌ **Secrets in `vars`**: `vars` are plaintext; use `wrangler secret`
+- ❌ **Storing state in module scope**: isolates are short-lived and numerous
+- ❌ **Treating KV as authoritative**: it is eventually consistent, cache only
+- ❌ **Exposing RDS publicly for CI convenience**: use private connectivity
+- ❌ **`CLOUDFLARE_API_TOKEN` in the repo**: GitHub Secrets only
+
+## References
+
+- [Epic Web Principles](https://www.epicweb.dev/principles)
+- [Cloudflare Workers](https://developers.cloudflare.com/workers/)
+- [Hyperdrive](https://developers.cloudflare.com/hyperdrive/)
+- [Rate limiting bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)
+- [Workers KV](https://developers.cloudflare.com/kv/)
+- `wrangler.jsonc` - Worker configuration and bindings
+- `workers/app.ts` - Worker entry point
+- `docs/deployment.md` - Step-by-step deployment guide
+- `docs/amazon-rds-postgresql.md` - RDS provisioning
+- `.github/workflows/deploy.yml` - CI/CD workflow

@@ -53,7 +53,28 @@ to do this.
 
 ## Rate Limiting
 
-The Node development/test harness has a permissive in-memory Express limiter.
-Production rate limiting must be configured at Cloudflare using WAF
-rate-limiting rules. Apply the strongest rules to authentication, verification,
-password reset, onboarding, settings mutations, and administrative paths.
+Rate limiting runs in both runtimes at three tiers: 10 requests per minute for
+authentication, verification, password reset, onboarding, settings mutations,
+and administrative paths; 100 for other mutations; 1000 for everything else.
+
+Which tier a request falls into is decided in one shared module,
+[`app/utils/rate-limit.server.ts`](../app/utils/rate-limit.server.ts). Add a new
+sensitive path to `STRONG_PATHS` there and both runtimes pick it up — do not
+duplicate the list.
+
+- **Production (Worker):** Cloudflare rate-limiting bindings declared in
+  `wrangler.jsonc`. The check runs before a Hyperdrive client is opened, so a
+  flood cannot exhaust the database connection pool. The key derives from
+  `CF-Connecting-IP`, which Cloudflare sets itself and strips from client input,
+  so it cannot be spoofed the way `X-Forwarded-For` can.
+- **Node harness:** `express-rate-limit` with the same tiers, deliberately
+  loosened during development and Playwright runs.
+
+## Security Headers
+
+The nonce-based Content-Security-Policy is built per render in
+`app/entry.server.tsx`. Every other security header comes from
+[`app/utils/security-headers.server.ts`](../app/utils/security-headers.server.ts),
+which both the Worker and the Node harness apply, so the two cannot drift.
+`Referrer-Policy` is deliberately omitted because it breaks the `redirectTo`
+flow.

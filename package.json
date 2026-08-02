@@ -19,6 +19,7 @@
     "db:stop": "docker compose stop postgres",
     "dev": "cross-env NODE_ENV=development MOCKS=true node index.ts",
     "dev:no-mocks": "cross-env NODE_ENV=development node index.ts",
+    "dev:worker": "npm run generate && cross-env WRANGLER_LOG_PATH=.wrangler/logs CLOUDFLARE_WORKERS=true vite dev",
     "format": "prettier --write .",
     "lint": "eslint .",
     "setup": "npm run build && prisma migrate deploy && prisma generate && playwright install",

@@ -1,11 +1,12 @@
 ---
 name: epic-database
-description: Guide on Prisma, SQLite, and LiteFS for Epic Stack
+description:
+  Guide on Prisma, PostgreSQL on Amazon RDS, and Cloudflare Hyperdrive
 categories:
   - database
   - prisma
-  - sqlite
-  - litefs
+  - postgresql
+  - hyperdrive
 ---
 
 # Epic Stack: Database
@@ -16,10 +17,10 @@ Use this skill when you need to:
 
 - Design database schema with Prisma
 - Create migrations
-- Work with SQLite and LiteFS
+- Work with PostgreSQL, Amazon RDS, and Hyperdrive
 - Optimize queries and performance
 - Create seed scripts
-- Work with multi-region deployments
+- Understand how the Worker gets a request-scoped Prisma client
 - Manage backups and restores
 
 ## Patterns and conventions
@@ -77,22 +78,43 @@ const notes = await prisma.note.findMany({
 
 ### Prisma Schema
 
-Epic Stack uses Prisma with SQLite as the database.
+This stack uses Prisma with PostgreSQL (Amazon RDS in production, the
+`compose.yaml` container locally).
 
 **Basic configuration:**
 
+Two clients are generated from one schema, because the Node harness and the
+Worker need different runtimes. `vite.config.ts` aliases `#prisma-client` to the
+right one based on `CLOUDFLARE_WORKERS`. Never import a generated client
+directly — always import `prisma` from `#app/utils/db.server.ts`.
+
 ```prisma
 // prisma/schema.prisma
-generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["typedSql"]
+generator nodeClient {
+  provider   = "prisma-client"
+  output     = "../app/generated/prisma-node"
+  runtime    = "nodejs"
+  engineType = "client"
+}
+
+generator workerClient {
+  provider   = "prisma-client"
+  output     = "../app/generated/prisma-worker"
+  runtime    = "cloudflare"
+  engineType = "client"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 ```
+
+**Request-scoped clients:** the Worker opens a Prisma client per request over
+the Hyperdrive binding and disposes of it once the response body has drained.
+`db.server.ts` exposes that through an `AsyncLocalStorage` proxy so ordinary
+`import { prisma }` call sites work unchanged in both runtimes. Do not cache a
+Prisma client at module scope in Worker code.
 
 **Basic model:**
 
@@ -263,8 +285,11 @@ npx prisma migrate dev --name add_user_field
 npx prisma migrate deploy
 ```
 
-**Automatic migrations:** Migrations are automatically applied on deploy via
-`litefs.yml`.
+**Automatic migrations:** `.github/workflows/deploy.yml` runs
+`prisma migrate deploy` against the staging or production RDS instance before
+`wrangler deploy`. Migrations run from CI over a direct `DATABASE_URL`, not
+through Hyperdrive — Hyperdrive is a runtime connection pool, not a migration
+path.
 
 **"Widen then Narrow" strategy for zero-downtime:**
 
@@ -390,43 +415,37 @@ await prisma.$transaction(async (tx) => {
 })
 ```
 
-### SQLite con LiteFS
+### PostgreSQL through Hyperdrive
 
-**Multi-region with LiteFS:**
+There is one primary RDS instance and no read replicas, so unlike the LiteFS
+setup this replaced, **every isolate can read and write**. There is no primary
+election, no write forwarding, and no `ensurePrimary()`.
 
-- Only the primary instance can write
-- Replicas can only read
-- Writes are automatically replicated
+**What Hyperdrive does:** it pools connections at the edge, so a Worker isolate
+does not pay a TCP + TLS + Postgres handshake per request, and RDS does not see
+one connection per isolate. The Worker reads `env.HYPERDRIVE.connectionString`
+and hands it to Prisma's `pg` adapter.
 
-**Check primary instance:**
+**What this means when writing queries:**
+
+- Connections are precious. Do not hold a transaction open across an `await` on
+  anything slow (an S3 upload, a third-party API).
+- Prefer a handful of well-shaped queries over many small round trips; each one
+  crosses the network to your RDS region.
+- Reads and writes are strongly consistent, so read-after-write works normally.
 
 ```typescript
-import { ensurePrimary, getInstanceInfo } from '#app/utils/litefs.server.ts'
+// The connection string only exists inside the Worker request scope.
+// App code never touches it — it imports the proxy instead.
+import { prisma } from '#app/utils/db.server.ts'
 
 export async function action({ request }: Route.ActionArgs) {
-	// Ensure we're on primary instance for writes
-	await ensurePrimary()
-
-	// Now we can write safely
+	// No primary check needed; just write.
 	await prisma.user.create({
 		data: {
 			/* ... */
 		},
 	})
-}
-```
-
-**Get instance information:**
-
-```typescript
-import { getInstanceInfo } from '#app/utils/litefs.server.ts'
-
-const { currentIsPrimary, primaryInstance } = await getInstanceInfo()
-
-if (currentIsPrimary) {
-	// Can write
-} else {
-	// Read-only, redirect to primary if necessary
 }
 ```
 
@@ -549,43 +568,38 @@ client.$on('query', async (e) => {
 
 ### Database URL
 
-**Development:**
+`DATABASE_URL` is used by the Prisma CLI (migrations, seed, Studio) and by the
+Node harness. The deployed Worker never reads it — it uses the Hyperdrive
+binding instead.
+
+**Development** (the `compose.yaml` container, started with `npm run db:start`):
 
 ```bash
-DATABASE_URL=file:./data/db.sqlite
+DATABASE_URL="postgresql://candidgarden:candidgarden@localhost:5432/candidgarden?schema=public"
 ```
 
-**Production (Fly.io):**
+Note the `?schema=` parameter: `pg` ignores it, so `db.server.ts` parses it out
+and passes it to the adapter explicitly. Drop it and every query silently lands
+on the default `search_path`.
+
+**Production (Amazon RDS):**
 
 ```bash
-DATABASE_URL=file:/litefs/data/sqlite.db
+DATABASE_URL="postgresql://USER:PASSWORD@RDS_ENDPOINT:5432/candidgarden?schema=public&sslmode=require&connection_limit=5"
 ```
 
-### Connecting to DB in Production
+### Connecting to the production DB
 
-**SSH to Fly instance:**
-
-```bash
-fly ssh console --app [YOUR_APP_NAME]
-```
-
-**Connect to DB CLI:**
+RDS is reached directly over the network — there is no instance to SSH into.
+Whether it is publicly reachable or only from a VPC/bastion is your RDS security
+group configuration; see `docs/amazon-rds-postgresql.md`.
 
 ```bash
-fly ssh console -C database-cli --app [YOUR_APP_NAME]
-```
+# psql
+psql "$PRODUCTION_DATABASE_URL"
 
-**Prisma Studio:**
-
-```bash
-# Terminal 1: Start Prisma Studio
-fly ssh console -C "npx prisma studio" -s --app [YOUR_APP_NAME]
-
-# Terminal 2: Local proxy
-fly proxy 5556:5555 --app [YOUR_APP_NAME]
-
-# Open in browser
-# http://localhost:5556
+# Prisma Studio against production — read carefully before editing anything
+DATABASE_URL="$PRODUCTION_DATABASE_URL" npx prisma studio
 ```
 
 ## Common examples
@@ -787,8 +801,14 @@ async function seed() {
   you need them
 - ❌ **Not using transactions for related operations**: Always use transactions
   when multiple operations must be atomic
-- ❌ **Writing from replicas**: Verify `ensurePrimary()` before writes in
-  production
+- ❌ **Caching a Prisma client at module scope in Worker code**: the client is
+  request-scoped and disposed after the response; import the `prisma` proxy
+- ❌ **Holding a transaction open across a slow await**: Hyperdrive connections
+  are pooled and finite; never await S3 or a third-party API inside one
+- ❌ **Running migrations through Hyperdrive**: `prisma migrate deploy` needs a
+  direct `DATABASE_URL` to RDS
+- ❌ **Dropping `?schema=` from the connection string**: `pg` ignores it, so
+  queries land on the default `search_path`
 - ❌ **Breaking migrations without strategy**: Use "widen then narrow" for
   zero-downtime
 - ❌ **Not validating data before inserting**: Always validate with Zod before
@@ -807,9 +827,10 @@ async function seed() {
 - [Epic Stack Database Docs](../epic-stack/docs/database.md)
 - [Epic Web Principles](https://www.epicweb.dev/principles)
 - [Prisma Documentation](https://www.prisma.io/docs)
-- [LiteFS Documentation](https://fly.io/docs/litefs/)
-- [SQLite Documentation](https://www.sqlite.org/docs.html)
+- [Cloudflare Hyperdrive](https://developers.cloudflare.com/hyperdrive/)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 - `prisma/schema.prisma` - Complete schema
 - `prisma/seed.ts` - Seed example
-- `app/utils/db.server.ts` - Prisma Client setup
-- `app/utils/litefs.server.ts` - LiteFS utilities
+- `app/utils/db.server.ts` - Request-scoped Prisma client and proxy
+- `workers/app.ts` - Where the per-request client is created and disposed
+- `docs/amazon-rds-postgresql.md` - RDS provisioning and connection details
