@@ -60,7 +60,7 @@ database would require a separate data-export and transformation process.
 **Commit:** `migrate image storage to Amazon S3`
 
 This project has been fully migrated from its previous S3-compatible object
-storage setup to private Amazon S3 buckets for uploaded profile and note images.
+storage setup to private Amazon S3 buckets for uploaded profile images.
 
 The migration includes:
 

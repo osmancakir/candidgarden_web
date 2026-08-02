@@ -23,8 +23,7 @@ Timings requires four parts:
 3. Create headers
 4. Send headers
 
-Here are all those parts in action in the `/user/:username/notes` route at the
-time of this writing:
+Here are all those parts in action in a user profile route:
 
 ```tsx
 import {
@@ -32,10 +31,10 @@ import {
 	makeTimings,
 	time,
 } from '#app/utils/timing.server.ts'
-import { type Route } from './+types/notes.ts'
+import { type Route } from './+types/index.ts'
 
 export async function loader({ params }: Route.LoaderArgs) {
-	const timings = makeTimings('notes loader') // <-- 1. Setup Timings
+	const timings = makeTimings('profile loader') // <-- 1. Setup Timings
 	// 2. Time functions
 	const owner = await time(
 		() =>
@@ -55,22 +54,8 @@ export async function loader({ params }: Route.LoaderArgs) {
 	if (!owner) {
 		throw new Response('Not found', { status: 404 })
 	}
-	// 2. Time functions
-	const notes = await time(
-		() =>
-			prisma.note.findMany({
-				where: {
-					ownerId: owner.id,
-				},
-				select: {
-					id: true,
-					title: true,
-				},
-			}),
-		{ timings, type: 'find notes' },
-	)
 	return json(
-		{ owner, notes },
+		{ owner },
 		{ headers: { 'Server-Timing': timings.toString() } }, // <-- 3. Create headers
 	)
 }

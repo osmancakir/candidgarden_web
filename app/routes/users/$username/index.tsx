@@ -70,11 +70,6 @@ export default function ProfileRoute() {
 			</header>
 
 			<div className="mt-8 flex flex-wrap items-center gap-4">
-				<Button asChild variant="outline">
-					<Link to="notes" prefetch="intent">
-						{isLoggedInUser ? 'My notes' : `${userDisplayName}'s notes`}
-					</Link>
-				</Button>
 				{isLoggedInUser ? (
 					<>
 						<Button asChild variant="outline">

@@ -125,10 +125,12 @@ function quoteIdentifier(identifier) {
 	return `"${identifier.replaceAll('"', '""')}"`
 }
 
-function sourceCount(table) {
+function sourceCount(table, where = '') {
 	return Number(
 		sqlite
-			.prepare(`SELECT COUNT(*) AS count FROM ${quoteIdentifier(table)}`)
+			.prepare(
+				`SELECT COUNT(*) AS count FROM ${quoteIdentifier(table)} ${where}`,
+			)
 			.get().count,
 	)
 }
@@ -294,16 +296,9 @@ async function migrateImages() {
 			`SELECT id, userId, contentType, blob FROM "UserImage" ORDER BY id`,
 		)
 		.all()
-	const noteImages = sqlite
-		.prepare(
-			`SELECT id, noteId, contentType, blob FROM "NoteImage" ORDER BY id`,
-		)
-		.all()
-
 	const jobs = [
 		...artworkRows.map((row) => ({ type: 'artwork', row })),
 		...userImages.map((row) => ({ type: 'user-image', row })),
-		...noteImages.map((row) => ({ type: 'note-image', row })),
 	]
 	let cursor = 0
 	let migrated = 0
@@ -359,14 +354,8 @@ async function migrateImages() {
 
 		const row = job.row
 		const extension = imageExtension(String(row.contentType))
-		const key =
-			job.type === 'user-image'
-				? `users/${row.userId}/profile-images/legacy-${row.id}.${extension}`
-				: `notes/${row.noteId}/images/legacy-${row.id}.${extension}`
-		const migration =
-			job.type === 'user-image'
-				? 'fly-sqlite-user-image-v1'
-				: 'fly-sqlite-note-image-v1'
+		const key = `users/${row.userId}/profile-images/legacy-${row.id}.${extension}`
+		const migration = 'fly-sqlite-user-image-v1'
 		if (await objectAlreadyMigrated(s3, key, migration)) {
 			skipped++
 			return
@@ -440,6 +429,7 @@ const tableConfigurations = [
 	},
 	{
 		table: 'Permission',
+		where: `WHERE "entity" <> 'note'`,
 		columns: [
 			text('id'),
 			text('action'),
@@ -540,17 +530,6 @@ const tableConfigurations = [
 		],
 		serial: true,
 	},
-	{
-		table: 'Note',
-		columns: [
-			text('id'),
-			text('title'),
-			text('content'),
-			timestamp('createdAt'),
-			timestamp('updatedAt'),
-			text('ownerId'),
-		],
-	},
 	{ table: 'Password', columns: [text('hash'), text('userId')] },
 	{
 		table: 'Session',
@@ -590,6 +569,7 @@ const tableConfigurations = [
 	},
 	{
 		table: '_PermissionToRole',
+		where: `WHERE "A" IN (SELECT "id" FROM "Permission" WHERE "entity" <> 'note')`,
 		columns: [text('A'), text('B')],
 	},
 	{ table: '_RoleToUser', columns: [text('A'), text('B')] },
@@ -608,23 +588,6 @@ const tableConfigurations = [
 			timestamp('createdAt'),
 			timestamp('updatedAt'),
 			text('userId'),
-		],
-	},
-	{
-		table: 'NoteImage',
-		columns: [
-			text('id'),
-			text('altText'),
-			{
-				source: 'id',
-				target: 'objectKey',
-				type: 'text',
-				transform: (_value, row) =>
-					`notes/${row.noteId}/images/legacy-${row.id}.${imageExtension(String(row.contentType))}`,
-			},
-			timestamp('createdAt'),
-			timestamp('updatedAt'),
-			text('noteId'),
 		],
 	},
 	{
@@ -752,10 +715,12 @@ async function insertBatch(client, configuration, rows) {
 }
 
 async function insertTable(client, configuration) {
-	const total = sourceCount(configuration.table)
+	const total = sourceCount(configuration.table, configuration.where)
 	const batchSize = configuration.batchSize ?? 2_000
 	const source = sqlite
-		.prepare(`SELECT * FROM ${quoteIdentifier(configuration.table)}`)
+		.prepare(
+			`SELECT * FROM ${quoteIdentifier(configuration.table)} ${configuration.where ?? ''}`,
+		)
 		.iterate()
 	let batch = []
 	let inserted = 0
@@ -909,7 +874,7 @@ async function verifyDatabase(existingPassword) {
 	const client = await connectToRds(password, 'candidgarden-data-verification')
 	try {
 		for (const configuration of tableConfigurations) {
-			const source = sourceCount(configuration.table)
+			const source = sourceCount(configuration.table, configuration.where)
 			const target = Number(
 				(
 					await client.query(
@@ -927,7 +892,7 @@ async function verifyDatabase(existingPassword) {
 			`SELECT table_name, column_name
 			 FROM information_schema.columns
 			 WHERE table_schema = 'public'
-			   AND table_name IN ('UserImage', 'NoteImage')
+			   AND table_name = 'UserImage'
 			   AND (column_name = 'blob' OR data_type = 'bytea')`,
 		)
 		if (imageBlobColumns.rowCount) {
@@ -962,7 +927,10 @@ async function verifyDatabase(existingPassword) {
 function printInventory() {
 	const inventoryTables = tableConfigurations.map(({ table }) => table)
 	for (const table of inventoryTables) {
-		console.log(`${table}: ${sourceCount(table)}`)
+		const configuration = tableConfigurations.find(
+			(candidate) => candidate.table === table,
+		)
+		console.log(`${table}: ${sourceCount(table, configuration?.where)}`)
 	}
 	const resources = sqlite
 		.prepare(
@@ -971,11 +939,7 @@ function printInventory() {
 		)
 		.get().count
 	const blobBytes = sqlite
-		.prepare(
-			`SELECT
-			 (SELECT COALESCE(SUM(length(blob)), 0) FROM "UserImage") +
-			 (SELECT COALESCE(SUM(length(blob)), 0) FROM "NoteImage") AS bytes`,
-		)
+		.prepare(`SELECT COALESCE(SUM(length(blob)), 0) AS bytes FROM "UserImage"`)
 		.get().bytes
 	console.log(`Artwork objects to migrate: ${resources}`)
 	console.log(

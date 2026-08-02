@@ -47,7 +47,7 @@ We're changing the implementation to follow a RBAC model:
 model Permission {
   id          String @id @default(cuid())
   action      String // e.g. create, read, update, delete
-  entity      String // e.g. note, user, etc.
+  entity      String // e.g. user
   access      String // e.g. own or any
   description String @default("")
 

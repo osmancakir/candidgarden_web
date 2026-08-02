@@ -73,15 +73,7 @@ app/routes
 └── users
     ├── index.tsx
     └── $username
-        ├── index.tsx
-        └── notes
-            ├── $noteId.tsx
-            ├── $noteId_.edit.tsx
-            ├── _layout.tsx
-            ├── index.tsx
-            └── new.tsx
-
-17 directories, 72 files
+        └── index.tsx
 ```
 
 ```tsx
@@ -179,18 +171,6 @@ app/routes
 			index
 			file="routes/users/$username/index.tsx"
 		/>
-		<Route
-			path="users/:username/notes"
-			file="routes/users/$username/notes/_layout.tsx"
-		>
-			<Route path=":noteId" file="routes/users/$username/notes/$noteId.tsx" />
-			<Route
-				path=":noteId/edit"
-				file="routes/users/$username/notes/$noteId_.edit.tsx"
-			/>
-			<Route index file="routes/users/$username/notes/index.tsx" />
-			<Route path="new" file="routes/users/$username/notes/new.tsx" />
-		</Route>
 		<Route path="users" index file="routes/users/index.tsx" />
 	</Route>
 </Routes>

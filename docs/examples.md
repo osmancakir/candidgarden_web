@@ -22,9 +22,6 @@ This page links to examples of how to implement some things with the Epic Stack.
 - [Cross-site Request Forgery Protection (CSRF)](https://github.com/epicweb-dev/epic-stack-example-csrf)
   by [@kentcdodds](https://github.com/kentcdodds): An example of the Epic Stack
   with CSRF protection on forms.
-- [Epic Stack + OpenAI](https://github.com/kentcdodds/epic-ai): by
-  [@kentcdodds](https://github.com/kentcdodds): An example of the Epic Stack
-  with OpenAI's GPT API (enhances the notes feature with "generate" buttons).
 - [Prisma Client Extensions](https://github.com/L-Steinmacher/epic-stack-with-prisma-client-extensions)
   by
   [@L-Steinmacher](https://github.com/L-Steinmacher/epic-stack-with-prisma-client-extensions):

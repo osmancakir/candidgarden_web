@@ -18,8 +18,8 @@ The primary utility you'll use for redirecting with toast notifications is
 using this:
 
 ```tsx
-return redirectWithToast(`/users/${note.owner.username}/notes/${note.id}`, {
-	description: id ? 'Note updated' : 'Note created',
+return redirectWithToast(`/users/${user.username}`, {
+	description: 'Profile updated',
 })
 ```
 
@@ -34,7 +34,7 @@ return json(
 	{ success: true },
 	{
 		headers: await createToastHeaders({
-			description: 'Note updated',
+			description: 'Profile updated',
 			type: 'success',
 		}),
 	},
@@ -51,7 +51,7 @@ return json(
 		headers: combineHeaders(
 			await createToastHeaders({
 				toast: {
-					description: 'Note updated',
+					description: 'Profile updated',
 					type: 'success',
 				},
 			}),

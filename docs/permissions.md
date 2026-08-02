@@ -6,10 +6,10 @@ Each user has a set of roles, and each role has a set of permissions. A user's
 permissions are the union of the permissions of all their roles (with the more
 permissive permission taking precedence).
 
-The default development seed creates fine-grained permissions that include
-`create`, `read`, `update`, and `delete` permissions for `user` and `note` with
-the access of `own` and `any`. The default seed also creates `user` and `admin`
-roles with the sensible permissions for those roles.
+The default development seed creates fine-grained `create`, `read`, `update`,
+and `delete` permissions for `user` with the access of `own` and `any`. The
+default seed also creates `user` and `admin` roles with sensible permissions for
+those roles.
 
 You can combine these permissions in different ways to support different roles
 for different personas of users of your application.
@@ -29,7 +29,7 @@ const userIsAdmin = await requireUserWithRole(request, 'admin')
 ```ts
 // UI utilities
 const user = useUser()
-const userCanCreateTheirOwnNotes = userHasPermission(user, 'create:note:own')
+const userCanUpdateTheirOwnProfile = userHasPermission(user, 'update:user:own')
 const userIsUser = userHasRole(user, 'user')
 ```
 
