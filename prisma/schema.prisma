@@ -29,13 +29,15 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  image       UserImage?
-  password    Password?
-  notes       Note[]
-  roles       Role[]
-  sessions    Session[]
-  connections Connection[]
-  passkey     Passkey[]
+  image                 UserImage?
+  password              Password?
+  notes                 Note[]
+  roles                 Role[]
+  sessions              Session[]
+  connections           Connection[]
+  passkey               Passkey[]
+  favorites             Favorite[]
+  wikiDataVerifications WikiDataVerification[] @relation("VerifiedByUser")
 }
 
 model Note {
@@ -192,4 +194,204 @@ model Passkey {
   transports     String? // Stored as comma-separated values
 
   @@index(userId)
+}
+
+// Legacy Candid Garden domain data is retained while the application routes are
+// migrated separately. Image binaries are never stored in PostgreSQL: legacy
+// source paths are kept for audit/compatibility and objectKey points to the
+// private production S3 bucket.
+model Artist {
+  id                   Int                   @id @default(autoincrement())
+  name                 String
+  wikiDataId           String?
+  wikiDataVerification WikiDataVerification?
+  resources            Resource[]
+
+  @@index([name])
+}
+
+model Resource {
+  id          Int     @id @default(autoincrement())
+  artistId    Int?    @map("artist_id")
+  title       String?
+  titleEn     String? @map("title_en")
+  notBefore   Int?    @map("not_before")
+  notAfter    Int?    @map("not_after")
+  location    String?
+  institution String?
+  path        String?
+  objectKey   String? @unique
+  wikiDataId  String?
+  highlight   Boolean @default(false)
+
+  artist               Artist?               @relation(fields: [artistId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  taggings             Tagging[]
+  relationsAsFirst     Relation[]            @relation("Resource1")
+  relationsAsSecond    Relation[]            @relation("Resource2")
+  favorites            Favorite[]
+  confessionLinks      ConfessionArt[]
+  wikiDataVerification WikiDataVerification?
+
+  @@index([artistId])
+  @@index([highlight])
+  @@index([title, location])
+}
+
+model Institution {
+  id                   Int                   @id @default(autoincrement())
+  name                 String
+  wikiDataId           String?
+  imageUrl             String?
+  objectKey            String?               @unique
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  deletedAt            DateTime?
+  wikiDataVerification WikiDataVerification?
+
+  @@index([name])
+}
+
+model WikiDataVerification {
+  id            Int       @id @default(autoincrement())
+  status        String    @default("PENDING")
+  notes         String?
+  verifiedAt    DateTime?
+  verifiedById  String?
+  artistId      Int?      @unique
+  resourceId    Int?      @unique
+  institutionId Int?      @unique
+
+  verifiedBy  User?        @relation("VerifiedByUser", fields: [verifiedById], references: [id])
+  artist      Artist?      @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  resource    Resource?    @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  institution Institution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+}
+
+model Relation {
+  id          Int    @id @default(autoincrement())
+  resourceId1 Int    @map("resource_id_1")
+  resourceId2 Int    @map("resource_id_2")
+  type        String
+
+  resource1 Resource @relation("Resource1", fields: [resourceId1], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  resource2 Resource @relation("Resource2", fields: [resourceId2], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([resourceId1, resourceId2, type])
+}
+
+model Tag {
+  id       String    @id
+  name     String
+  language String
+  category String?
+  safety   String?
+  human    Int       @default(0)
+  aiGpt4o  Int       @default(0) @map("ai_gpt_4o")
+  taggings Tagging[]
+
+  @@index([name, language])
+  @@index([category, safety])
+}
+
+model Tagging {
+  id         Int    @id @default(autoincrement())
+  resourceId Int    @map("resource_id")
+  tagId      String @map("tag_id")
+  frequency  Int
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([resourceId, tagId])
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  userId     String
+  resourceId Int
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, resourceId])
+}
+
+model Music {
+  id              Int               @id @default(autoincrement())
+  source          String
+  trackName       String            @map("track_name")
+  artistName      String            @map("artist_name")
+  album           String
+  isrc            String            @unique
+  spotifyId       String            @unique @map("spotify_id")
+  country         String
+  genre           String
+  releaseYear     Int               @map("release_year")
+  youtubeUrl      String            @default("") @map("youtube_url")
+  highlight       Boolean           @default(false)
+  confessionLinks ConfessionMusic[]
+
+  @@index([highlight])
+}
+
+model Confession {
+  id         Int               @id @default(autoincrement())
+  confession String
+  likeCount  Int               @default(0)
+  musicExp   String?
+  artExp     String?
+  mood       String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  deletedAt  DateTime?
+  score      Int?
+  comments   Comment[]
+  musicLinks ConfessionMusic[]
+  artLinks   ConfessionArt[]
+}
+
+model ConfessionMusic {
+  id           Int @id @default(autoincrement())
+  confessionId Int
+  musicId      Int
+
+  confession Confession @relation(fields: [confessionId], references: [id], onDelete: Cascade)
+  music      Music      @relation(fields: [musicId], references: [id])
+}
+
+model ConfessionArt {
+  id           Int @id @default(autoincrement())
+  confessionId Int
+  artId        Int
+
+  confession Confession @relation(fields: [confessionId], references: [id], onDelete: Cascade)
+  art        Resource   @relation(fields: [artId], references: [id])
+}
+
+model Comment {
+  id           Int       @id @default(autoincrement())
+  confessionId Int
+  text         String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  confession Confession @relation(fields: [confessionId], references: [id], onDelete: Cascade)
+}
+
+model PdfDownload {
+  id        Int      @id @default(autoincrement())
+  fileName  String
+  ipAddress String?
+  userAgent String?
+  country   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SearchSubmission {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  query     String
 }

@@ -7,7 +7,7 @@
 	"upload_source_maps": true,
 	"assets": {
 		"binding": "ASSETS",
-		"directory": "./build/client",
+		"directory": "./build/client"
 	},
 	"observability": {
 		"enabled": true,
@@ -15,16 +15,16 @@
 		"logs": {
 			"enabled": true,
 			"head_sampling_rate": 0.1,
-			"invocation_logs": true,
+			"invocation_logs": true
 		},
 		"traces": {
 			"enabled": true,
 			"head_sampling_rate": 0.1,
-			"persist": true,
+			"persist": true
 		},
 	},
 	"vars": {
-		"ALLOW_INDEXING": "false",
+		"ALLOW_INDEXING": "false"
 	},
 	"secrets": {
 		"required": [
@@ -33,8 +33,8 @@
 			"AWS_ACCESS_KEY_ID",
 			"AWS_SECRET_ACCESS_KEY",
 			"AWS_REGION",
-			"AWS_S3_BUCKET",
-		],
+			"AWS_S3_BUCKET"
+		]
 	},
 	"hyperdrive": [
 		{
@@ -47,7 +47,7 @@
 		"staging": {
 			"name": "candidgarden-staging",
 			"vars": {
-				"ALLOW_INDEXING": "false",
+				"ALLOW_INDEXING": "false"
 			},
 			"secrets": {
 				"required": [
@@ -56,20 +56,20 @@
 					"AWS_ACCESS_KEY_ID",
 					"AWS_SECRET_ACCESS_KEY",
 					"AWS_REGION",
-					"AWS_S3_BUCKET",
+					"AWS_S3_BUCKET"
 				],
 			},
 			"hyperdrive": [
 				{
 					"binding": "HYPERDRIVE",
-					"id": "00000000000000000000000000000000",
+					"id": "00000000000000000000000000000000"
 				},
 			],
 		},
 		"production": {
 			"name": "candidgarden",
 			"vars": {
-				"ALLOW_INDEXING": "true",
+				"ALLOW_INDEXING": "true"
 			},
 			"secrets": {
 				"required": [
@@ -78,13 +78,13 @@
 					"AWS_ACCESS_KEY_ID",
 					"AWS_SECRET_ACCESS_KEY",
 					"AWS_REGION",
-					"AWS_S3_BUCKET",
+					"AWS_S3_BUCKET"
 				],
 			},
 			"hyperdrive": [
 				{
 					"binding": "HYPERDRIVE",
-					"id": "00000000000000000000000000000000",
+					"id": "48aaabf6c3d843fbbe6d22bedf28a355"
 				},
 			],
 		},

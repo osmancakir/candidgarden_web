@@ -1,0 +1,87 @@
+# One exact legacy Resource.path per line. These objects are intentionally not
+# uploaded to S3, and their PostgreSQL Resource.objectKey remains NULL.
+berckmüller_1969-6-26.jpg
+berckmüller_1969-6-29.jpg
+berckmüller_1969-6-31.jpg
+berthélemy_2825.jpg
+böhmischer meister_2431a-b.jpg
+bürkel_605.jpg
+bürkel_606.jpg
+crissé_2771.jpg
+crissé_2868.jpg
+cézanne_2450.jpg
+dandré-bardon_2848.jpg
+daullé_VI 2864.jpg
+dürer_I 801.jpg
+dürer_I 794.jpg
+dürer_I 933-a.jpg
+dürer_I 952.jpg
+dürer_I 956.jpg
+dürer_I 980.jpg
+dürr_545.jpg
+emelé_VIII 1320-17.jpg
+flämischer meister_1922.jpg
+fürstenberg_VII 2279.jpg
+hallé_2866.jpg
+holländisch_147.jpg
+hölzel_1183.jpg
+hübsch_1944-101.jpg
+hübsch_1944-104.jpg
+knüpfer_2701.jpg
+köbel_610.jpg
+könig_1410.jpg
+lagrenée_2542.jpg
+largillière_473.jpg
+largillière_493.jpg
+marées_1538.jpg
+marées_2243.jpg
+meister der coburger rundblätter_2184.jpg
+meister der coburger rundblätter_2185.jpg
+mányoki_2230.jpg
+mühlhäuser_P137.jpg
+müller_VIII 1807.jpg
+oberschwäbisch_1223.jpg
+oberschwäbisch_1224.jpg
+schrödter_1409-1.jpg
+schrödter_1409-2.jpg
+schrödter_1409-3.jpg
+schrödter_1409-4.jpg
+schrödter_1409-5.jpg
+schrödter_1409-6.jpg
+schrödter_1409-7.jpg
+schrödter_1409-8.jpg
+schrödter_1957-3.jpg
+schrödter_1957-32.jpg
+schrödter_1991-39.jpg
+schrödter_2291.jpg
+schrödter_VIII 2472.jpg
+schrödter_VIII 2473.jpg
+schrödter_VIII 2474.jpg
+schrödter_VIII 2475.jpg
+schwäbisch_1171.jpg
+schwäbisch_1172.jpg
+schwäbisch_1173.jpg
+schwäbisch_1174.jpg
+schwäbisch_2356.jpg
+schwäbisch_Lg94a-c.jpg
+schönfeld_1978-9.jpg
+schönfeld_2473.jpg
+schönleber_1112.jpg
+schönleber_1625.jpg
+schönleber_2209.jpg
+schönleber_2408.jpg
+schönleber_2410.jpg
+schönleber_2798.jpg
+süddeutsch_1639.jpg
+südniederl. meister_2724.jpg
+südniederländisch_2617.jpg
+südostdeutsch_126.jpg
+trübner_1141.jpg
+trübner_1645.jpg
+trübner_1978.jpg
+trübner_1999.jpg
+trübner_2006.jpg
+trübner_2411.jpg
+trübner_899.jpg
+waldmüller_2594.jpg
+waldmüller_Lg755.jpg
