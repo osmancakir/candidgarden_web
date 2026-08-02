@@ -139,6 +139,20 @@
 		},
 		"production": {
 			"name": "candidgarden",
+			// Routes (not custom domains) intercept requests at the Cloudflare edge
+			// ahead of whatever the proxied DNS records point at, so the apex and
+			// www records can stay untouched. Switch these to `custom_domain: true`
+			// once the old origin is decommissioned and its A records are removed.
+			"routes": [
+				{
+					"pattern": "candidgarden.com/*",
+					"zone_name": "candidgarden.com",
+				},
+				{
+					"pattern": "www.candidgarden.com/*",
+					"zone_name": "candidgarden.com",
+				},
+			],
 			"vars": {
 				"ALLOW_INDEXING": "true",
 			},
