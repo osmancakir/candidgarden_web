@@ -44,5 +44,5 @@ SET max_parallel_maintenance_workers = 0;
 -- is simply not used by another, and the planner falls back to a seq scan
 -- without saying so.
 CREATE INDEX "InterpretationEmbedding_embedding_idx"
-    ON "InterpretationEmbedding" USING ivfflat ("embedding" vector_cosine_ops)
+    ON "InterpretationEmbedding" USING ivfflat ("embedding" public.vector_cosine_ops)
     WITH (lists = 100);
