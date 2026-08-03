@@ -147,7 +147,7 @@ export default function StadelEvaluation({ loaderData }: Route.ComponentProps) {
 							Scoring the models against the museum's own annotations was tried
 							and removed; the reason is set out in{' '}
 							<Link
-								to="/stadel-research#why-the-catalogue-comparison-was-set-aside"
+								to="/staedel-research#why-the-catalogue-comparison-was-set-aside"
 								className="text-link underline underline-offset-4"
 							>
 								§3 of the report
@@ -484,7 +484,7 @@ function SheetView({
 						)}
 
 						<Link
-							to={`/stadel-research/tags?work=${work.id}&model=${model.id}`}
+							to={`/staedel-research/tags?work=${work.id}&model=${model.id}`}
 							className="font-data text-data-sm text-link tracking-[0.12em] uppercase underline underline-offset-4"
 						>
 							Read the keywords this scored →

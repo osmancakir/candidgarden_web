@@ -29,10 +29,10 @@ import {
    ========================================================================== */
 
 const SECTIONS = [
-	{ to: '/stadel-research', label: 'Overview', end: true },
-	{ to: '/stadel-research/tags', label: 'Keywords', end: false },
-	{ to: '/stadel-research/descriptions', label: 'Descriptions', end: false },
-	{ to: '/stadel-research/evaluation', label: 'Evaluation', end: false },
+	{ to: '/staedel-research', label: 'Overview', end: true },
+	{ to: '/staedel-research/tags', label: 'Keywords', end: false },
+	{ to: '/staedel-research/descriptions', label: 'Descriptions', end: false },
+	{ to: '/staedel-research/evaluation', label: 'Evaluation', end: false },
 ]
 
 /** The rail across the four surfaces of the pilot. Segmented, mono, no chrome. */

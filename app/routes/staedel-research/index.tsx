@@ -135,7 +135,7 @@ function ScoreTable({
 							<tr key={row.model} className="border-rule border-b">
 								<th scope="row" className="py-2 pr-4 text-left font-normal">
 									<Link
-										to={`/stadel-research/evaluation?medium=${medium}&model=${row.model}`}
+										to={`/staedel-research/evaluation?medium=${medium}&model=${row.model}`}
 										className="hover:text-link font-body text-prose no-underline hover:underline"
 									>
 										{model?.label ?? row.model}
@@ -366,7 +366,7 @@ export default function StadelPilotOverview({
 						<p>
 							The underlying question — what would this actually add to the
 							catalogue? — is still answerable, and directly. The{' '}
-							<Link to="/stadel-research/tags">keyword comparison</Link> puts
+							<Link to="/staedel-research/tags">keyword comparison</Link> puts
 							your record beside all five models on every sheet in the sample,
 							so the answer can be read off the roughly 85 deeply annotated
 							records rather than taken on trust as a percentage.
@@ -425,8 +425,8 @@ export default function StadelPilotOverview({
 					</p>
 					<p className="font-body text-prose measure">
 						In the meantime, everything is readable. The{' '}
-						<Link to="/stadel-research/tags">keywords</Link> and the{' '}
-						<Link to="/stadel-research/descriptions">descriptions</Link> are
+						<Link to="/staedel-research/tags">keywords</Link> and the{' '}
+						<Link to="/staedel-research/descriptions">descriptions</Link> are
 						there sheet by sheet, and the full prompt behind each task is
 						printed on its own page. If you can look through them and mark
 						anything that reads wrong to you — a keyword that would not pass
@@ -450,19 +450,19 @@ export default function StadelPilotOverview({
 					<div className="grid gap-6 md:grid-cols-3">
 						{[
 							{
-								to: '/stadel-research/tags',
+								to: '/staedel-research/tags',
 								title: 'Keywords',
 								blurb:
 									'All nine schema fields, five models against your own record, on any sheet in the sample.',
 							},
 							{
-								to: '/stadel-research/descriptions',
+								to: '/staedel-research/descriptions',
 								title: 'Descriptions',
 								blurb:
 									'The bilingual texts — long and short, German and English — as each model wrote them.',
 							},
 							{
-								to: '/stadel-research/evaluation',
+								to: '/staedel-research/evaluation',
 								title: 'Evaluation',
 								blurb:
 									"The judge's score and its written justification for every model on every sheet.",
