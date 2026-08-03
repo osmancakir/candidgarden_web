@@ -20,11 +20,11 @@ import {
 	PrintColophon,
 	Wordmark,
 } from './components/institute/chrome.tsx'
-import { EpicProgress } from './components/progress-bar.tsx'
+import { AppProgress } from './components/progress-bar.tsx'
 import { useToast } from './components/toaster.tsx'
 import { Button } from './components/ui/button.tsx'
 import { href as iconsHref } from './components/ui/icon.tsx'
-import { EpicToaster } from './components/ui/sonner.tsx'
+import { AppToaster } from './components/ui/sonner.tsx'
 import { UserDropdown } from './components/user-dropdown.tsx'
 import {
 	ThemeSwitch,
@@ -242,8 +242,8 @@ function App() {
 
 				<Colophon />
 			</div>
-			<EpicToaster closeButton position="top-center" theme={theme} />
-			<EpicProgress />
+			<AppToaster closeButton position="top-center" theme={theme} />
+			<AppProgress />
 			<PrintColophon />
 		</OpenImgContextProvider>
 	)

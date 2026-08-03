@@ -1,5 +1,5 @@
 /**
- * Pure helpers for dropping expected Sentry noise from the public Epic Stack
+ * Pure helpers for dropping expected Sentry noise from the public application
  * demo (bots, scanners, and platform healthchecks) without hiding real bugs.
  */
 
