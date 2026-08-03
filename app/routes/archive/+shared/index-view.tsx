@@ -21,9 +21,12 @@ import { cn, getWorkImgSrc } from '#app/utils/misc.tsx'
 import {
 	activeFilterCount,
 	centuryLabel,
+	isSenseMode,
 	PAGE_SIZE,
+	SENSE_MAX_LENGTH,
 	type ArchiveIndexData,
 	type ArchiveWork,
+	type SenseReport,
 } from './filters.ts'
 
 /**
@@ -47,10 +50,13 @@ function toSummary(work: ArchiveWork): WorkSummary {
 }
 
 export function ArchiveIndexView({ data }: { data: ArchiveIndexData }) {
-	const { filters, works, total, facets, pageCount } = data
+	const { filters, works, total, facets, pageCount, sense } = data
 	const [searchParams] = useSearchParams()
 	const activeCount = activeFilterCount(filters)
 	const isVoidMode = filters.level === 3
+	// A failed reading search falls back to the filtered index, so the presence
+	// of a phrase and the presence of a ranking are not the same question.
+	const ranked = isSenseMode(filters) && !sense?.error
 
 	function hrefWith(changes: Record<string, string | number | null>) {
 		const next = new URLSearchParams(searchParams)
@@ -104,10 +110,26 @@ export function ArchiveIndexView({ data }: { data: ArchiveIndexData }) {
 				<FilterConsole
 					resetTo={filters.level === 1 ? '?' : `?level=${filters.level}`}
 					summary={
-						<>
-							{total.toLocaleString('en-US')} records
-							{activeCount ? ` · ${activeCount} filters active` : null}
-						</>
+						ranked ? (
+							// The phrase is counted as a filter everywhere else, but here it
+							// is the thing producing the result rather than narrowing it —
+							// so the count reports only what narrowed the ranking.
+							<>
+								{total.toLocaleString('en-US')} of{' '}
+								{(sense?.candidates ?? 0).toLocaleString('en-US')} nearest
+								readings
+								{activeCount > 1
+									? ` · ${activeCount - 1} ${activeCount === 2 ? 'filter' : 'filters'} narrowing`
+									: null}
+							</>
+						) : (
+							<>
+								{total.toLocaleString('en-US')} records
+								{activeCount
+									? ` · ${activeCount} ${activeCount === 1 ? 'filter' : 'filters'} active`
+									: null}
+							</>
+						)
 					}
 				>
 					{/* The view mode has to survive a submit, so it rides along hidden. */}
@@ -120,6 +142,25 @@ export function ArchiveIndexView({ data }: { data: ArchiveIndexData }) {
 							type="search"
 							defaultValue={filters.q}
 							placeholder="e.g. Judith"
+						/>
+					</ConsoleField>
+
+					{/* The one control that searches the readings rather than the
+					    catalogue. Sits beside Keyword because the difference between
+					    the two is the thing worth teaching, and it is only legible
+					    when they are adjacent. */}
+					<ConsoleField
+						label="Sense"
+						htmlFor="f-sense"
+						hint="the readings, by meaning"
+					>
+						<ConsoleInput
+							id="f-sense"
+							name="sense"
+							type="search"
+							maxLength={SENSE_MAX_LENGTH}
+							defaultValue={filters.sense}
+							placeholder="e.g. grief at a deathbed"
 						/>
 					</ConsoleField>
 
@@ -209,25 +250,55 @@ export function ArchiveIndexView({ data }: { data: ArchiveIndexData }) {
 						</ConsoleSelect>
 					</ConsoleField>
 
-					<ConsoleField label="Order" htmlFor="f-sort">
-						<ConsoleSelect id="f-sort" name="sort" defaultValue={filters.sort}>
-							<option value="title">title</option>
-							<option value="period">period</option>
-							<option value="motifs">motif count</option>
-						</ConsoleSelect>
-					</ConsoleField>
+					{/* A ranking has one order. Rather than offer a control that would
+					    silently do nothing, the field says what it is doing and keeps
+					    the reader's column choice for when the sense is cleared. */}
+					{ranked ? (
+						<div className="flex flex-col gap-1.5">
+							<Data className="text-ground-muted">Order</Data>
+							<input type="hidden" name="sort" value={filters.sort} />
+							<p className="border-rule-strong font-data text-data text-ground-muted flex h-10 items-center border border-dashed px-3">
+								nearest first
+							</p>
+							<Data className="text-ground-muted normal-case opacity-70">
+								fixed while a sense is set
+							</Data>
+						</div>
+					) : (
+						<ConsoleField label="Order" htmlFor="f-sort">
+							<ConsoleSelect
+								id="f-sort"
+								name="sort"
+								defaultValue={filters.sort}
+							>
+								<option value="title">title</option>
+								<option value="period">period</option>
+								<option value="motifs">motif count</option>
+							</ConsoleSelect>
+						</ConsoleField>
+					)}
 				</FilterConsole>
+
+				<SenseDisclosure sense={sense} ranked={ranked} />
 			</section>
 
 			{/* ---- The records ---- */}
 			<section className="container pb-16">
 				{works.length === 0 ? (
-					<NoRecords>
-						No records match these filters. Try widening the period or clearing
-						the motif.
-					</NoRecords>
+					ranked ? (
+						<NoRecords>
+							None of the {(sense?.candidates ?? 0).toLocaleString('en-US')}{' '}
+							nearest readings survives these filters. Widen the period or clear
+							the motif — the phrase itself found readings.
+						</NoRecords>
+					) : (
+						<NoRecords>
+							No records match these filters. Try widening the period or
+							clearing the motif.
+						</NoRecords>
+					)
 				) : filters.level === 1 ? (
-					<LevelOneTable works={works} />
+					<LevelOneTable works={works} showMatch={ranked} />
 				) : filters.level === 2 ? (
 					<LevelTwoGrid works={works} />
 				) : (
@@ -249,31 +320,128 @@ export function ArchiveIndexView({ data }: { data: ArchiveIndexData }) {
 	)
 }
 
+/**
+ * §6, "uncertainty as content", applied to a ranking.
+ *
+ * A ranked search is more capable of misleading than a filter is: it always
+ * returns something, it returns it in an order that looks like judgement, and
+ * it can only see the readings that have been embedded. So the qualifications
+ * travel with the results — what nearness measures, how far the scan reached,
+ * and how much of the archive it can reach at all — rather than living in a
+ * help page nobody opens.
+ */
+function SenseDisclosure({
+	sense,
+	ranked,
+}: {
+	sense: SenseReport | null
+	ranked: boolean
+}) {
+	if (!sense) return null
+
+	if (sense.error) {
+		return (
+			<p
+				role="note"
+				className="border-stamp-fg text-stamp-fg font-data text-data mt-4 border-l-2 py-1 pl-3 tracking-[0.12em] uppercase"
+			>
+				Reading index unavailable · the phrase “{sense.query}” was not applied ·
+				showing the unranked index
+			</p>
+		)
+	}
+
+	if (!ranked) return null
+
+	const { coverage } = sense
+	return (
+		<div className="border-rule mt-4 border-l pl-3">
+			<Data className="text-ground-muted">
+				Nearest first · {sense.matched.toLocaleString('en-US')} of{' '}
+				{sense.candidates.toLocaleString('en-US')} nearest readings kept
+				{sense.capped ? ' · scan capped' : null}
+			</Data>
+			<p className="font-body text-prose-sm text-ground-muted measure mt-2">
+				Nearness is the distance between your phrase and a machine-written
+				reading, measured in the embedding space of the model that wrote neither
+				of them. It is proximity, not relevance, and it is not evidence that a
+				work depicts what you asked for.
+				{sense.capped ? (
+					<>
+						{' '}
+						The scan stops at the {sense.candidates.toLocaleString(
+							'en-US',
+						)}{' '}
+						nearest readings before your filters are applied, so this is not
+						every work in the archive that could match.
+					</>
+				) : null}
+				{coverage ? (
+					<>
+						{' '}
+						It reaches{' '}
+						<span className="font-data tabular-nums">
+							{coverage.works.toLocaleString('en-US')}
+						</span>{' '}
+						works —{' '}
+						<span className="font-data tabular-nums">
+							{coverage.readings.toLocaleString('en-US')}
+						</span>{' '}
+						of{' '}
+						<span className="font-data tabular-nums">
+							{coverage.publishedReadings.toLocaleString('en-US')}
+						</span>{' '}
+						published readings have been embedded. The rest cannot be found this
+						way.
+					</>
+				) : null}
+			</p>
+		</div>
+	)
+}
+
 /** Level I — inventory. A real table that is allowed to look like a table (§5). */
-function LevelOneTable({ works }: { works: Array<ArchiveWork> }) {
+function LevelOneTable({
+	works,
+	showMatch = false,
+}: {
+	works: Array<ArchiveWork>
+	showMatch?: boolean
+}) {
+	const columns = [
+		'',
+		'Title',
+		'Artist',
+		'Period',
+		'Collection',
+		'Motifs',
+		...(showMatch ? ['Nearness'] : []),
+	]
 	return (
 		<div className="overflow-x-auto">
 			<table className="min-w-full">
 				<caption className="sr-only">
 					Works in the archive, shown at Level I: pre-iconographic inventory.
+					{showMatch
+						? ' Ordered by the nearness of their readings to the phrase searched for.'
+						: null}
 				</caption>
 				<thead>
 					<tr className="border-rule-strong border-b">
-						{['', 'Title', 'Artist', 'Period', 'Collection', 'Motifs'].map(
-							(h, i) => (
-								<th
-									key={h || i}
-									scope="col"
-									className={cn(
-										'font-data text-data-sm text-ground-muted py-2 pr-4 text-left tracking-[0.12em] uppercase',
-										h === 'Collection' && 'hidden md:table-cell',
-										h === 'Motifs' && 'hidden lg:table-cell',
-									)}
-								>
-									{h || <span className="sr-only">Plate</span>}
-								</th>
-							),
-						)}
+						{columns.map((h, i) => (
+							<th
+								key={h || i}
+								scope="col"
+								className={cn(
+									'font-data text-data-sm text-ground-muted py-2 pr-4 text-left tracking-[0.12em] uppercase',
+									h === 'Collection' && 'hidden md:table-cell',
+									h === 'Motifs' && 'hidden lg:table-cell',
+									h === 'Nearness' && 'pr-0 text-right',
+								)}
+							>
+								{h || <span className="sr-only">Plate</span>}
+							</th>
+						))}
 					</tr>
 				</thead>
 				<tbody>
@@ -282,6 +450,8 @@ function LevelOneTable({ works }: { works: Array<ArchiveWork> }) {
 							key={w.id}
 							work={toSummary(w)}
 							imgSrc={getWorkImgSrc(w.objectKey)}
+							match={w.match}
+							showMatch={showMatch}
 						/>
 					))}
 				</tbody>
@@ -299,6 +469,7 @@ function LevelTwoGrid({ works }: { works: Array<ArchiveWork> }) {
 					key={w.id}
 					work={toSummary(w)}
 					imgSrc={getWorkImgSrc(w.objectKey)}
+					match={w.match}
 				/>
 			))}
 		</div>
@@ -324,6 +495,7 @@ function LevelThreeFeatures({
 					imgSrc={getWorkImgSrc(w.objectKey)}
 					index={start + i + 1}
 					total={total}
+					match={w.match}
 				/>
 			))}
 		</div>

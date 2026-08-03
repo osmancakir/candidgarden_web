@@ -271,6 +271,25 @@ grotesque caps at modest size, artist/date in Times italic, timestamp in mono.
 On `void` sections, cards lose borders entirely — images float on black,
 Anthology-style.
 
+**The `Sense` field.** The console's second text input, beside `Keyword`, and
+deliberately beside it: `Keyword` matches strings in the catalogue, `Sense`
+matches meaning in the readings, and the difference between those two is only
+legible when the two controls sit together. A phrase there re-ranks the index by
+the distance between it and the Level II/III prose, nearest first, and every
+record then shows the passage it matched and a `nearness` figure — three
+decimals, no leading zero (`.741`), so it cannot be mistaken for the two-decimal
+agreement score on a motif chip.
+
+The ranking is disclosed rather than presented. Beneath the console it states
+what nearness measures (proximity in an embedding space, not relevance and not
+evidence the work depicts what was asked for), how many of the nearest readings
+the filters kept, that the scan stops at a fixed candidate ceiling, and how much
+of the archive has been embedded at all. Ordering is fixed to nearest-first
+while a sense is set, and the `Order` control says so instead of offering a
+choice that would do nothing. A ranked search is more capable of misleading than
+a filter — it always returns something, in an order that looks like judgement —
+so §6's candour is owed here more than anywhere else in the console.
+
 **Uncertainty as content.** Where the model's reading is contested or
 low-confidence, say so in the interface's own voice, prominently, in mono:
 `MODEL CONFIDENCE LOW · READING CONTESTED · 2 HUMAN ANNOTATIONS DISAGREE`. Both
@@ -522,10 +541,18 @@ Stated plainly, per §7.
   original and the institutional register was written to translate cleanly, but
   there is no i18n layer and `<html lang>` is hard-coded to `en`. §7 asks for
   parity from day one; this is the largest outstanding debt.
-- **Levels II and III hold no curated prose** because the corpus holds no
-  interpretive text. The sections render their structure and disclose the
-  absence. Populating them means adding storage for readings — with model, run
-  and verification status per reading, so the stamp keeps meaning something.
+- **Levels II and III hold no _curated_ prose.** They now hold machine-drafted
+  readings imported from the description corpus — 54,497 at Level II and 54,345
+  at Level III, every one of them written by GPT-4o and stamped as such. Not one
+  has been through an editorial pass, so the byline reads `WRITTEN BY A MACHINE`
+  and the dispute link is the only correction mechanism the archive has. The 152
+  works with no Level III still disclose the absence rather than fill it.
+- **The reading search cannot reach the whole archive.** 89,800 of 108,842
+  published readings carry a vector, so `Sense` sees 52,787 of 54,497 works. The
+  interface states both figures rather than implying the search is exhaustive,
+  and the numbers are read from the database so they correct themselves when the
+  embedding job is finished. Until then a work can be absent from a ranking for
+  the uninteresting reason that nobody has embedded it yet.
 - **The print sheet withholds the page.** This is §8 as specified and it is
   genuinely funny, but it means a scholar cannot print a dossier. If the archive
   ever wants to be printed from, that is a deliberate reversal to make, not a

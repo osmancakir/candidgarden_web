@@ -175,14 +175,15 @@ model Resource {
   wikiDataId  String?
   highlight   Boolean @default(false)
 
-  artist               Artist?               @relation(fields: [artistId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  taggings             Tagging[]
-  relationsAsFirst     Relation[]            @relation("Resource1")
-  relationsAsSecond    Relation[]            @relation("Resource2")
-  favorites            Favorite[]
-  confessionLinks      ConfessionArt[]
-  wikiDataVerification WikiDataVerification?
-  interpretations      Interpretation[]
+  artist                Artist?                   @relation(fields: [artistId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  taggings              Tagging[]
+  relationsAsFirst      Relation[]                @relation("Resource1")
+  relationsAsSecond     Relation[]                @relation("Resource2")
+  favorites             Favorite[]
+  confessionLinks       ConfessionArt[]
+  wikiDataVerification  WikiDataVerification?
+  interpretations       Interpretation[]
+  interpretationVectors InterpretationEmbedding[]
 
   @@index([artistId])
   @@index([highlight])
@@ -242,11 +243,40 @@ model Interpretation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  author   User?    @relation("InterpretationAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  resource  Resource                 @relation(fields: [resourceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  author    User?                    @relation("InterpretationAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  embedding InterpretationEmbedding?
 
   @@unique([resourceId, level])
   @@index([resourceId, level, publishedAt])
+}
+
+/// One bge-m3 vector per interpretation, for the semantic search in
+/// `app/utils/semantic-search.server.ts`.
+///
+/// Prisma cannot read or write `vector` columns — a model carrying a required
+/// `Unsupported` field is excluded from `create`/`update` and the column never
+/// appears in a select — so every write goes through
+/// `scripts/embed-interpretations.mjs` and every read through `$queryRaw`. The
+/// model is declared here anyway so `prisma migrate` does not see the table as
+/// drift and try to drop it. The vector index has no schema representation and
+/// lives only in the migrations — currently IVFFlat, see
+/// `20260803190000_replace_hnsw_with_ivfflat` for why it is not HNSW.
+model InterpretationEmbedding {
+  interpretationId String                      @id @map("interpretation_id")
+  resourceId       Int                         @map("resource_id")
+  level            Int
+  embedding        Unsupported("vector(1024)")
+  model            String
+  inputHash        String                      @map("input_hash")
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @updatedAt
+
+  interpretation Interpretation @relation(fields: [interpretationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  resource       Resource       @relation(fields: [resourceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([resourceId])
+  @@index([level])
 }
 
 model Relation {

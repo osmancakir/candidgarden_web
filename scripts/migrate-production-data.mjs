@@ -10,6 +10,7 @@ import {
 } from '@aws-sdk/client-s3'
 import pg from 'pg'
 import prompts from 'prompts'
+import { awsCredentials, rdsPassword, rdsSsl } from './lib/credentials.mjs'
 
 const { Client } = pg
 
@@ -202,29 +203,12 @@ async function retry(operation, description, attempts = 4) {
 	})
 }
 
-async function promptForAws() {
-	const answers = await prompts(
-		[
-			{
-				type: 'password',
-				name: 'accessKeyId',
-				message: 'AWS access key ID for candidgarden-images-production',
-				validate: (value) => Boolean(value) || 'Access key ID is required',
-			},
-			{
-				type: 'password',
-				name: 'secretAccessKey',
-				message: 'AWS secret access key',
-				validate: (value) => Boolean(value) || 'Secret access key is required',
-			},
-		],
-		{ onCancel: () => fail('Cancelled without making changes.') },
-	)
-	if (!answers.accessKeyId || !answers.secretAccessKey)
-		fail('AWS credentials are required.')
+async function buildS3Client() {
+	// AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY come from `.env`; the prompt in
+	// `lib/credentials.mjs` is only reached when one of them is missing.
 	return new S3Client({
 		region: AWS_REGION,
-		credentials: answers,
+		credentials: await awsCredentials(),
 	})
 }
 
@@ -284,7 +268,7 @@ async function migrateImages() {
 		console.log('Image migration is read-only without --apply.')
 		return
 	}
-	const s3 = await promptForAws()
+	const s3 = await buildS3Client()
 	const artworkRows = sqlite
 		.prepare(
 			`SELECT id, path FROM "Resource"
@@ -756,41 +740,37 @@ async function runPrismaMigration(password) {
 	})
 }
 
-async function promptForDatabase() {
-	const answers = await prompts(
-		[
-			{
-				type: 'password',
-				name: 'password',
-				message: `Saved RDS password for ${RDS_USER}`,
-				validate: (value) => Boolean(value) || 'Password is required',
-			},
-			{
-				type: 'text',
-				name: 'confirmation',
-				message:
-					'Type MIGRATE PRODUCTION to replace target RDS application rows',
-				validate: (value) =>
-					value === 'MIGRATE PRODUCTION' || 'Exact confirmation is required',
-			},
-		],
+/**
+ * The password is read from `.env`, but the typed confirmation stays: this
+ * phase TRUNCATEs every application table in production, and a credential being
+ * conveniently to hand is not a reason to make that one keystroke away.
+ */
+async function confirmDatabaseMigration() {
+	const password = await rdsPassword(RDS_USER)
+	const { confirmation } = await prompts(
+		{
+			type: 'text',
+			name: 'confirmation',
+			message: 'Type MIGRATE PRODUCTION to replace target RDS application rows',
+			validate: (value) =>
+				value === 'MIGRATE PRODUCTION' || 'Exact confirmation is required',
+		},
 		{ onCancel: () => fail('Cancelled without making database changes.') },
 	)
-	if (!answers.password || answers.confirmation !== 'MIGRATE PRODUCTION') {
-		fail('Database credentials and exact confirmation are required.')
+	if (confirmation !== 'MIGRATE PRODUCTION') {
+		fail('Exact confirmation is required.')
 	}
-	return answers.password
+	return password
 }
 
 async function connectToRds(password, applicationName) {
-	const ca = await readFile(RDS_CA_PATH, 'utf8')
 	const client = new Client({
 		host: RDS_HOST,
 		port: RDS_PORT,
 		database: RDS_DATABASE,
 		user: RDS_USER,
 		password,
-		ssl: { ca, rejectUnauthorized: true },
+		ssl: await rdsSsl(),
 		connectionTimeoutMillis: 15_000,
 		application_name: applicationName,
 	})
@@ -804,7 +784,7 @@ async function migrateDatabase() {
 		console.log('Database migration is read-only without --apply.')
 		return
 	}
-	const password = await promptForDatabase()
+	const password = await confirmDatabaseMigration()
 	await runPrismaMigration(password)
 	const client = await connectToRds(password, 'candidgarden-data-migration')
 	const tables = [...tableConfigurations.map(({ table }) => table), 'Passkey']
@@ -847,19 +827,7 @@ async function migrateDatabase() {
 }
 
 async function verifyDatabase(existingPassword) {
-	let password = existingPassword
-	if (!password) {
-		const answer = await prompts(
-			{
-				type: 'password',
-				name: 'password',
-				message: `Saved RDS password for ${RDS_USER}`,
-				validate: (value) => Boolean(value) || 'Password is required',
-			},
-			{ onCancel: () => fail('Verification cancelled.') },
-		)
-		password = answer.password
-	}
+	const password = existingPassword ?? (await rdsPassword(RDS_USER))
 	const client = await connectToRds(password, 'candidgarden-data-verification')
 	try {
 		for (const configuration of tableConfigurations) {

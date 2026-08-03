@@ -1,7 +1,12 @@
 import { Img } from 'openimg/react'
 import { Link } from 'react-router'
-import { archivalDate, displayPeriod } from '#app/utils/archive.ts'
+import {
+	archivalDate,
+	displayPeriod,
+	formatNearness,
+} from '#app/utils/archive.ts'
 import { cn } from '#app/utils/misc.tsx'
+import { PANOFSKY } from './descent.tsx'
 import { Data, Display } from './primitives.tsx'
 
 /* ==========================================================================
@@ -9,6 +14,9 @@ import { Data, Display } from './primitives.tsx'
      Level I   → RecordRow      a real <tr> in a real <table>
      Level II  → EditorialCard  image at true ratio, grotesque title
      Level III → FeaturePlate   single work, monumental, on the deep ground
+
+   Each also knows how to show *why* a work is on the page when the index is
+   ranked by meaning: the passage that matched and how near it was.
    ========================================================================== */
 
 export type WorkSummary = {
@@ -21,6 +29,47 @@ export type WorkSummary = {
 	objectKey: string | null
 	motifs: Array<string>
 	updatedAt?: Date | string | number | null
+}
+
+/** The `sense` match on a work, as the record components need it. */
+export type RecordMatch = {
+	level: 2 | 3
+	similarity: number
+	excerpt: string
+}
+
+/**
+ * The matched passage, quoted.
+ *
+ * Set in Times and quoted rather than paraphrased or highlighted: it is
+ * somebody's — something's — prose, and the reader is being asked to judge the
+ * match by it. The level is named because a phrase landing on a Level III
+ * reading means something different from one landing on a Level II.
+ */
+export function MatchedPassage({
+	match,
+	className,
+}: {
+	match: RecordMatch
+	className?: string
+}) {
+	if (!match.excerpt) return null
+	return (
+		<figure className={cn('border-rule border-l pl-3', className)}>
+			<blockquote className="font-body text-prose-sm measure italic">
+				“{match.excerpt}”
+			</blockquote>
+			<figcaption className="mt-1">
+				<Data className="text-ground-muted">
+					Level {PANOFSKY[match.level].numeral} · {PANOFSKY[match.level].gloss}{' '}
+					· nearness{' '}
+					<span className="tabular-nums">
+						{formatNearness(match.similarity)}
+					</span>
+				</Data>
+			</figcaption>
+		</figure>
+	)
 }
 
 export function workHref(id: number) {
@@ -79,13 +128,23 @@ export function Plate({
 	)
 }
 
-/** The Level I view of a work: a row of facts, in a table that looks like one. */
+/**
+ * The Level I view of a work: a row of facts, in a table that looks like one.
+ *
+ * `showMatch` is separate from `match` on purpose: a column exists for the
+ * whole table or not at all, and a row that quietly dropped its last cell would
+ * break the header alignment for every row beneath it.
+ */
 export function RecordRow({
 	work,
 	imgSrc,
+	match,
+	showMatch = false,
 }: {
 	work: WorkSummary
 	imgSrc: string | null
+	match?: RecordMatch | null
+	showMatch?: boolean
 }) {
 	return (
 		<tr className="border-rule hover:bg-tint border-b transition-colors">
@@ -113,6 +172,11 @@ export function RecordRow({
 				>
 					{work.title ?? <span className="italic opacity-70">Untitled</span>}
 				</Link>
+				{match?.excerpt ? (
+					<p className="font-body text-prose-sm text-ground-muted measure mt-1 italic">
+						“{match.excerpt}”
+					</p>
+				) : null}
 			</td>
 			<td className="font-body text-prose-sm py-2 pr-4 align-top italic">
 				{work.artist ?? <span className="opacity-60">Unattributed</span>}
@@ -140,6 +204,20 @@ export function RecordRow({
 					) : null}
 				</div>
 			</td>
+			{showMatch ? (
+				<td className="font-data text-data-sm py-2 text-right align-top tabular-nums">
+					{match ? (
+						<>
+							{formatNearness(match.similarity)}
+							<span className="text-ground-muted block text-[0.625rem]">
+								Lv {PANOFSKY[match.level].numeral}
+							</span>
+						</>
+					) : (
+						<span className="text-ground-muted">—</span>
+					)}
+				</td>
+			) : null}
 		</tr>
 	)
 }
@@ -153,10 +231,12 @@ export function EditorialCard({
 	work,
 	imgSrc,
 	borderless = false,
+	match,
 }: {
 	work: WorkSummary
 	imgSrc: string | null
 	borderless?: boolean
+	match?: RecordMatch | null
 }) {
 	return (
 		<article
@@ -201,6 +281,7 @@ export function EditorialCard({
 						{archivalDate(work.updatedAt)}
 					</Data>
 				) : null}
+				{match ? <MatchedPassage match={match} className="mt-2" /> : null}
 			</div>
 		</article>
 	)
@@ -215,11 +296,13 @@ export function FeaturePlate({
 	imgSrc,
 	index,
 	total,
+	match,
 }: {
 	work: WorkSummary
 	imgSrc: string | null
 	index: number
 	total: number
+	match?: RecordMatch | null
 }) {
 	return (
 		<article className="grid gap-8 py-16 md:grid-cols-12 md:gap-10">
@@ -255,6 +338,7 @@ export function FeaturePlate({
 						{displayPeriod(work.notBefore, work.notAfter)}
 					</span>
 				</p>
+				{match ? <MatchedPassage match={match} /> : null}
 				{work.motifs.length ? (
 					<p className="font-body text-prose measure">
 						Motifs recorded at Level I: {work.motifs.slice(0, 12).join(', ')}.

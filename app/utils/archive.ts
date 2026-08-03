@@ -79,6 +79,21 @@ export function formatConfidence(score: number): string {
 	return score.toFixed(2)
 }
 
+/**
+ * `.741` — the cosine similarity between a reader's phrase and a machine-written
+ * reading, as shown beside a search result.
+ *
+ * Deliberately formatted unlike `formatConfidence`: three decimals because
+ * nearness values cluster tightly and two would show a dozen results as the
+ * same number, and no leading zero so the two figures cannot be mistaken for
+ * each other on a page that carries both. It measures distance in an embedding
+ * space, not relevance and not agreement, and §6's candour requires the
+ * interface to keep saying so wherever it appears.
+ */
+export function formatNearness(similarity: number): string {
+	return similarity.toFixed(3).replace(/^0/, '')
+}
+
 export type VerificationStatus =
 	| 'VERIFIED'
 	| 'PENDING'
