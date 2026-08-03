@@ -1,129 +1,183 @@
 # Candid Garden
 
-Candid Garden is an art re-search project that publishes machine-generated
-iconographic metadata for works in the ARTigo corpus and presents those readings
-for scholarly correction.
+**An institute for art re-search: 54,497 artworks, machine-generated readings,
+and an interface built to keep interpretation open to correction.**
 
-The application uses React Router, React, TypeScript, Tailwind CSS, Prisma,
-PostgreSQL, Amazon S3, and Cloudflare Workers. See
-[the project documentation](./docs/README.md) for local setup, architecture, and
-deployment guides.
+[Live archive](https://candidgarden.com) ·
+[Explore the Atlas](https://candidgarden.com/archive/atlas) ·
+[Technical documentation](./docs/README.md)
 
-## PostgreSQL and Amazon RDS migration
+Candid Garden is a research platform for asking how machines describe and
+interpret art. It publishes iconographic metadata for works in the ARTigo
+corpus, organises each reading through Erwin Panofsky's three levels of meaning,
+and presents the results as provisional material for scholarly review—not as
+machine truth.
 
-**Commit:** `migrate application to PostgreSQL for Amazon RDS`
+[![The Candid Garden archive: 54,497 artworks, Panofsky levels, and the filter console](./public/readme/archive.png)](https://candidgarden.com)
 
-This project has been fully migrated from SQLite to PostgreSQL and prepared for
-Amazon RDS for PostgreSQL with pgvector support.
+## What the project does
 
-The migration includes:
+- **Makes a large corpus legible.** Browse 54,497 artworks by title, artist,
+  motif, subject class, period, collection, attribution, agreement, or Panofsky
+  level.
+- **Searches by meaning.** Queries are embedded with `bge-m3` and ranked against
+  1,024-dimensional interpretation vectors in PostgreSQL with pgvector. 
+  
+- **Keeps uncertainty visible.** Generated readings are labelled provisional;
+  confidence represents observed agreement rather than truth, and authenticated
+  researchers can review the underlying records.
+- **Turns the corpus into a spatial argument.** The Atlas projects the reading
+  corpus into a stable three-dimensional UMAP layout so a search becomes a
+  constellation rather than another reordered list.
+- **Treats the archive as the product.** The index is the homepage. There is no
+  marketing page between the visitor and the research material.
 
-- changing the Prisma datasource and initial migration to PostgreSQL;
-- enabling the `vector` extension in the database baseline;
-- updating application queries for PostgreSQL syntax and behavior;
-- adding a local PostgreSQL 17 + pgvector environment with Docker Compose;
-- moving the test suite to isolated PostgreSQL schemas;
-- removing the SQLite application database, persistent SQLite cache, LiteFS, Fly
-  volumes, Consul coordination, and SQLite administration routes;
-- retaining only a disposable, process-local LRU cache; and
-- preparing Amazon RDS as the production database and applying Prisma migrations
-  separately from the application runtime.
+## The Atlas
 
-The PostgreSQL migration, pgvector installation, authorization seed data, test
-suite, type checking, linting, and application builds have been verified.
+[![The Candid Garden Atlas: 89,800 iconographic and iconological readings rendered as a three-dimensional UMAP point cloud](./public/readme/atlas.png)](https://candidgarden.com/archive/atlas)
 
-The repository is RDS-ready, but AWS access keys alone do not provision the
-infrastructure. An RDS PostgreSQL instance, database credentials, networking,
-security groups, TLS configuration, and a production `DATABASE_URL` must still
-be created. See the [Amazon RDS setup guide](./docs/amazon-rds-postgresql.md)
-for the deployment requirements.
+The [`/archive/atlas`](https://candidgarden.com/archive/atlas) route renders
+**89,800 Level II and III readings from 52,787 works** as one interactive WebGL
+point cloud. It maps the language written about the artworks—not the images
+themselves.
 
-Because this migration rewrites the original baseline for a new application, it
-does not copy records from an existing SQLite database. A populated legacy
-database would require a separate data-export and transformation process.
+The layout is fitted offline and remains fixed. Searching does not recompute or
+rearrange the projection; it lights up to 900 matching readings within the same
+space. That stability is the point: one search can form a tight cluster while
+another splits into several regions, and both remain comparable because the map
+has not moved.
 
-## Amazon S3 image storage migration
+Some of the less visible engineering behind the view:
 
-**Commit:** `migrate image storage to Amazon S3`
+- UMAP reduces 1,024-dimensional `bge-m3` embeddings to three dimensions with
+  cosine distance and a reproducible seed.
+- A custom, versioned binary format ships all geometry and identifiers in about
+  **1.6 MB**, compared with roughly 8 MB as JSON.
+- One `THREE.Points` object and a custom GPU shader control colour, size,
+  filtering, and query highlighting without rebuilding the geometry.
+- Artwork labels are fetched only when a point is hovered and cached for the
+  session, avoiding a multi-megabyte title payload.
+- “Interpretive spread”—the distance between a work's Level II and Level III
+  readings—is measured in the original embedding space, not the lossy UMAP
+  projection.
 
-This project has been fully migrated from its previous S3-compatible object
-storage setup to private Amazon S3 buckets for uploaded profile images.
+The complete data pipeline, binary layout, rendering decisions, and known gaps
+are documented in [The Atlas](./docs/atlas.md).
 
-The migration includes:
+## Architecture
 
-- replacing the custom endpoint and handwritten AWS Signature Version 4 code
-  with the official AWS SDK for JavaScript;
-- uploading objects with `@aws-sdk/client-s3` and retrieving them through
-  60-second signed URLs generated by `@aws-sdk/s3-request-presigner`;
-- using `AWS_REGION` and `AWS_S3_BUCKET` instead of provider-specific endpoint
-  and bucket variables;
-- authenticating with scoped IAM access keys stored as environment variables or
-  Cloudflare Worker secrets;
-- keeping buckets private and proxying image reads through the existing image
-  optimization route;
-- replacing the previous storage mock with an Amazon S3 MSW mock so local
-  development and tests remain offline; and
-- updating the environment examples, deployment instructions, feature list,
-  architecture decision, and image storage guide.
+```mermaid
+flowchart LR
+    Browser[Browser] --> Worker[React Router SSR<br/>Cloudflare Worker]
+    Worker --> Assets[Static app + Atlas binary]
+    Worker --> AI[Workers AI<br/>bge-m3]
+    Worker --> Hyperdrive[Cloudflare Hyperdrive]
+    Hyperdrive --> DB[(Amazon RDS<br/>PostgreSQL + pgvector)]
+    Worker --> KV[(Workers KV<br/>+ isolate LRU)]
+    Worker --> S3[(Private Amazon S3)]
+    S3 --> Images[Cloudflare Image<br/>Transformations]
+    Images --> Browser
+```
 
-Type checking, linting, the production application build, and a direct S3 mock
-upload-to-signed-download smoke test have been verified successfully. The full
-Vitest suite still requires the dedicated PostgreSQL test database to be running
-at `localhost:5432`.
+Production runs as a server-rendered React Router application on Cloudflare
+Workers. Hyperdrive connects request-local Prisma clients to Amazon RDS; Workers
+AI embeds semantic queries; private S3 holds uploaded originals; and Cloudflare
+transforms and caches images at the edge. A Node/Express runtime is kept as the
+local-development and Playwright harness.
 
-The repository is S3-ready, but it does not provision or modify AWS
-infrastructure. Separate production and staging buckets, IAM identities, and
-deployment secrets must still be created. Keep S3 Block Public Access enabled
-and grant the application only `s3:GetObject` and `s3:PutObject` for objects in
-its bucket. See the [image storage guide](./docs/image-storage.md) and
-[deployment guide](./docs/deployment.md) for the required configuration.
+| Area                  | Technology                                                               |
+| --------------------- | ------------------------------------------------------------------------ |
+| Application           | React 19, React Router 7, TypeScript, Tailwind CSS                       |
+| Data                  | PostgreSQL 17, Prisma, pgvector, Amazon RDS                              |
+| Search and projection | Workers AI `bge-m3`, IVFFlat cosine search, UMAP                         |
+| Visualisation         | three.js, WebGL, custom shaders, compact binary assets                   |
+| Infrastructure        | Cloudflare Workers, Hyperdrive, KV, Image Transformations, Amazon S3     |
+| Reliability           | Vitest, Testing Library, Playwright, MSW, ESLint, Sentry, GitHub Actions |
 
-Existing database records do not need to change when image objects are copied
-into Amazon S3 using their existing object keys. Copy and verify those objects
-before decommissioning the previous storage resource.
+## Testing and delivery
 
-## Cloudflare Workers deployment migration
+The test strategy exercises both application behaviour and the two target
+runtimes:
 
-**Commit:** `migrate application deployment to Cloudflare Workers`
+- **Vitest and Testing Library** cover authentication, security headers, error
+  handling, UI utilities, and route behaviour. Parallel workers receive isolated
+  PostgreSQL schemas, while MSW keeps third-party calls deterministic and
+  offline.
+- **Playwright** covers onboarding, profile management, two-factor
+  authentication, passkeys, and error boundaries through the browser.
+- **Static checks** include ESLint, generated React Router and Cloudflare types,
+  and strict TypeScript checking.
+- **CI builds both runtimes**—the Node test harness and the Cloudflare
+  Worker—then gates deployment on linting, type checking, Vitest coverage, and
+  Playwright.
 
-Production and staging deployment has been migrated from Fly.io containers to
-server-rendered Cloudflare Workers. The existing Node/Express entry point is
-retained only as the local development and Playwright test harness.
+Run the complete local validation pipeline with:
 
-The migration includes:
+```sh
+npm run validate
+```
 
-- adding a native React Router Worker entry and Cloudflare Vite/Wrangler build;
-- replacing Node stream-based SSR with Web `ReadableStream` rendering;
-- connecting Prisma to Amazon RDS through a cache-disabled Hyperdrive binding
-  and a request-local `@prisma/adapter-pg` client;
-- generating separate Cloudflare and Node Prisma clients so the Worker bundles
-  its complete database runtime while the local/test harness stays compatible;
-- replacing filesystem/Sharp image processing with Cloudflare Image
-  Transformations and edge caching while keeping private Amazon S3 storage;
-- moving canonical URL and security-header handling to the Worker;
-- replacing Fly container deployment with environment-specific Wrangler builds
-  and GitHub Actions deployment for the `dev` and `main` branches;
-- running Prisma migrations separately before Worker deployment; and
-- removing the Fly and Docker production configuration.
+Individual commands are available when iterating:
 
-The Node build, Cloudflare Worker build, generated Worker types, TypeScript
-checking, and a Wrangler dry run have been verified. The dry run bundles all
-Prisma modules successfully and reports a gzip upload size of approximately 1.7
-MiB.
+```sh
+npm run test -- --run   # unit and integration tests
+npm run coverage        # Vitest with coverage
+npm run test:e2e:run    # production-build browser tests
+npm run typecheck       # generated types + TypeScript
+npm run lint
+```
 
-The repository does not create or modify external infrastructure. Before a real
-deployment, create production and staging Hyperdrive configurations, replace the
-all-zero binding IDs in `wrangler.jsonc`, upload the required Worker secrets,
-enable Cloudflare Image Transformations, configure WAF/rate-limiting rules, and
-give the migration runner a secure network path to RDS. See the
-[deployment guide](./docs/deployment.md) for the complete setup.
+## Tradeoffs and constraints
 
-## Docs
+This project makes its compromises explicit because the interface can otherwise
+make uncertain data look more authoritative than it is.
 
-[Read the project docs](./docs/README.md).
+| Decision                                                       | Benefit                                                              | Cost                                                                                |
+| -------------------------------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Fit the Atlas offline and keep its coordinates fixed           | Searches remain comparable and request-time compute stays small      | The projection must be regenerated when the corpus or model changes                 |
+| Use UMAP for the Atlas                                         | Preserves useful local neighbourhoods in an explorable view          | Global distances, cluster sizes, and gaps are not reliable measurements             |
+| Ship custom binary geometry and load labels on demand          | Keeps 89,800 points to about 1.6 MB and avoids shipping every title  | Adds format-versioning code and a network request on first hover                    |
+| Disable Hyperdrive query caching                               | Preserves authentication, mutation, and read-after-write correctness | Gives up a potential database-read optimisation                                     |
+| Keep RDS private and run migrations separately from deployment | Avoids opening the database to generic hosted runners                | Makes migrations an explicit operational step before release                        |
+| Render the Atlas in WebGL                                      | Makes a dense, interactive 89,800-point view practical               | The point cloud still lacks a complete non-WebGL and keyboard-accessible equivalent |
 
-## Support
+## Run locally
 
-- Contact [hey@candidgarden.com](mailto:hey@candidgarden.com).
-- Report bugs and propose changes in the
-  [GitHub repository](https://github.com/osmancakir/candidgarden_web).
+### Prerequisites
+
+- Node.js 22.18 or newer
+- Docker with Compose
+
+### Setup
+
+```sh
+git clone https://github.com/osmancakir/candidgarden_web.git
+cd candidgarden_web
+npm ci
+cp .env.example .env
+npm run db:start
+npx prisma migrate deploy
+npx prisma generate
+npx prisma db seed
+npm run dev
+```
+
+The default development server uses MSW-backed third-party integrations, so it
+does not need real email or S3 credentials. See
+[Getting Started](./docs/getting-started.md) for the development workflow and
+[Deployment](./docs/deployment.md) for the Cloudflare, RDS, and S3 production
+setup.
+
+## Documentation
+
+- [Atlas pipeline and rendering](./docs/atlas.md)
+- [Database and pgvector](./docs/database.md)
+- [Amazon RDS setup](./docs/amazon-rds-postgresql.md)
+- [Image storage](./docs/image-storage.md)
+- [Deployment](./docs/deployment.md)
+- [Security model](./docs/security.md)
+- [Architecture decisions](./docs/decisions/README.md)
+
+## Contact
+
+[hey@candidgarden.com](mailto:hey@candidgarden.com)
