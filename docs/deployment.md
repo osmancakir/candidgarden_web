@@ -91,9 +91,6 @@ AWS_S3_BUCKET="production-private-bucket"
 # Optional integrations
 RESEND_API_KEY="..."
 SENTRY_DSN="..."
-GITHUB_CLIENT_ID="..."
-GITHUB_CLIENT_SECRET="..."
-GITHUB_REDIRECT_URI="https://your-domain.example/auth/github/callback"
 ```
 
 Create an equivalent `.secrets.staging` file with staging-only credentials, then
@@ -165,8 +162,7 @@ database migration succeed.
 ## 7. Domains, rate limits, and observability
 
 Attach production and staging custom domains in the Cloudflare dashboard or add
-environment-specific routes to `wrangler.jsonc`. Update OAuth callback URLs
-after the domains are final.
+environment-specific routes to `wrangler.jsonc`.
 
 Rate limiting runs in the Worker itself through the three rate-limiting bindings
 declared in `wrangler.jsonc` (10/100/1000 requests per minute). The tiers are

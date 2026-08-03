@@ -1,8 +1,6 @@
 /* eslint no-restricted-imports: "off" */
 import { prisma } from '#app/utils/db.server.ts'
-import { MOCK_CODE_GITHUB } from '#app/utils/providers/constants.ts'
 import { createPassword, createUser, getUserImages } from '#tests/db-utils.ts'
-import { insertGitHubUser } from '#tests/mocks/github.ts'
 
 async function seed() {
 	console.log('🌱 Seeding...')
@@ -36,7 +34,6 @@ async function seed() {
 	console.timeEnd(`👤 Created ${totalUsers} users...`)
 
 	console.time(`🐨 Created admin user "kody"`)
-	const githubUser = await insertGitHubUser(MOCK_CODE_GITHUB)
 	const kody = await prisma.user.create({
 		select: { id: true },
 		data: {
@@ -44,12 +41,6 @@ async function seed() {
 			username: 'kody',
 			name: 'Kody',
 			password: { create: createPassword('kodylovesyou') },
-			connections: {
-				create: {
-					providerName: 'github',
-					providerId: String(githubUser.profile.id),
-				},
-			},
 			roles: { connect: [{ name: 'admin' }, { name: 'user' }] },
 		},
 	})

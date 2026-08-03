@@ -10,10 +10,6 @@ import { ErrorList, Field } from '#app/components/forms.tsx'
 import { AccessPage } from '#app/components/institute/access.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { requireAnonymous } from '#app/utils/auth.server.ts'
-// import {
-// 	ProviderConnectionForm,
-// 	providerNames,
-// } from '#app/utils/connections.tsx'
 import { prisma } from '#app/utils/db.server.ts'
 import { sendEmail } from '#app/utils/email.server.ts'
 import { checkHoneypot } from '#app/utils/honeypot.server.ts'
@@ -166,24 +162,6 @@ export default function SignupRoute({ actionData }: Route.ComponentProps) {
 					Submit
 				</StatusButton>
 			</Form>
-			{/* Temporarily disabled: Signup with GitHub.
-			{providerNames.length ? (
-				<>
-					<AccessDivider>via</AccessDivider>
-					<ul className="flex flex-col gap-3">
-						{providerNames.map((providerName) => (
-							<li key={providerName}>
-								<ProviderConnectionForm
-									type="Signup"
-									providerName={providerName}
-									redirectTo={redirectTo}
-								/>
-							</li>
-						))}
-					</ul>
-				</>
-			) : null}
-			*/}
 		</AccessPage>
 	)
 }

@@ -25,8 +25,7 @@ The migration includes:
 - moving the test suite to isolated PostgreSQL schemas;
 - removing the SQLite application database, persistent SQLite cache, LiteFS, Fly
   volumes, Consul coordination, and SQLite administration routes;
-- retaining only a disposable, process-local LRU cache for GitHub profile
-  lookups; and
+- retaining only a disposable, process-local LRU cache; and
 - preparing Amazon RDS as the production database and applying Prisma migrations
   separately from the application runtime.
 

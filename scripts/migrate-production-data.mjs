@@ -557,17 +557,6 @@ const tableConfigurations = [
 		],
 	},
 	{
-		table: 'Connection',
-		columns: [
-			text('id'),
-			text('providerName'),
-			text('providerId'),
-			timestamp('createdAt'),
-			timestamp('updatedAt'),
-			text('userId'),
-		],
-	},
-	{
 		table: '_PermissionToRole',
 		where: `WHERE "A" IN (SELECT "id" FROM "Permission" WHERE "entity" <> 'note')`,
 		columns: [text('A'), text('B')],

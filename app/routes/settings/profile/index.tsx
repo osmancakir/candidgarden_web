@@ -167,13 +167,6 @@ export default function EditUserProfile({ loaderData }: Route.ComponentProps) {
 						value="Sign in without a password"
 						action={<SettingsLink to="passkeys">Manage passkeys</SettingsLink>}
 					/>
-					<LedgerRow
-						label="Connections"
-						value="Third-party identity providers"
-						action={
-							<SettingsLink to="connections">Manage connections</SettingsLink>
-						}
-					/>
 				</Ledger>
 			</section>
 
