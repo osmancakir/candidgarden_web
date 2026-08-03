@@ -118,16 +118,34 @@ export function MonumentalTitle({
  * The legend that lets a reader browse the index "at" a level (§2). Rendered as
  * three links that set `?level=`, so the mode survives in the URL and works
  * without JS.
+ *
+ * `atlasHref` appends a fourth chip, and it carries no numeral. Panofsky wrote
+ * three levels and the latent space is not a fourth one — it is where the three
+ * readings are held, not a step below them — so the chip names itself and lets
+ * the sequence stop at III. On small screens the three collapse to their
+ * numerals and this one collapses to `LS`, which is the same collapse (a mark
+ * standing for a name) rather than a number continuing a count.
+ *
+ * It is also a link out of the index rather than another view of it: no
+ * register, no records, no `?level=`. Admitting it to `PANOFSKY` would oblige
+ * every consumer of `PanofskyLevel` to handle a level that renders nothing.
  */
 export function LevelLegend({
 	current,
 	hrefFor,
+	atlasHref,
 	className,
 }: {
 	current: PanofskyLevel
 	hrefFor: (level: PanofskyLevel) => string
+	atlasHref?: string
 	className?: string
 }) {
+	const chip =
+		'font-data text-data-sm flex items-baseline gap-2 border px-3 py-2 tracking-[0.12em] uppercase no-underline transition-colors'
+	const resting =
+		'border-rule text-ground-muted hover:border-link hover:text-link'
+
 	return (
 		<nav aria-label="Browse level" className={cn('flex flex-wrap', className)}>
 			{([1, 2, 3] as const).map((level) => {
@@ -139,10 +157,9 @@ export function LevelLegend({
 						href={hrefFor(level)}
 						aria-current={isCurrent ? 'true' : undefined}
 						className={cn(
-							'font-data text-data-sm -ml-px flex items-baseline gap-2 border px-3 py-2 tracking-[0.12em] uppercase no-underline transition-colors',
-							isCurrent
-								? 'border-ground-fg bg-ground-fg text-ground'
-								: 'border-rule text-ground-muted hover:border-link hover:text-link',
+							chip,
+							'-ml-px',
+							isCurrent ? 'border-ground-fg bg-ground-fg text-ground' : resting,
 						)}
 					>
 						<span>{meta.numeral}</span>
@@ -150,6 +167,16 @@ export function LevelLegend({
 					</a>
 				)
 			})}
+			{atlasHref ? (
+				<a
+					href={atlasHref}
+					className={cn(chip, resting, 'ml-3')}
+					title="The atlas — every Level II and III reading as the space the model holds them in"
+				>
+					<span className="sm:hidden">LS</span>
+					<span className="hidden sm:inline">Latent space</span>
+				</a>
+			) : null}
 		</nav>
 	)
 }

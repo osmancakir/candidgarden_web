@@ -24,3 +24,7 @@ node_modules
 /app/generated/prisma
 /app/generated/prisma-*
 .react-router/
+
+# UMAP atlas intermediates (368MB of float32; regenerate with scripts/export-embedding-atlas.mjs)
+.atlas/
+.venv-atlas/

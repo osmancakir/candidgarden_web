@@ -1,0 +1,50 @@
+{
+	"formatVersion": 1,
+	"model": "@cf/baai/bge-m3",
+	"count": 89800,
+	"works": 52787,
+	"pairedWorks": 37013,
+	"fit": {
+		"algorithm": "umap",
+		"nComponents": 3,
+		"metric": "cosine",
+		"nNeighbors": 15,
+		"minDist": 0.1,
+		"init": "pca",
+		"seed": 42,
+		"sampled": false,
+		"fittedAt": "2026-08-03T21:34:48Z"
+	},
+	"normalisation": {
+		"centre": [
+			5.665188789367676,
+			4.3828444480896,
+			4.849946022033691
+		],
+		"extent": 9.840631484985352
+	},
+	"spreadFloor": 0.08686503767967224,
+	"spreadCeiling": 0.24063611030578613,
+	"layout": {
+		"positions": {
+			"offset": 16,
+			"byteLength": 1077600,
+			"dtype": "float32"
+		},
+		"resourceIds": {
+			"offset": 1077616,
+			"byteLength": 359200,
+			"dtype": "uint32"
+		},
+		"levels": {
+			"offset": 1436816,
+			"byteLength": 89800,
+			"dtype": "uint8"
+		},
+		"spreads": {
+			"offset": 1526616,
+			"byteLength": 89800,
+			"dtype": "uint8"
+		}
+	}
+}

@@ -92,6 +92,30 @@ the inversion intact. The toggle in the masthead names the ground rather than
 showing a sun or a moon (`GROUND PAPER` / `GROUND VOID` / `GROUND AUTO`) — it is
 the one control that says the vocabulary out loud.
 
+**Latent space (void) — a fourth chip, and deliberately not a fourth level.**
+The index's browse legend carries a fourth item, set apart from the three by a
+gap and **carrying no numeral**, leading to [the atlas](./atlas.md): all 89,800
+Level II and III readings drawn as the space the model holds them in.
+
+The numeral is what was refused, and refusing it is the whole design. `IV` would
+have read as the next term in Panofsky's sequence, and there is no fourth level
+of meaning — the latent space is not deeper than iconology, it is _where the
+readings are kept_. So the chip is named rather than numbered, the descent still
+ends at III, and the small-screen collapse follows the same logic: I / II / III
+shorten to numerals because that is what they are, and this one shortens to `LS`
+because a mark standing for a name is not a number continuing a count.
+
+It is a link out, not a browse mode: no register of its own (it rests on `void`,
+as Level III's neighbour rather than its successor), no records, and no
+`?level=`. `PanofskyLevel` stays `1 | 2 | 3` and the chip is a plain link, so no
+consumer of the type inherits a level that renders nothing.
+
+**What the space is of.** The vectors are of the _readings_ — prose a language
+model wrote about the works — so the atlas maps what has been written about the
+archive, not the archive. No image is embedded, and nothing in a cloud of points
+makes that visible, which is exactly why the page states it in type before the
+reader draws a conclusion from a cluster.
+
 ---
 
 ## 3. Color
@@ -469,18 +493,19 @@ one implementation in `app/routes/archive/+shared/`. Filter state lives entirely
 in the URL, so any view of the archive is citable, works without JavaScript, and
 degrades to a plain GET form.
 
-| Route                             | Register                      | Notes                                                                 |
-| --------------------------------- | ----------------------------- | --------------------------------------------------------------------- |
-| `/`, `/archive`                   | paper (level 3 flips to void) | Statement, filter console, records at the chosen level                |
-| `/archive/:id`                    | **the descent**               | The signature. Paper → slate → void                                   |
-| `/about`                          | paper                         | Institute charter (§7)                                                |
-| `/glossary`                       | paper                         | §8, with the German original per term                                 |
-| `/essays`                         | paper                         | The _Reprise_ chapter (§5) — methodology and the corrections register |
-| `/privacy`, `/tos`, `/support`    | paper                         | Notice, attribution ethics, and the invitation to dispute             |
-| `/login`, `/signup`, `/verify`, … | paper                         | `AccessPage` — no centred product card                                |
-| `/settings/profile/*`             | paper                         | `Ledger` rows; the archive files its users like its works             |
-| `/users`, `/users/:username`      | paper                         | The contributor register                                              |
-| `*` (404)                         | paper                         | §8: a real work at Level I, captioned `INTERPRETATION NOT FOUND`      |
+| Route                             | Register                      | Notes                                                                                 |
+| --------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------- |
+| `/`, `/archive`                   | paper (level 3 flips to void) | Statement, filter console, records at the chosen level                                |
+| `/archive/:id`                    | **the descent**               | The signature. Paper → slate → void                                                   |
+| `/archive/atlas`                  | void                          | `Latent space` — the fourth chip, not a fourth level (§2). See [atlas.md](./atlas.md) |
+| `/about`                          | paper                         | Institute charter (§7)                                                                |
+| `/glossary`                       | paper                         | §8, with the German original per term                                                 |
+| `/essays`                         | paper                         | The _Reprise_ chapter (§5) — methodology and the corrections register                 |
+| `/privacy`, `/tos`, `/support`    | paper                         | Notice, attribution ethics, and the invitation to dispute                             |
+| `/login`, `/signup`, `/verify`, … | paper                         | `AccessPage` — no centred product card                                                |
+| `/settings/profile/*`             | paper                         | `Ledger` rows; the archive files its users like its works                             |
+| `/users`, `/users/:username`      | paper                         | The contributor register                                                              |
+| `*` (404)                         | paper                         | §8: a real work at Level I, captioned `INTERPRETATION NOT FOUND`                      |
 
 **One route group is not part of the archive.** `/stadel-research/*` is an
 unlisted working area holding a single dated deliverable for the Städel Museum's

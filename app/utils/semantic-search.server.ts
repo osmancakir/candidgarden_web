@@ -50,6 +50,20 @@ export type SemanticHit = {
 }
 
 /**
+ * One matched reading, uncollapsed — the unit the atlas illuminates.
+ *
+ * `searchInterpretations` returns works, because a list of results is a list of
+ * pictures. The atlas plots readings, and a work whose level II and level III
+ * passages both match is two points in that space, often far apart. Collapsing
+ * them there would hide exactly what the projection exists to show.
+ */
+export type SemanticPoint = {
+	resourceId: number
+	level: number
+	similarity: number
+}
+
+/**
  * Embeds one string with bge-m3.
  *
  * Prefers the Worker's AI binding, which stays inside Cloudflare's network.
@@ -165,6 +179,48 @@ export async function searchInterpretations({
 		distance: Number(row.distance),
 		// bge-m3 emits unit-norm vectors, so this inversion is exact rather than
 		// an approximation.
+		similarity: 1 - Number(row.distance),
+	}))
+}
+
+/**
+ * The nearest readings to `query`, one row per reading rather than per work.
+ *
+ * The same index, the same operator, the same probes as `searchInterpretations`
+ * — only the collapse is gone, so a work contributes as many points as it has
+ * matching readings. `app/routes/archive/atlas.tsx` uses this to light up the
+ * projection.
+ *
+ * `limit` runs larger here than in the ranked index: a list has to be read and
+ * a constellation only has to be seen, and a few hundred lit points against
+ * 89,800 dim ones is what makes the shape of a query legible.
+ */
+export async function searchInterpretationPoints({
+	query,
+	limit = 400,
+}: {
+	query: string
+	limit?: number
+}): Promise<Array<SemanticPoint>> {
+	const vector = toVectorLiteral(await embedQuery(query))
+
+	const rows = await prisma.$transaction(async (tx) => {
+		await tx.$executeRawUnsafe(`SET LOCAL ivfflat.probes = ${PROBES}`)
+		return tx.$queryRawUnsafe<
+			Array<{ resource_id: number; level: number; distance: number }>
+		>(
+			`SELECT e.resource_id, e.level, e.embedding <=> $1::vector AS distance
+			   FROM "InterpretationEmbedding" e
+			  ORDER BY e.embedding <=> $1::vector
+			  LIMIT $2`,
+			vector,
+			limit,
+		)
+	})
+
+	return rows.map((row) => ({
+		resourceId: row.resource_id,
+		level: row.level,
 		similarity: 1 - Number(row.distance),
 	}))
 }

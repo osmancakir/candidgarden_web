@@ -97,9 +97,32 @@ export function ArchiveIndexView({ data }: { data: ArchiveIndexData }) {
 						<LevelLegend
 							current={filters.level}
 							hrefFor={(level) => hrefWith({ level })}
+							// The atlas reads the same `sense` param, so a phrase already in
+							// the console travels with the reader and arrives lit. The other
+							// filters do not: the projection has no notion of a century or a
+							// collection, and silently dropping them is honest where
+							// pretending to honour them would not be.
+							atlasHref={
+								filters.sense
+									? `/archive/atlas?sense=${encodeURIComponent(filters.sense)}`
+									: '/archive/atlas'
+							}
 						/>
 						<p className="font-body text-prose-sm text-ground-muted">
 							{PANOFSKY[filters.level].blurb}
+						</p>
+						{/* The fourth chip leaves the index, so it gets its own line — and
+						    the line says what it is not. The descent stops at III; this is
+						    where those readings are held, not a step beneath them. */}
+						<p className="font-body text-prose-sm text-ground-muted">
+							<Link
+								to="/archive/atlas"
+								className="underline underline-offset-4"
+							>
+								Latent space
+							</Link>{' '}
+							is not a fourth level. It is the same Level II and III readings
+							seen from outside — as the space the model holds them in.
 						</p>
 					</div>
 				</div>

@@ -26,6 +26,9 @@ in the coming weeks. Stay tuned!
   running.
 - [Amazon RDS for PostgreSQL](./amazon-rds-postgresql.md) - Local PostgreSQL and
   production RDS setup, including pgvector.
+- [The Atlas](./atlas.md) - The UMAP projection of the interpretation corpus:
+  the offline pipeline, the shipped binary, and what the map does and does not
+  claim.
 - [Decisions](./decisions/README.md) - The reasoning behind various decisions
   made for the Epic Stack. A good historical record.
 - [Guiding Principles](./guiding-principles.md) - The guiding principles behind
