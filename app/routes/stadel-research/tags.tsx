@@ -344,10 +344,9 @@ function TagsHeader({
 					</Display>
 					<p className="font-body text-prose-lg measure mt-6">
 						Every sheet in the sample, tagged independently by each model
-						against the schema agreed in the briefing — and set beside the
-						annotation the Städel already holds for that sheet. Values are the
-						model's own German; nothing here has been edited, reordered or
-						filtered.
+						against the schema in the briefing, and set beside the annotation
+						the Städel already holds for that sheet. Values are the model's own
+						German; nothing here has been edited, reordered or filtered.
 					</p>
 				</div>
 				<div className="flex flex-col justify-end gap-3 lg:col-span-4">

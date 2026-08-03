@@ -20,8 +20,8 @@ import { type Route } from './+types/index.ts'
  * this page links through to the sheets it was computed from.
  *
  * The order is the order of the argument, not of the pipeline: what was run,
- * what it showed, what we removed from the evaluation and why, what we need
- * from the museum, what happens next.
+ * what it showed, why the catalogue comparison was set aside, what would
+ * strengthen the results, what happens next.
  */
 
 export const meta: Route.MetaFunction = () => [
@@ -171,20 +171,17 @@ export default function StadelPilotOverview({
 				title="Five models on the graphic collection"
 				lead={
 					<>
-						We froze an evaluation sample of {run.sample.works} sheets —{' '}
+						I froze an evaluation sample of {run.sample.works} sheets —{' '}
 						{run.sample.perMedium} prints and {run.sample.perMedium} drawings,
-						capped at {run.sample.maxPerArtist} works per artist so the sample
-						is not simply twenty Dürers — and ran five current vision models
+						capped at {run.sample.maxPerArtist} works per artist so that no
+						single artist dominates it — and ran five current vision models
 						across both tasks and both media. {run.calls} model calls in total.
-						This is what came back, and what we are and are not willing to
-						conclude from it.
 					</>
 				}
 				aside={
 					<ProvenanceStamp
 						dataset="Städel · Graphische Sammlung"
 						run={run.experiment}
-						date={run.runDate}
 						verification="PENDING"
 					/>
 				}
@@ -193,11 +190,10 @@ export default function StadelPilotOverview({
 			<div className="container flex flex-col gap-14 py-12 md:py-16">
 				<Section n={1} heading="The roster">
 					<p className="font-body text-prose measure">
-						The roster was rebuilt from each provider's live model list rather
-						than from assumption. The models named in the briefing were more
-						than a year old, and the field has moved considerably since it was
-						written. One model per provider, each the provider's current
-						flagship for vision.
+						The roster was taken from each provider's live model list. The
+						models named in the briefing are more than a year old, and the field
+						has moved since it was written. One model per provider, each the
+						provider's current flagship for vision.
 					</p>
 					<div className="overflow-x-auto">
 						<table className="min-w-full">
@@ -289,45 +285,42 @@ export default function StadelPilotOverview({
 					/>
 					<div className="prose-editorial measure">
 						<p>
-							<strong>Mistral is clearly last</strong> on both media — well over
-							a point behind the next model, and two and a half points behind
-							the leader on print iconography. That result is solid.
+							Mistral scores lowest on both media — well over a point behind the
+							next model, and two and a half points behind the leader on print
+							iconography. The margin is wide enough that the sample size is
+							unlikely to account for it.
 						</p>
 						<p>
-							<strong>Google and xAI are level.</strong> They swap places
-							between the two media; nothing here separates them.
+							Google and xAI score level with each other. They swap places
+							between the two media, and this sample does not separate them.
 						</p>
 						<p>
-							<strong>
-								The top two are OpenAI and Anthropic, in that order — but we are
-								not presenting that order as final.
-							</strong>{' '}
-							The judge in this run was itself one of the contestants, and its
-							margin over the runner-up (
+							OpenAI and Anthropic lead, in that order, though that order should
+							be read as provisional. The judge in this run was itself one of
+							the contestants, and its margin over the runner-up (
 							{printsTop && printsRunnerUp
 								? (printsTop.overall! - printsRunnerUp.overall!).toFixed(2)
 								: '—'}{' '}
 							on prints) is smaller than the self-preference that could
-							plausibly explain it. The next step is to re-score only those two
-							with a judge that is neither of them, which settles it cleanly.
+							plausibly explain it. Re-scoring those two with a judge that is
+							neither of them would settle the question.
 						</p>
 						<p>
-							<strong>Iconography is the category that discriminates.</strong>{' '}
-							It spans 5.2 to 9.2 across the roster. Atmosphere and emotion sit
-							between 8.0 and 9.0 for every model and, at this sample size, tell
-							us very little.
+							Iconography is the category that separates the models: it spans
+							5.2 to 9.2 across the roster. Atmosphere and emotion sit between
+							8.0 and 9.0 for every model and, at this sample size, say very
+							little.
 						</p>
 					</div>
 					<UncertaintyNotice notice="Ranking provisional · judge was a contestant · re-score pending" />
 				</Section>
 
-				<Section n={3} heading="What we removed, and why">
+				<Section n={3} heading="Why the catalogue comparison was set aside">
 					<p className="font-body text-prose measure">
-						The briefing asked us to score the models against the annotations
-						already in your records. We built towards that, ran it on the pilot
-						output — and then took it out of the evaluation. The reason is worth
-						stating plainly, because it is a finding about the data rather than
-						a shortcut on our side.
+						The briefing asked for the models to be scored against the
+						annotations already in your records. I built that, ran it on the
+						pilot output, and then took it out of the evaluation. The reason is
+						a finding about the data, so it is worth setting out.
 					</p>
 					<div className="prose-editorial measure">
 						<p>
@@ -345,60 +338,55 @@ export default function StadelPilotOverview({
 						<p>
 							Run across the whole roster, that metric ranks the models almost
 							exactly inversely to how much they write: the tersest model comes
-							first. Publishing it would recommend the model that says the
-							least, on a project whose entire premise is enriching a thin
-							catalogue.
+							first.
 						</p>
 						<p>
-							There is also a structural gap. Of the nine fields the briefing
-							asks for,{' '}
-							<strong>four have no data in your records at all</strong> —{' '}
-							<code>Assoziation.Person</code>, <code>Assoziation.Thema</code>,{' '}
-							<code>Atmosphäre</code> and <code>Emotion</code> are empty in all{' '}
-							{run.sample.works} sample records, because these are the
-							categories you have asked us to <em>add</em>. A
-							model-versus-catalogue comparison is blind to nearly half the
-							output by construction.
+							There is also a structural limit. Four of the nine fields the
+							briefing asks for — <code>Assoziation.Person</code>,{' '}
+							<code>Assoziation.Thema</code>, <code>Atmosphäre</code> and{' '}
+							<code>Emotion</code> — are empty across all {run.sample.works}{' '}
+							sample records. That is by design: they are the categories the
+							project exists to add. A comparison against the catalogue is
+							therefore blind to nearly half the output.
 						</p>
 						<p>
-							So the evaluation now scores the models against the artwork
+							The evaluation therefore scores the models against the artwork
 							itself, which needs no catalogue and covers all four categories.
 							Your records remain the backbone of every run — they supply the
 							work list, the metadata in each prompt, and the images. They are
 							simply not being used as a scoreboard.
 						</p>
 						<p>
-							We have not abandoned the underlying question — “what would this
-							actually add to our catalogue?” That is the right question and we
-							still want to answer it. The{' '}
+							The underlying question — what would this actually add to the
+							catalogue? — is still answerable, and directly. The{' '}
 							<Link to="/stadel-research/tags">keyword comparison</Link> puts
 							your record beside all five models on every sheet in the sample,
-							so you can read the answer directly on the roughly 85 deeply
-							annotated records rather than take a percentage on trust.
+							so the answer can be read off the roughly 85 deeply annotated
+							records rather than taken on trust as a percentage.
 						</p>
 					</div>
 				</Section>
 
-				<Section n={4} heading="What we need from you">
+				<Section n={4} heading="What would strengthen the results">
 					<ol className="prose-editorial measure list-decimal pl-5">
 						<li>
 							<strong>A technique column, if one exists.</strong> The export has
 							nothing distinguishing Radierung from Kupferstich from
-							Holzschnitt. Right now the model infers technique from the image;
-							if you can supply it, we can state it instead.
+							Holzschnitt. At present the model infers technique from the image;
+							if the field exists somewhere, it could be stated instead.
 						</li>
 						<li>
 							<strong>
 								Published texts on works in the graphic collection.
 							</strong>{' '}
 							The briefing asks for example texts to guide description style.
-							The three published Städel texts we have describe a Tischbein
-							painting, a Vidal photograph and a Piazzetta drawing — none of
-							those artists appears in this export, and two are the wrong medium
-							entirely. Examples built on a painting and a photograph would
-							teach the model to write about colour and surface, which is wrong
-							for pre-1800 works on paper. A handful of prints and a handful of
-							drawings would be enough.
+							The three published Städel texts available to me describe a
+							Tischbein painting, a Vidal photograph and a Piazzetta drawing —
+							none of those artists appears in this export, and two are a
+							different medium. Examples built on a painting and a photograph
+							would teach the model to write about colour and surface, which
+							does not transfer to pre-1800 works on paper. A handful of prints
+							and a handful of drawings would be enough.
 						</li>
 						<li>
 							<strong>Confirmation of one vocabulary deviation.</strong> The
@@ -411,22 +399,40 @@ export default function StadelPilotOverview({
 							<code>Mythologische Darstellung</code> (139). And{' '}
 							<code>Personendarstellung</code> — the most common value in the
 							collection, 560 records — is absent from the briefing list
-							altogether. Six briefing terms are never used at all. We have
-							therefore built the prompt around <em>your</em> vocabulary and
-							kept the briefing's unused terms only as fallbacks. This is a
-							deliberate deviation from the agreed text and we would like it
-							confirmed.
+							altogether. Six briefing terms are never used at all. The prompt
+							is therefore built around the vocabulary in your export, with the
+							briefing's unused terms kept as fallbacks. Since this departs from
+							the agreed text, I would like it confirmed before the full run.
 						</li>
 					</ol>
 				</Section>
 
 				<Section n={5} heading="What happens next">
 					<p className="font-body text-prose measure">
-						Once the finalists are re-scored with a neutral judge, we run all{' '}
-						{run.corpus.works.toLocaleString('en-US')} works through the chosen
-						model — the briefing's “best performer plus one comparison model” —
-						and deliver the UTF-8 CSV with semicolon delimiter plus the separate
-						keyword-and-type list, as specified.
+						I am working on a more robust evaluation — the two leading models
+						re-scored with a judge that took no part in the run. It is unlikely
+						to change the headline result: the OpenAI and Anthropic models lead
+						on both media, and their margin over the rest is wide enough that a
+						different judge should not disturb it. What the re-score settles is
+						the order between those two.
+					</p>
+					<p className="font-body text-prose measure">
+						In the meantime, everything is readable. The{' '}
+						<Link to="/stadel-research/tags">keywords</Link> and the{' '}
+						<Link to="/stadel-research/descriptions">descriptions</Link> are
+						there sheet by sheet, and the full prompt behind each task is
+						printed on its own page. If you can look through them and mark
+						anything that reads wrong to you — a keyword that would not pass
+						review, a description in the wrong voice — that is the most useful
+						thing at this stage.
+					</p>
+					<p className="font-body text-prose measure">
+						I would then like to schedule our next meeting to go through your
+						notes together. After that, all{' '}
+						{run.corpus.works.toLocaleString('en-US')} works go through the
+						chosen model — the briefing's “best performer plus one comparison
+						model” — and I deliver the UTF-8 CSV with semicolon delimiter plus
+						the separate keyword-and-type list, as specified.
 					</p>
 				</Section>
 

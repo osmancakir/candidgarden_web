@@ -151,7 +151,7 @@ export function ProvenanceStamp({
 }: {
 	dataset?: string
 	run?: string | number
-	date: Date | string | number
+	date?: Date | string | number
 	verification: VerificationStatus
 	className?: string
 }) {
@@ -174,8 +174,12 @@ export function ProvenanceStamp({
 						<dd>{run}</dd>
 					</>
 				) : null}
-				<dt className="tracking-[0.12em] opacity-70">Generated</dt>
-				<dd>{archivalDate(date)}</dd>
+				{date != null ? (
+					<>
+						<dt className="tracking-[0.12em] opacity-70">Generated</dt>
+						<dd>{archivalDate(date)}</dd>
+					</>
+				) : null}
 				<dt className="tracking-[0.12em] opacity-70">Human check</dt>
 				<dd>{verification}</dd>
 			</dl>

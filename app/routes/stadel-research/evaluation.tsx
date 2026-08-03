@@ -127,7 +127,7 @@ export default function StadelEvaluation({ loaderData }: Route.ComponentProps) {
 							ten on four categories. Model names were hidden, so the judge
 							could not recognise whose output it was reading. Twenty sheets per
 							medium, five models, one written justification per category per
-							sheet — all of it readable here.
+							sheet. All of it readable here.
 						</p>
 					</div>
 					<div className="flex flex-col justify-end gap-3 lg:col-span-4">
@@ -140,7 +140,7 @@ export default function StadelEvaluation({ loaderData }: Route.ComponentProps) {
 							Scoring the models against the museum's own annotations was tried
 							and removed; the reason is set out in{' '}
 							<Link
-								to="/stadel-research#what-we-removed-and-why"
+								to="/stadel-research#why-the-catalogue-comparison-was-set-aside"
 								className="text-link underline underline-offset-4"
 							>
 								§3 of the report
@@ -233,10 +233,10 @@ export default function StadelEvaluation({ loaderData }: Route.ComponentProps) {
 						} · re-score with a neutral judge pending`}
 					/>
 					<p className="font-body text-prose-sm measure text-ground-muted">
-						Iconography is the category that discriminates: it spans more than
-						four points across the roster. Atmosphere and emotion sit between
-						8.0 and 9.0 for every model, and at this sample size tell us very
-						little. Read them as a floor, not as a result.
+						Iconography is the category that separates the models: it spans more
+						than four points across the roster. Atmosphere and emotion sit
+						between 8.0 and 9.0 for every model, and at this sample size say
+						very little. Read them as a floor, not as a result.
 					</p>
 				</div>
 			</section>
