@@ -28,6 +28,7 @@
     "deploy:staging": "npm run build:worker:staging && cross-env WRANGLER_LOG_PATH=.wrangler/logs CLOUDFLARE_ENV=staging wrangler deploy",
     "deploy:production": "npm run build:worker:production && cross-env WRANGLER_LOG_PATH=.wrangler/logs CLOUDFLARE_ENV=production wrangler deploy",
     "migrate:production-data": "node scripts/migrate-production-data.mjs",
+    "interpretations:import": "node --env-file=.env scripts/import-interpretations.mjs",
     "account:researcher": "node scripts/create-researcher-account.mjs",
     "account:researcher:local": "node --env-file=.env scripts/create-researcher-account.mjs --local",
     "stadel:data": "node scripts/stadel-research/prepare-data.mjs",

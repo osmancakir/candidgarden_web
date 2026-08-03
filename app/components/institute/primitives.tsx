@@ -188,6 +188,48 @@ export function ProvenanceStamp({
 }
 
 /**
+ * A written reading at Level II or III, with its provenance stated beneath it
+ * rather than in a tooltip. §6 makes attribution the brand: a machine-drafted
+ * reading is set in the same type as a curator's but says which it is, because
+ * the distance between naming motifs and interpreting a painting is the subject
+ * of this institute and cannot be quietly closed.
+ */
+export function Reading({
+	body,
+	source,
+	author,
+	citation,
+	className,
+}: {
+	body: string
+	source: string
+	author?: string | null
+	citation?: string | null
+	className?: string
+}) {
+	const byline =
+		source === 'EDITORIAL'
+			? (author ?? 'Candid Garden')
+			: source === 'MODEL'
+				? 'Written by a machine'
+				: 'Imported'
+
+	return (
+		<div className={className}>
+			<div className="prose-editorial">
+				{body.split('\n\n').map((paragraph, index) => (
+					<p key={index}>{paragraph}</p>
+				))}
+			</div>
+			<p className="font-data text-data-sm text-ground-muted border-rule mt-6 border-t pt-3 tracking-[0.12em] uppercase">
+				{byline}
+				{citation ? <span className="normal-case"> · {citation}</span> : null}
+			</p>
+		</div>
+	)
+}
+
+/**
  * §6 "Uncertainty as content." Where a reading is contested or thin, the
  * interface says so in its own voice, prominently, in mono. Renders nothing
  * when there is nothing to disclose — silence here has to mean something.

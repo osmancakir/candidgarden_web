@@ -11,6 +11,7 @@ import {
 	Data,
 	Display,
 	ProvenanceStamp,
+	Reading,
 	RecordStamp,
 	UncertaintyNotice,
 } from '#app/components/institute/primitives.tsx'
@@ -39,9 +40,12 @@ import { type Route } from './+types/$resourceId.ts'
  *   Level II  identification — subject classes and their distribution. Derived.
  *   Level III interpretation — provenance of the reading, and its limits.
  *
- * The corpus carries no curated Level II/III prose yet. Rather than fill those
- * sections with generated filler, they show the structure and state plainly
- * what is missing — which §7 asks for and §6 makes the brand.
+ * Levels II and III read from `Interpretation`, which currently holds
+ * machine-drafted prose imported from the description corpus (see
+ * scripts/import-interpretations.mjs). Every reading is rendered with its
+ * provenance stated, per §6. Where no reading exists — 152 works have no
+ * Level III — the section keeps its original behaviour and says plainly what
+ * is missing rather than filling the space, which §7 asks for.
  */
 
 const MAX_MOTIFS = 60
@@ -71,6 +75,16 @@ export async function loader({ params }: Route.LoaderArgs) {
 			artist: { select: { id: true, name: true, wikiDataId: true } },
 			wikiDataVerification: {
 				select: { status: true, verifiedAt: true, notes: true },
+			},
+			interpretations: {
+				where: { publishedAt: { not: null } },
+				select: {
+					level: true,
+					body: true,
+					source: true,
+					citation: true,
+					author: { select: { name: true } },
+				},
 			},
 			taggings: {
 				orderBy: { frequency: 'desc' },
@@ -129,6 +143,9 @@ export async function loader({ params }: Route.LoaderArgs) {
 	const verification = verificationLabel(resource.wikiDataVerification?.status)
 	const generatedAt = resource.wikiDataVerification?.verifiedAt ?? new Date(0)
 
+	const readingAt = (level: number) =>
+		resource.interpretations.find((i) => i.level === level) ?? null
+
 	return {
 		work: {
 			id: resource.id,
@@ -146,6 +163,8 @@ export async function loader({ params }: Route.LoaderArgs) {
 		categories,
 		humanLeaning,
 		modelLeaning,
+		iconographic: readingAt(2),
+		iconological: readingAt(3),
 		verification,
 		verificationNotes: resource.wikiDataVerification?.notes ?? null,
 		generatedAt,
@@ -177,6 +196,8 @@ export default function Dossier({ loaderData }: Route.ComponentProps) {
 		categories,
 		humanLeaning,
 		modelLeaning,
+		iconographic,
+		iconological,
 		verification,
 		verificationNotes,
 		generatedAt,
@@ -301,36 +322,58 @@ export default function Dossier({ loaderData }: Route.ComponentProps) {
 			<Level level={2} stamp={stamp}>
 				<div className="grid gap-10 lg:grid-cols-12">
 					<div className="lg:col-span-7">
-						<div className="prose-editorial">
-							<p>
-								At Level II the archive asks what the motifs of Level I{' '}
-								<em>depict</em> — the conventional subjects a contemporary
-								viewer would have recognised. Candid Garden holds no curated
-								iconographic reading for this work. What follows is therefore
-								not an identification but a description of the material an
-								identification would be built from:{' '}
-								{motifs.length.toLocaleString('en-US')} motifs distributed
-								across {categories.length}{' '}
-								{categories.length === 1 ? 'subject class' : 'subject classes'}.
-							</p>
-							<p>
-								Of those motifs, {humanLeaning} are more often supplied by human
-								annotators than by the model across the corpus as a whole, and{' '}
-								{modelLeaning} more often by the model. This is a corpus-wide
-								tendency of each term, not a measurement of this work, and it
-								should not be read as agreement about <em>this</em> picture.
-							</p>
-							{verificationNotes ? (
-								<p>
-									<cite>Verification note:</cite> {verificationNotes}
-								</p>
-							) : null}
-						</div>
+						{iconographic ? (
+							<>
+								<Reading
+									body={iconographic.body}
+									source={iconographic.source}
+									author={iconographic.author?.name}
+									citation={iconographic.citation}
+								/>
+								{verificationNotes ? (
+									<p className="prose-editorial mt-6">
+										<cite>Verification note:</cite> {verificationNotes}
+									</p>
+								) : null}
+							</>
+						) : (
+							<>
+								<div className="prose-editorial">
+									<p>
+										At Level II the archive asks what the motifs of Level I{' '}
+										<em>depict</em> — the conventional subjects a contemporary
+										viewer would have recognised. Candid Garden holds no curated
+										iconographic reading for this work. What follows is
+										therefore not an identification but a description of the
+										material an identification would be built from:{' '}
+										{motifs.length.toLocaleString('en-US')} motifs distributed
+										across {categories.length}{' '}
+										{categories.length === 1
+											? 'subject class'
+											: 'subject classes'}
+										.
+									</p>
+									<p>
+										Of those motifs, {humanLeaning} are more often supplied by
+										human annotators than by the model across the corpus as a
+										whole, and {modelLeaning} more often by the model. This is a
+										corpus-wide tendency of each term, not a measurement of this
+										work, and it should not be read as agreement about{' '}
+										<em>this</em> picture.
+									</p>
+									{verificationNotes ? (
+										<p>
+											<cite>Verification note:</cite> {verificationNotes}
+										</p>
+									) : null}
+								</div>
 
-						<p className="font-data text-data text-stamp-fg mt-8 tracking-[0.12em] uppercase">
-							No iconographic reading on record · Level II awaiting editorial
-							pass
-						</p>
+								<p className="font-data text-data text-stamp-fg mt-8 tracking-[0.12em] uppercase">
+									No iconographic reading on record · Level II awaiting
+									editorial pass
+								</p>
+							</>
+						)}
 					</div>
 
 					<div className="lg:col-span-5">
@@ -401,24 +444,36 @@ export default function Dossier({ loaderData }: Route.ComponentProps) {
 					</div>
 
 					<div className="flex flex-col gap-8 lg:col-span-5">
-						<div className="prose-editorial">
-							<p>
-								Level III asks what the work meant — to its makers, its patrons,
-								and the culture that produced it — and what the machine's
-								reading of it reveals about the machine. Candid Garden publishes
-								no iconological synthesis for this work.
-							</p>
-							<p>
-								We consider this the honest state of the record rather than a
-								gap to be papered over. A model that has named {motifs.length}{' '}
-								motifs has not thereby interpreted a painting, and the distance
-								between those two things is the subject of this institute.
-							</p>
-						</div>
+						{iconological ? (
+							<Reading
+								body={iconological.body}
+								source={iconological.source}
+								author={iconological.author?.name}
+								citation={iconological.citation}
+							/>
+						) : (
+							<>
+								<div className="prose-editorial">
+									<p>
+										Level III asks what the work meant — to its makers, its
+										patrons, and the culture that produced it — and what the
+										machine's reading of it reveals about the machine. Candid
+										Garden publishes no iconological synthesis for this work.
+									</p>
+									<p>
+										We consider this the honest state of the record rather than
+										a gap to be papered over. A model that has named{' '}
+										{motifs.length} motifs has not thereby interpreted a
+										painting, and the distance between those two things is the
+										subject of this institute.
+									</p>
+								</div>
 
-						<p className="font-data text-data text-stamp-fg tracking-[0.12em] uppercase">
-							No iconological reading on record
-						</p>
+								<p className="font-data text-data text-stamp-fg tracking-[0.12em] uppercase">
+									No iconological reading on record
+								</p>
+							</>
+						)}
 
 						{/* §6 The provenance stamp — once per dossier. */}
 						<ProvenanceStamp
@@ -427,8 +482,10 @@ export default function Dossier({ loaderData }: Route.ComponentProps) {
 							verification={verification}
 						/>
 
+						{/* Carries which reading is under dispute, so §7's invitation
+						    lands on a page that can name it rather than a generic one. */}
 						<Link
-							to="/support"
+							to={`/support?record=${work.id}&level=${iconological ? 3 : 2}`}
 							className="font-data text-data-sm text-link tracking-[0.12em] uppercase underline underline-offset-4"
 						>
 							Dispute this reading →

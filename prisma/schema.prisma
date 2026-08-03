@@ -36,6 +36,7 @@ model User {
   passkey               Passkey[]
   favorites             Favorite[]
   wikiDataVerifications WikiDataVerification[] @relation("VerifiedByUser")
+  interpretations       Interpretation[]       @relation("InterpretationAuthor")
 }
 
 model UserImage {
@@ -181,6 +182,7 @@ model Resource {
   favorites            Favorite[]
   confessionLinks      ConfessionArt[]
   wikiDataVerification WikiDataVerification?
+  interpretations      Interpretation[]
 
   @@index([artistId])
   @@index([highlight])
@@ -215,6 +217,36 @@ model WikiDataVerification {
   artist      Artist?      @relation(fields: [artistId], references: [id], onDelete: Cascade)
   resource    Resource?    @relation(fields: [resourceId], references: [id], onDelete: Cascade)
   institution Institution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+}
+
+/// A written reading of one work at one Panofsky level. Levels II and III cannot
+/// be derived from `Tagging` the way Level I is — "this depicts an Annunciation"
+/// is a claim somebody makes, not a number you can sum — so the claim is stored
+/// here together with who made it. `source` is the field that matters: the
+/// dossier distinguishes human from machine provenance for its tags, and prose
+/// is held to the same standard rather than being presented as scholarship.
+model Interpretation {
+  id          String    @id @default(cuid())
+  resourceId  Int       @map("resource_id")
+  /// Panofsky level this reading belongs to: 2 (iconographic) or 3 (iconological).
+  level       Int
+  body        String
+  /// EDITORIAL (written by a person) | MODEL (machine-drafted) | IMPORTED.
+  source      String    @default("EDITORIAL")
+  authorId    String?
+  /// Where the reading came from — a citation, or the model and run that wrote it.
+  citation    String?
+  /// Null means drafted but not shown; the dossier only reads published rows.
+  publishedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  author   User?    @relation("InterpretationAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@unique([resourceId, level])
+  @@index([resourceId, level, publishedAt])
 }
 
 model Relation {

@@ -176,7 +176,7 @@ export default defineConfig((config) => {
 				: null,
 		],
 		test: {
-			include: ['./app/**/*.test.{ts,tsx}'],
+			include: ['./app/**/*.test.{ts,tsx}', './scripts/**/*.test.{ts,tsx}'],
 			setupFiles: ['./tests/setup/setup-test-env.ts'],
 			restoreMocks: true,
 			coverage: {
