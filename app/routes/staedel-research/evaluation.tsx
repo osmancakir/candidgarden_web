@@ -1,3 +1,4 @@
+import { type SEOHandle } from '@nasa-gcn/remix-seo'
 import { Link } from 'react-router'
 import {
 	Data,
@@ -31,6 +32,12 @@ import {
 	type ScoreCategory,
 } from './+shared/schema.ts'
 import { type Route } from './+types/evaluation.ts'
+
+// Gated by the layout's role check, so it must not be advertised in
+// sitemap.xml. remix-seo includes every static route unless told otherwise.
+export const handle: SEOHandle = {
+	getSitemapEntries: () => null,
+}
 
 /**
  * How the models were scored, and what the scores do and do not support.

@@ -1,3 +1,4 @@
+import { type SEOHandle } from '@nasa-gcn/remix-seo'
 import { Link } from 'react-router'
 import {
 	Data,
@@ -13,6 +14,12 @@ import {
 } from './+shared/pilot.server.ts'
 import { MEDIA, SCORE_CATEGORIES, type MediumId } from './+shared/schema.ts'
 import { type Route } from './+types/index.ts'
+
+// Gated by the layout's role check, so it must not be advertised in
+// sitemap.xml. remix-seo includes every static route unless told otherwise.
+export const handle: SEOHandle = {
+	getSitemapEntries: () => null,
+}
 
 /**
  * The pilot report. Everything the status note of 01 August 2026 says, laid out

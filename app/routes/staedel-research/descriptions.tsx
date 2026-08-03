@@ -1,3 +1,4 @@
+import { type SEOHandle } from '@nasa-gcn/remix-seo'
 import { Link } from 'react-router'
 import {
 	ConsoleField,
@@ -32,6 +33,12 @@ import {
 	type DescriptionSet,
 } from './+shared/schema.ts'
 import { type Route } from './+types/descriptions.ts'
+
+// Gated by the layout's role check, so it must not be advertised in
+// sitemap.xml. remix-seo includes every static route unless told otherwise.
+export const handle: SEOHandle = {
+	getSitemapEntries: () => null,
+}
 
 /**
  * Task 2: the bilingual visitor texts.
