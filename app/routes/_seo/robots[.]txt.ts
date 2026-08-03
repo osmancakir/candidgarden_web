@@ -12,5 +12,10 @@ export function loader({ request }: Route.LoaderArgs) {
 		// The area is behind a role check as well, so a crawler that ignores all
 		// three gets a redirect to /login rather than the pages.
 		{ type: 'disallow', value: '/staedel-research' },
+		// Image transformations are metered, and crawlers gain nothing by walking
+		// the resized variants — the plates they reach from archive pages are the
+		// same images. Well-behaved bots honour this; the dimension allowlist in
+		// `app/routes/resources/images.tsx` is what stops the rest.
+		{ type: 'disallow', value: '/resources/images' },
 	])
 }

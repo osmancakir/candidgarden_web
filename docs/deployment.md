@@ -112,17 +112,24 @@ The existing `npm run dev` command continues to use the Node/MSW harness and
 
 ## 4. Apply database migrations
 
-Prisma CLI does not run inside the Worker. Apply checked-in migrations from a
-trusted machine or CI runner that has direct RDS network access:
+Prisma CLI does not run inside the Worker, and the deploy workflow does not run
+migrations. RDS only accepts connections from allowlisted addresses, so apply
+checked-in migrations **manually, before pushing**, from a machine whose IP the
+security group permits:
 
 ```sh
 DATABASE_URL="$PRODUCTION_DATABASE_URL" npx prisma migrate deploy
 DATABASE_URL="$STAGING_DATABASE_URL" npx prisma migrate deploy
 ```
 
-Never expose RDS publicly only to make a generic hosted CI runner work. Use a
-self-hosted runner, private connectivity, or a short-lived tightly scoped
-administrative path when the database is private.
+Migrations must land before the code that depends on them. For anything
+destructive, use **widen then narrow**: add the new column, deploy code that
+writes both, backfill, then drop the old column in a later change.
+
+Never expose RDS publicly only to make a generic hosted CI runner work. If you
+later want migrations automated, use a self-hosted runner, private
+connectivity, or a short-lived tightly scoped administrative path — not a
+standing allowlist entry.
 
 ## 5. Build and deploy
 
@@ -149,15 +156,16 @@ CLOUDFLARE_ENV=staging npx wrangler deploy --dry-run
 
 The deployment workflow expects these GitHub repository secrets:
 
-- `CLOUDFLARE_API_TOKEN` with permission to deploy the Worker;
-- `CLOUDFLARE_ACCOUNT_ID`;
-- `PRODUCTION_DATABASE_URL`; and
-- `STAGING_DATABASE_URL`.
+- `CLOUDFLARE_API_TOKEN` with permission to deploy the Worker; and
+- `CLOUDFLARE_ACCOUNT_ID`.
+
+`SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` are optional; without
+them the build simply skips sourcemap upload.
 
 The Worker application secrets from step 3 live in Cloudflare, not GitHub. A
 push to `dev` deploys staging and a push to `main` deploys production after
-linting, type checking, the Node and Worker builds, Vitest, Playwright, and the
-database migration succeed.
+linting, type checking, the Node and Worker builds, Vitest, and Playwright
+succeed. Database migrations are not part of this workflow — see step 4.
 
 ## 7. Domains, rate limits, and observability
 

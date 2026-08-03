@@ -2,7 +2,18 @@ import { invariantResponse } from '@epic-web/invariant'
 import { getSignedGetUrl } from '#app/utils/storage.server.ts'
 import { type Route } from './+types/images'
 
-const MAX_IMAGE_DIMENSION = 4096
+// Cloudflare bills image transformations per *unique* combination of parameters,
+// not per request, and repeats within a month are free. An endpoint that accepts
+// any dimension therefore lets a crawler mint unlimited billable transformations
+// just by walking `w`, which is how the free monthly allowance gets burned in a
+// day. Only the sizes this app actually asks for are served; anything else is a
+// 400 that never reaches the transformation.
+//
+// `Img` from openimg builds each srcset from the default breakpoints filtered to
+// `bp <= width`, plus the intrinsic width itself — there are no 2x densities. So
+// this set is the union of those breakpoints and the `width`/`height` props used
+// across the app. Adding an <Img> at a new size means adding that size here.
+const ALLOWED_DIMENSIONS = new Set([112, 192, 256, 640, 768, 1024, 1200])
 
 function getDimension(searchParams: URLSearchParams, name: 'w' | 'h') {
 	const value = searchParams.get(name)
@@ -10,10 +21,8 @@ function getDimension(searchParams: URLSearchParams, name: 'w' | 'h') {
 
 	const dimension = Number(value)
 	invariantResponse(
-		Number.isInteger(dimension) &&
-			dimension > 0 &&
-			dimension <= MAX_IMAGE_DIMENSION,
-		`${name} must be an integer between 1 and ${MAX_IMAGE_DIMENSION}`,
+		ALLOWED_DIMENSIONS.has(dimension),
+		`${name} must be one of ${[...ALLOWED_DIMENSIONS].join(', ')}`,
 		{ status: 400 },
 	)
 	return dimension
@@ -42,6 +51,17 @@ function getFormat(searchParams: URLSearchParams) {
 export async function loader({ request, context }: Route.LoaderArgs) {
 	const requestUrl = new URL(request.url)
 	const { searchParams } = requestUrl
+
+	// Validated up front so a request for a disallowed size costs nothing: no
+	// cache probe, no URL signing, no upstream fetch.
+	const image: RequestInitCfPropertiesImage = {
+		width: getDimension(searchParams, 'w'),
+		height: getDimension(searchParams, 'h'),
+		fit: getFit(searchParams),
+		format: getFormat(searchParams),
+		metadata: 'none',
+	}
+
 	const cache =
 		typeof caches === 'undefined'
 			? undefined
@@ -71,13 +91,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		)
 	}
 
-	const image: RequestInitCfPropertiesImage = {
-		width: getDimension(searchParams, 'w'),
-		height: getDimension(searchParams, 'h'),
-		fit: getFit(searchParams),
-		format: getFormat(searchParams),
-		metadata: 'none',
-	}
 	const upstreamResponse = await fetch(sourceUrl, {
 		cf: { image },
 	})

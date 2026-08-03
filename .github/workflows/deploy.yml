@@ -149,16 +149,10 @@ jobs:
           cache: npm
       - name: 📥 Download deps
         run: npm ci
-      - name: 🛠 Apply staging PostgreSQL migrations
-        if: github.ref == 'refs/heads/dev'
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
-      - name: 🛠 Apply production PostgreSQL migrations
-        if: github.ref == 'refs/heads/main'
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      # Migrations are applied manually, not here. RDS is not publicly
+      # reachable from a hosted runner, and opening it to one is not worth the
+      # exposure. Run `npx prisma migrate deploy` against the target database
+      # before pushing — see docs/deployment.md step 4.
       - name: 🚀 Deploy staging
         if: github.ref == 'refs/heads/dev'
         run: npm run deploy:staging
