@@ -287,6 +287,16 @@ export function AtlasCanvas({
 			controls.minDistance = 0.15
 			controls.maxDistance = 8
 
+			// On a phone a one-finger drag over a canvas this size means "scroll the
+			// page", and OrbitControls' own `touch-action: none` would swallow it —
+			// the map becomes a trap the reader has to swipe around. So a coarse
+			// pointer gets the bargain an embedded map makes: one finger scrolls
+			// past, two fingers turn and zoom the cloud.
+			if (window.matchMedia('(pointer: coarse)').matches) {
+				controls.touches = { ONE: null, TWO: THREE.TOUCH.DOLLY_ROTATE }
+				renderer.domElement.style.touchAction = 'pan-y'
+			}
+
 			const geometry = new THREE.BufferGeometry()
 			geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
 			geometry.setAttribute(
@@ -353,7 +363,7 @@ export function AtlasCanvas({
 			let lastHovered = -1
 			const clientPointer = { x: 0, y: 0 }
 
-			function onPointerMove(event: PointerEvent) {
+			function onPointerMove(event: PointerEvent | MouseEvent) {
 				const rect = renderer.domElement.getBoundingClientRect()
 				pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
 				pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
@@ -370,7 +380,14 @@ export function AtlasCanvas({
 				onHover(null)
 			}
 
-			function onClick() {
+			function onClick(event: MouseEvent) {
+				// A tap fires no pointermove, so on touch the hover pass has never
+				// run and `lastHovered` is stale — and pointerleave has usually
+				// cleared it by now anyway. Pick from the click's own coordinates
+				// instead of trusting the last frame. On a mouse this is one extra
+				// raycast per click and lands on the same point.
+				onPointerMove(event)
+				pick()
 				if (lastHovered >= 0) onSelect(resourceIds[lastHovered]!)
 			}
 
