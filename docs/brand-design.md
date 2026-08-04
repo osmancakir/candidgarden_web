@@ -358,6 +358,30 @@ is the only animated moment; everything else is instant.
 `prefers-reduced-motion` collapses even that to hard cuts. Hover states are
 ultramarine underlines and nothing else.
 
+**The one interruption: the retrieval interlock.** A slow navigation is not
+reported by a hairline creeping across the top of the page — the Epic Stack
+default, which is a progress bar borrowed from products that want you to keep
+clicking. Here the archive being consulted takes the whole screen: the ground
+travels to `register-level-3` (the far end of the descent, relative to wherever
+the reader is resting, per §2), a hairline-bordered plate states `RETRIEVING` /
+`WE ARE CONSULTING THE ARCHIVE.` — or `FILING` on a submission — and the shell
+behind it is `inert`, so a page that is already leaving cannot take another
+instruction. It is gated at 600ms, so an ordinary navigation never sees it.
+
+The plate carries the second animated moment in the entire design, and it is
+animated as machine text rather than as chrome: a row of 24 mono cells filling
+one cell at a time (`steps(24)`), the ASCII layer of §4 rather than the skeleton
+shimmer §10 refuses. There is no spinner glyph — a rotating icon says nothing
+this project's own voice cannot say in words. Under `prefers-reduced-motion` the
+cells hold a fixed position and the type carries the whole message.
+
+The interlock owes two debts to §8's own accessibility floor, both paid in
+`retrieval.tsx`: the plate takes focus when it appears (the shell around it is
+inert, so focus would otherwise be stranded on the body), and the element that
+had focus before it appeared is restored afterwards if it survived the
+navigation — a filter console input that submitted in place does, a link on the
+page you just left does not.
+
 > **Build note.** Stripping the enter/exit animations from the Radix menus has a
 > consequence worth knowing: a `DropdownMenuItem` wrapping a submit button used
 > to stay mounted for the length of its exit animation, which is what let the
@@ -462,7 +486,8 @@ about registers.
   so write `border border-rule`, not `border-ink/20`.
 - Radius is zero everywhere by construction; you cannot accidentally round
   something. `rounded-full` is deliberately preserved for the one case that
-  needs it (the progress bar).
+  needs it: the atlas legend's swatches, which stand for points in a scatter and
+  would be lying if they were squares.
 - `.measure` sets the reading column; `.label-data` and `.heading-display` are
   the two type shorthands.
 
@@ -477,6 +502,7 @@ The §6 components live in `app/components/institute/`:
 | `console.tsx`    | `FilterConsole`, `ConsoleField`, `ConsoleSelect`, `ConsoleInput`                                                |
 | `record.tsx`     | `Plate`, `RecordRow` (Level I), `EditorialCard` (Level II), `FeaturePlate` (Level III)                          |
 | `chrome.tsx`     | `Wordmark`, `InstituteNav`, `Colophon`, `PrintColophon`                                                         |
+| `retrieval.tsx`  | `useRetrieval`, `RetrievalOverlay` — the pending-navigation interlock (§8)                                      |
 | `document.tsx`   | `DocumentPage`, `DocumentSection`, `Glossary`, `Ledger`, `LedgerRow`, `PanelHeading`                            |
 | `access.tsx`     | `AccessPage`, `AccessDivider` — the authentication surfaces                                                     |
 

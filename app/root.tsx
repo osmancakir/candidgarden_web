@@ -20,7 +20,10 @@ import {
 	PrintColophon,
 	Wordmark,
 } from './components/institute/chrome.tsx'
-import { AppProgress } from './components/progress-bar.tsx'
+import {
+	RetrievalOverlay,
+	useRetrieval,
+} from './components/institute/retrieval.tsx'
 import { useToast } from './components/toaster.tsx'
 import { Button } from './components/ui/button.tsx'
 import { href as iconsHref } from './components/ui/icon.tsx'
@@ -202,6 +205,7 @@ function App() {
 	const user = useOptionalUser()
 	const theme = useTheme()
 	useToast(data.toast)
+	const retrieval = useRetrieval()
 
 	return (
 		<OpenImgContextProvider
@@ -212,7 +216,15 @@ function App() {
 			 * The masthead is the Institute register: hairline-ruled, mono, and the
 			 * same on every page (§5). It never becomes a hero.
 			 */}
-			<div className="bg-ground text-ground-fg flex min-h-screen flex-col">
+			{/*
+			 * While the archive is being consulted the shell is inert: the
+			 * interlock covering it is not a scrim you can click through, and a
+			 * page that is already leaving should not take another instruction.
+			 */}
+			<div
+				inert={retrieval.pending}
+				className="bg-ground text-ground-fg flex min-h-screen flex-col"
+			>
 				<header className="border-rule border-b">
 					<div className="container flex flex-wrap items-center justify-between gap-x-8 gap-y-4 py-4">
 						<Wordmark />
@@ -243,7 +255,7 @@ function App() {
 				<Colophon />
 			</div>
 			<AppToaster closeButton position="top-center" theme={theme} />
-			<AppProgress />
+			<RetrievalOverlay {...retrieval} />
 			<PrintColophon />
 		</OpenImgContextProvider>
 	)

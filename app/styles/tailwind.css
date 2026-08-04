@@ -592,6 +592,40 @@
 	}
 }
 
+/* The retrieval interlock's ground (app/components/institute/retrieval.tsx).
+   `.register-level-3` gives it the far end of the descent and paints the
+   ground opaque; this thins that paint so the page being left is still faintly
+   under it — the archive is being consulted, not closed. It has to be a rule
+   rather than a `bg-ground/90` utility: the register classes are unlayered and
+   would win over anything in `@layer utilities`. Declared after them, so the
+   later rule takes the background and the register keeps every other var. */
+.retrieval-ground {
+	background-color: color-mix(in oklab, var(--ground) 90%, transparent);
+}
+
+/* The retrieval interlock's ticker (app/components/institute/retrieval.tsx).
+   A row of mono cells filling one cell at a time — machine text advancing, not
+   a skeleton shimmer (§10). The static width is what reduced motion sees, and
+   it reads as an indeterminate mark rather than as a broken bar. */
+.retrieval-fill {
+	width: 45%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.retrieval-fill {
+		animation: retrieval-fill 2s steps(24, end) infinite;
+	}
+}
+
+@keyframes retrieval-fill {
+	from {
+		width: 0;
+	}
+	to {
+		width: 100%;
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	html {
 		scroll-behavior: auto;
