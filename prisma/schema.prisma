@@ -37,6 +37,7 @@ model User {
   favorites             Favorite[]
   wikiDataVerifications WikiDataVerification[] @relation("VerifiedByUser")
   interpretations       Interpretation[]       @relation("InterpretationAuthor")
+  driftVerdicts         DriftVerdict[]
 }
 
 model UserImage {
@@ -184,6 +185,7 @@ model Resource {
   wikiDataVerification  WikiDataVerification?
   interpretations       Interpretation[]
   interpretationVectors InterpretationEmbedding[]
+  driftVerdicts         DriftVerdict[]
 
   @@index([artistId])
   @@index([highlight])
@@ -327,6 +329,47 @@ model Favorite {
   resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, resourceId])
+}
+
+/// One verdict on one work in the drift: PULL, PUSH or REST.
+///
+/// A force rather than a rating. The work either drew the reader towards it,
+/// pushed them off, or exerted nothing — which is a claim about what happened in
+/// front of a picture rather than about the opinion a reader thinks they ought
+/// to hold.
+///
+/// Keyed on `driftId` rather than on a user, because requiring an account
+/// before the first card would cost the reading the only people it is for. The
+/// id is a random token in a signed cookie — deliberately not `sessionId`, which
+/// in this schema means a login. `userId` is filled in when a signed-in reader
+/// passes through, so a drift can later be attributed without the anonymous ones
+/// being orphaned.
+///
+/// REST is stored, not skipped. "This exerted nothing on me" is the observation
+/// that keeps `pulled / (pulled + pushed)` from being computed over a sample the
+/// reader silently curated, and it is what marks a card as seen so the deck does
+/// not offer it twice.
+model DriftVerdict {
+  id         String   @id @default(cuid())
+  driftId    String   @map("drift_id")
+  userId     String?  @map("user_id")
+  resourceId Int      @map("resource_id")
+  /// PULL | PUSH | REST.
+  verdict    String
+  /// Which deck the card came from: SPREAD (a cluster representative) or
+  /// NEAREST (drawn towards the drift vector). Kept so the readout can say how
+  /// much of the drift was exploration and how much was confirmation.
+  origin     String   @default("SPREAD")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([driftId, resourceId])
+  @@index([driftId, createdAt])
+  @@index([userId])
 }
 
 model Music {

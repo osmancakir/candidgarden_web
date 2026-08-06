@@ -124,6 +124,21 @@ export function ArchiveIndexView({ data }: { data: ArchiveIndexData }) {
 							is not a fourth level. It is the same Level II and III readings
 							seen from outside — as the space the model holds them in.
 						</p>
+						{/* The one way into the archive that starts from the reader rather
+						    than from the record. It belongs beside the atlas because it is
+						    built out of the same space: the spread of cards it deals is
+						    taken over those readings. */}
+						<p className="font-body text-prose-sm text-ground-muted">
+							<Link
+								to="/archive/drift"
+								className="underline underline-offset-4"
+							>
+								The drift
+							</Link>{' '}
+							goes the other way: a passage across that same space, pulled and
+							pushed by a few dozen works, ending somewhere that is a reading of
+							you rather than of them.
+						</p>
 					</div>
 				</div>
 			</section>

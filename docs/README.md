@@ -29,6 +29,9 @@ in the coming weeks. Stay tuned!
 - [The Atlas](./atlas.md) - The UMAP projection of the interpretation corpus:
   the offline pipeline, the shipped binary, and what the map does and does not
   claim.
+- [The Drift](./drift.md) - The passage across the atlas: how 600 works are
+  chosen to span 54,497, how a reader's pulls and pushes fix a position in that
+  space, and what the readout is entitled to say.
 - [Decisions](./decisions/README.md) - The reasoning behind various decisions
   made for the Epic Stack. A good historical record.
 - [Guiding Principles](./guiding-principles.md) - The guiding principles behind

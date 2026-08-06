@@ -8,6 +8,7 @@ import {
 	Scripts,
 	ScrollRestoration,
 	useLoaderData,
+	useLocation,
 } from 'react-router'
 import { HoneypotProvider } from 'remix-utils/honeypot/react'
 import { type Route } from './+types/root.ts'
@@ -41,7 +42,7 @@ import { prisma } from './utils/db.server.ts'
 import { getEnv } from './utils/env.server.ts'
 import { pipeHeaders } from './utils/headers.server.ts'
 import { getHoneypot } from './utils/honeypot.server.ts'
-import { combineHeaders, getDomainUrl, getImgSrc } from './utils/misc.tsx'
+import { cn, combineHeaders, getDomainUrl, getImgSrc } from './utils/misc.tsx'
 import { useNonce } from './utils/nonce-provider.ts'
 import { type Theme, getTheme } from './utils/theme.server.ts'
 import { makeTimings, time } from './utils/timing.server.ts'
@@ -200,12 +201,28 @@ export function Layout({ children }: { children: React.ReactNode }) {
 	)
 }
 
+/**
+ * Routes that take the whole viewport, masthead and colophon included.
+ *
+ * Only the drift qualifies, and it qualifies for a reason rather than for
+ * effect: it is the one surface here that is *held* rather than read — a stack
+ * of cards under a thumb — and a card whose height depends on the page it sits
+ * in is a card that jumps between works. Locking the viewport is what lets the
+ * plate keep one height and the verdict buttons stay under the thumb where they
+ * were on the last card.
+ */
+function isFullscreenRoute(pathname: string) {
+	return pathname === '/archive/drift/session'
+}
+
 function App() {
 	const data = useLoaderData<typeof loader>()
 	const user = useOptionalUser()
 	const theme = useTheme()
 	useToast(data.toast)
 	const retrieval = useRetrieval()
+	const location = useLocation()
+	const fullscreen = isFullscreenRoute(location.pathname)
 
 	return (
 		<OpenImgContextProvider
@@ -223,9 +240,16 @@ function App() {
 			 */}
 			<div
 				inert={retrieval.pending}
-				className="bg-ground text-ground-fg flex min-h-screen flex-col"
+				className={
+					fullscreen
+						? // 100svh, not 100vh: on a phone the large viewport unit is a
+							// promise the browser breaks the moment its own chrome slides in,
+							// and the buttons would sit under it.
+							'bg-ground text-ground-fg flex h-svh flex-col overflow-hidden overscroll-none'
+						: 'bg-ground text-ground-fg flex min-h-screen flex-col'
+				}
 			>
-				<header className="border-rule border-b">
+				<header className={cn('border-rule border-b', fullscreen && 'hidden')}>
 					<div className="container flex flex-wrap items-center justify-between gap-x-8 gap-y-4 py-4">
 						<Wordmark />
 						<InstituteNav className="order-3 w-full md:order-0 md:w-auto" />
@@ -248,11 +272,15 @@ function App() {
 					 */}
 				</header>
 
-				<main className="flex flex-1 flex-col">
+				<main
+					className={
+						fullscreen ? 'flex min-h-0 flex-1 flex-col' : 'flex flex-1 flex-col'
+					}
+				>
 					<Outlet />
 				</main>
 
-				<Colophon />
+				{fullscreen ? null : <Colophon />}
 			</div>
 			<AppToaster closeButton position="top-center" theme={theme} />
 			<RetrievalOverlay {...retrieval} />

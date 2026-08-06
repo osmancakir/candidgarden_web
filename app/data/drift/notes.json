@@ -1,0 +1,592 @@
+{
+	"formatVersion": 1,
+	"model": "claude-opus-5",
+	"updatedAt": "2026-08-06T12:31:56.423Z",
+	"notes": {
+		"937": {
+			"body": "Nothing here is drawn in outline: the black is poché, walls and piers sliced through at floor level and inked solid, so the eye reads the white voids as the figures. Follow the centre line and the building is a chain of differently shaped rooms strung one behind another — rectangle, circle, gridded square — never one continuous hall. The faint octagon enclosing everything is the plot, its corners cut by the streets.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:30:27.926Z"
+		},
+		"2310": {
+			"body": "Count the labour in the block. The face is carried by a few dozen fine curved lines; the collar and shoulders take hundreds of short hooked flicks, each pelt-strand cut as a separate stroke, so the fur outweighs the man. The one area left almost bare is the sheet beneath his hand — white paper with a scatter of marks, the only thing here the cutter declined to model.",
+			"context": "Georg Sturtz was Erfurt's wealthiest physician and a patron of humanists; his plague treatise Liber de peste appeared in 1534, the year of this portrait.",
+			"source": "Wikipedia (German), Georg Sturtz",
+			"sourceUrl": "https://de.wikipedia.org/wiki/Georg_Sturtz",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:25:59.153Z"
+		},
+		"3345": {
+			"body": "On the rock face above the hooded priest, faint lettering is cut into the stone — a verse from Job: I have passed like the flower, I have withered like the grass of the field. Girodet lights it so weakly that it reads as staining or erosion before it reads as words, competing for attention with the small cross on the hillside outside the cave mouth.",
+			"context": "The inscription is the verse from the Book of Job that Chateaubriand quotes in his novella Atala, transcribed onto the rock by Girodet, who repeated it in his 1813 replica of the painting.",
+			"source": "Musée Girodet, Montargis (collection record)",
+			"sourceUrl": "https://webmuseo.com/ws/musee-girodet/app/collection/record/71",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:27:27.240Z"
+		},
+		"4402": {
+			"body": "Two numbers in the same frame disagree: AETATIS XLVI at the top right, 1565 floating beside the shoulder. He was 46 around 1535 and four years dead by the printed date, so the head is an older likeness recut. What is new is the six-line verse below, not a caption but an attack, ending on the bad lads who dislike going to church.",
+			"context": "Caspar von Schwenckfeld, born at Ossig in Silesia in 1489, was a lay Reformation dissenter who founded no church and died in Ulm on 10 December 1561.",
+			"source": "GAMEO (Global Anabaptist Mennonite Encyclopedia Online)",
+			"sourceUrl": "https://gameo.org/index.php?title=Schwenckfeld%2C_Caspar_von_%281489-1561%29",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:30:05.308Z"
+		},
+		"4903": {
+			"body": "Left of centre, a small four-bladed pinwheel — one blade solid black, the blades meeting at a white hub — carries the only hard edge on the sheet; everywhere else the washes bleed into damp paper. That is the propeller, the one circle here drawn as a machine rather than as colour. Track outward from it: the discs grow looser, paler and less closed the further they get.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:27:51.680Z"
+		},
+		"6027": {
+			"body": "A long stalk of grass hangs from her mouth and drops the full height of the canvas to end near her bare feet, the one straight line in all that tangle. Both hands are tucked away behind her back. Beggar children were an exhibition staple in the 1880s and their standard gesture was the open outstretched palm; withhold it, and what is left is a child chewing a straw and looking straight back at you.",
+			"context": "The painting's first owner, the writer Otto Julius Bierbaum, likened the straw hanging in her mouth to the cigarette of a dandy.",
+			"source": "Nationalgalerie, Staatliche Museen zu Berlin (museum-digital)",
+			"sourceUrl": "https://smb.museum-digital.de/object/143505",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:28:30.062Z"
+		},
+		"6787": {
+			"body": "Under the mantle he wears not armour but a long white alb, an embroidered band falling straight down the front, a stiff decorated hem at the ankles — vestments cut like a deacon's. The imperial coronation ornat was deliberately clerical: the crowned emperor counted as a cleric in minor orders, and the mitre-shaped, single-arched crown completes the bishop's silhouette. The ruff is the only garment on him belonging to 1622.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:26:47.080Z"
+		},
+		"6801": {
+			"body": "The pale cloud filling the gap in the gorge is not spray off the falls. A dark chimney stands directly beneath it, and the smoke it vents is the brightest paint in the picture — sunlight reaches into the ravine and silvers it, leaving the water below duller. The mill's lit wall sits just to the left, at the end of the track crossing the bridge.",
+			"context": "Blechen walked Amalfi's Mühltal, a valley of bridges and mill buildings, in 1829, and painted this factory at almost the same moment as his ironworks picture Walzwerk Neustadt-Eberswalde.",
+			"source": "Nationalgalerie, Staatliche Museen zu Berlin (museum-digital)",
+			"sourceUrl": "https://smb.museum-digital.de/object/143225",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:31:56.422Z"
+		},
+		"6955": {
+			"body": "The ivy has slipped. Bacchus's plant belongs on the head, but this garland has slid off the middle woman's shoulder to hang across her belly and thigh, and she is past noticing — chin on her chest, eyes shut, her weight taken by the two flanking her, the one on the right with both arms flung wide to keep all three upright.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:26:39.192Z"
+		},
+		"8544": {
+			"body": "The pale scribbles left on the boulder's upper face are the only place the chalk opens up; everywhere else the rock is worked to a dense, even grain heavier than any tree on the sheet. That weight is the subject — this is a hauled and lettered monument, not an outcrop found in a wood. The walker and his dog on the right-hand path are there to size it.",
+			"context": "The boulder is Wilson's Stone at Coleorton Hall, moved into Sir George Beaumont's garden as a memorial to the painter Richard Wilson and carved 'BROUGHT HERE 1818'; Constable drew it while staying there in 1823.",
+			"source": "Parks & Gardens (Historic England register entry for Coleorton Hall)",
+			"sourceUrl": "https://www.parksandgardens.org/places/coleorton-hall",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:27:03.540Z"
+		},
+		"9094": {
+			"body": "The brightest passage is the slot of open sky between the trees at centre, with pale water beneath it — and the company has its back to it, turned inward on a strip of grass barely deeper than the figures are tall. Watteau assembled such groups one figure at a time from red-chalk studies kept in albums, which is why the gathering never quite converges on anything.",
+			"context": "The panel measures only about 32 by 46 centimetres, so each of these figures stands roughly five centimetres high.",
+			"source": "Musée du Louvre, collections database (MI 1124)",
+			"sourceUrl": "https://collections.louvre.fr/en/ark:/53355/cl010059596",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:26:03.350Z"
+		},
+		"10824": {
+			"body": "The archway is the one patch of the sheet with nothing to draw, and it has been filled with a column of small cursive running down to where the roadway would be — the passage itself used as note paper. Overhead, the dedication is the opposite kind of writing: Roman capitals set out to scale, spaced like cut stone, sized to fill the frieze.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:28:09.271Z"
+		},
+		"11701": {
+			"body": "Only two things here carry real white paint: the chapel's whitewashed lantern and the moon, set at almost the same height on either side of the gorge, close but never touching. Everything else — battlements, cliff, firs — is silhouette thinned by mist into one flat cut-out. The gap between those two whites is what holds the picture together; the river's gold trail merely repeats it downward.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:25:37.507Z"
+		},
+		"12251": {
+			"body": "The bubble is not empty. In its lower right, in strokes barely darker than the highlight, float a spoked torture wheel and a leper's rattle — the wheel that broke bodies, the clapper a leper had to carry to warn the healthy off. They are painted at the size of a fingernail, set inside the one object here guaranteed to burst first.",
+			"context": "The Met identifies the images floating in the bubble as a wheel of torture and a leper's rattle, and considers this panel the earliest known independent vanitas still life.",
+			"source": "The Metropolitan Museum of Art",
+			"sourceUrl": "https://www.metmuseum.org/art/collection/search/436485",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:30:38.873Z"
+		},
+		"15330": {
+			"body": "At the very bottom, between the naked figures clambering out of the ground on the left and the demons hauling bodies toward the scaly jaws on the right, a small upright tablet carries the AD monogram. It is planted in the earth on the exact seam dividing the saved from the damned — the position a boundary stone would occupy, not the neutral corner where Dürer usually parks his signature.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:30:07.325Z"
+		},
+		"19166": {
+			"body": "Look at what fills the gaps between the blocks. On the upper sheet they are thin iron railings, hairlines you see straight through into the park; on the lower sheet the identical intervals are solid walls and roofed arcades that lock the court shut. One building, two opposite decisions about where its boundary is meant to be felt.",
+			"context": "Zuccalli was court architect to Elector Max Emanuel, and these remodelling schemes for the old ducal country house were set aside when work began instead on the wholly new Schleissheim palace in the winter of 1700/01.",
+			"source": "Bayerische Schlösserverwaltung (Schlossanlage Schleißheim, Baugeschichte)",
+			"sourceUrl": "https://www.schloesser-schleissheim.de/deutsch/neu_schl/bauges.htm",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:30:53.441Z"
+		},
+		"19998": {
+			"body": "Nobody is holding him up. Christ's own right hand lies splayed on the rock behind him, taking the weight, and Mary's hand only rests on his knee. The load that a lap-borne Pietà puts on the mother has been shifted into the ground, which leaves her free to do one thing — push her cheek flat against his.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:25:10.202Z"
+		},
+		"20342": {
+			"body": "Under the sloping board the entire tabletop is a fitted tray: ranked rows of small round colour pans, with an oval thumb-hole palette parked at her elbow. Before boxed moist paints, watercolour came as hard cakes that had to be rubbed up with water and kept wet, so the equipment needed furniture built around it. The sheet she leans over is still almost entirely blank.",
+			"context": "A 2012 Burlington Magazine article argued that the sitter is not a professional but one of Sandby's well-born drawing pupils, connected to the Delaval–Astley family, and linked the watercolour to a related Sandby drawing in New Haven.",
+			"source": "The Burlington Magazine",
+			"sourceUrl": "https://www.burlington.org.uk/archive/article/paul-sandbys-young-pupil-identified",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:27:40.005Z"
+		},
+		"21261": {
+			"body": "Top left, through the room's one window, a pale cupola stands in blue daylight: the Walnut Street Jail, where Lyon sat three months accused of robbing the bank whose vault locks he himself had made. It is the only daylight here — everything else is lit by the forge — and Neagle placed it behind his sitter, at the opposite end of the canvas from the anvil he turns to face.",
+			"context": "Lyon, by then a wealthy Philadelphia businessman, commissioned the portrait in 1825 and told Neagle he did \"not wish to be represented as what I am not—a gentleman,\" asking that the jail be included.",
+			"source": "Museum of Fine Arts, Boston",
+			"sourceUrl": "https://collections.mfa.org/objects/34216",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:26:35.302Z"
+		},
+		"22167": {
+			"body": "Follow the ground upward, past the crowd's heads: the same shore carries two later moments — figures among the orchard trees, and a kneeling man before the burning altar under the columns. Nothing separates them from the meeting at the gangplank but height on the sheet. One small block had to carry a whole chapter, so the cutter stacked the episodes rather than framing them apart.",
+			"context": "The 1497 Venetian translation printed by Giovanni Rosso for Lucantonio Giunta was the first illustrated edition of the Metamorphoses, its small woodcuts usually compressing several episodes into a single scene; the blocks were reused in later editions.",
+			"source": "The Metropolitan Museum of Art, \"Woodcut Book Illustration in Renaissance Italy: Venice in the 1490s\"",
+			"sourceUrl": "https://www.metmuseum.org/essays/woodcut-book-illustration-in-renaissance-italy-venice-in-the-1490s",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:27:31.569Z"
+		},
+		"22311": {
+			"body": "The low arcaded wing running off to the right is half a century younger than the portico it frames: added in the 1770s to close the court and turn it into a carriage sweep, so coaches could draw up along its shelter. The cars stand nose-in on exactly that line, and they are the only thing in the picture that measures how low the colonnade sits against the house.",
+			"context": "Stowe's north side received its colonnades to form an embracing road entrance for coaches, part of the remodelling carried out after Lord Cobham's death in 1749 by his nephew Earl Temple.",
+			"source": "World Monuments Fund Britain, 'History of the house'",
+			"sourceUrl": "https://wmf.org.uk/Projects/history-of-the-house/",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:28:52.499Z"
+		},
+		"22617": {
+			"body": "Only the standing woman carries pen line — the black band at her throat, the seam across her bared shoulders, the row of buttons down the bodice, the dark tassel at her hem. Everyone else is brush alone: the drinkers at the right and the pair at the counter have no faces, just wash and a few blots. She is the single thing in the room drawn twice over.",
+			"context": "Guys did not work in front of his subjects but reconstructed Parisian street and café scenes from memory afterwards.",
+			"source": "art-directory.info (art reference aggregator)",
+			"sourceUrl": "https://www.art-directory.info/fine-art/constantin-guys-1805/index.shtml",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:25:22.469Z"
+		},
+		"23135": {
+			"body": "Nearest the camera, what scans as an urn is a trophy of arms: furled standards lashed together over a shield and helmet, set on piled cannonballs. Gibbons's carvers repeated the group along the colonnade parapet, so the forecourt is lined not with garden ornament but with a defeated army's captured colours — French ones, stacked at the door of the house that Blindheim paid for.",
+			"context": "Historic England's listing records the colonnades as having \"carved military achievements\" by Grinling Gibbons, matching the reversed fleurs-de-lys, cannon balls and ducal coronets on the corner towers.",
+			"source": "Historic England, listed building entry 1052912",
+			"sourceUrl": "https://historicengland.org.uk/listing/the-list/list-entry/1052912",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:27:09.577Z"
+		},
+		"27859": {
+			"body": "The three chairs have been carried down off the veranda and set on bare packed earth, one leg riding higher than the others on the uneven yard. Thomson's wet collodion plates needed open daylight, so sitters could not be photographed inside the hall behind them — its deep shade and lattice doors read as near-black here, and the men hold their hands still through an exposure of several seconds.",
+			"context": "Thomson wrote that he wanted these Qing officials shown in plain robes as hard-working men rather than idle mandarins.",
+			"source": "Wellcome Collection",
+			"sourceUrl": "https://wellcomecollection.org/works/y3huqt4d",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:26:05.089Z"
+		},
+		"29074": {
+			"body": "Each photograph sits on a printed strip that is not a caption but a stock entry — catalogue number at one end, format and size codes at the other, the painting's title squeezed small between them. That is the sheet's organising logic: a head in fur, a woman at a window and a girl asleep in reeds share a page because they were sold in the same sizes. All nine have been scaled to fill identical cells.",
+			"context": "The Munich firm, run as Kunstverlag Franz Hanfstaengl by his son Edgar from 1868, photographed entire collections such as the Alte Pinakothek and sold the reproductions commercially.",
+			"source": "Historisches Lexikon Bayerns",
+			"sourceUrl": "https://www.historisches-lexikon-bayerns.de/Lexikon/Kunstverlag_Franz_Hanfstaengl",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:29:11.075Z"
+		},
+		"300128": {
+			"body": "The four do not stand in a row: they curve back into the shell, shoulders overlapping, the two rear figures half swallowed by it, front toes projecting over the sill into the street. Orsanmichele's tabernacles were each sized for a single patron saint — this guild had four martyrs to house, so Nanni turned them inward until the group closed into a ring.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:28:44.877Z"
+		},
+		"300729": {
+			"body": "Out on the water between the cliffs sits a single pale sail, small enough to scan past. Ariadne is identified by that ship: Theseus slipping away from Naxos while she slept. She lies with her back to it, chin propped, looking out at us instead — and the leopard pelt beneath her belongs to the god arriving from the other direction.",
+			"context": "Vigée Le Brun painted her in Naples on commission from Sir William Hamilton, whose mistress Emma Hart was locally famous for her \"Attitudes\", silent posed impersonations of classical figures.",
+			"source": "National Museums Liverpool",
+			"sourceUrl": "https://www.liverpoolmuseums.org.uk/stories/when-elisabeth-vigee-le-brun-met-emma-hamilton",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:29:44.321Z"
+		},
+		"305278": {
+			"body": "High on the last block, where the reef runs out against the neighbouring house wall, a bunch of grapes hangs from a carved vine. It belongs to a set of identifiable plants worked into the travertine — caper, wild fig, artichoke, ivy, lake reeds — species from the country the Aqua Virgo crosses before it reaches this basin. Around it the stone keeps its flat quarry bedding, cut but never dressed.",
+			"context": "Inventories of the fountain's carved flora list a caper on the Palazzo Poli façade, a wild fig rooted at the balustrade, an artichoke, reeds and a vine bearing four bunches of grapes.",
+			"source": "Wikipedia (Italian), \"Fontana di Trevi\"",
+			"sourceUrl": "https://it.wikipedia.org/wiki/Fontana_di_Trevi",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:25:31.639Z"
+		},
+		"306426": {
+			"body": "The two corner bearers take the slab on raised arms, faces wrenched sideways and mouths open with the strain. The man between them has stopped working: he squats with knees splayed, both hands closed on a staff, touching nothing above him. Telamones under a bishop's throne stand for subjected powers holding up church authority — and the carver left the middle one out of the lifting.",
+			"context": "The Basilica di San Nicola in Bari dates the throne to the years around Urban II's council there in October 1098, when Elias was abbot and archbishop.",
+			"source": "Basilica di San Nicola, Bari",
+			"sourceUrl": "https://www.basilicasannicola.it/sez/2/94/130/cattedra-dell-abate-elia-1098",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:26:50.302Z"
+		},
+		"306766": {
+			"body": "The Child is asleep: head dropped sideways into the fold of his mother's mantle, one leg gone slack, the weight all hers. Yet his fist still closes on a small cross laid back along his shoulder. Florentine sculptors used the sleeping infant as a rehearsal for the dead Christ — which is why Mary's eyes travel down and past him rather than to his face.",
+			"context": "Benedetto died in May 1497 leaving the marble group unfinished; it was completed for the Compagnia del Bigallo by Battista Lorenzi, whose payments are documented in 1574–75, and passed to the Misericordia in 1578.",
+			"source": "Catalogo generale dei Beni Culturali (ICCD, Ministero della Cultura)",
+			"sourceUrl": "https://catalogo.beniculturali.it/detail/HistoricOrArtisticProperty/0900095929",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:30:47.763Z"
+		},
+		"307189": {
+			"body": "Bottom right, a small human head rests in the lion's jaws while the man's arm reaches up to grip the paw that holds him. On the portal of Trani cathedral the sinner lies flat and crushed beneath the beast; here he is carried. Across the doorway his counterpart, the left lion now battered, took the other half of the pair — the reptile.",
+			"context": "This north portal faced the stratam peregrinorum, the pilgrim road running toward Siponto, and in time it displaced the west front as the abbey's main entrance.",
+			"source": "SiscaBlog (Siponto)",
+			"sourceUrl": "https://www.siscaonline.it/siscablog/2021/09/02/siponto/",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:26:26.814Z"
+		},
+		"309685": {
+			"body": "The child behind the cardinal is no mourning angel: he grips a lictor's fasces, the bundle of rods carried on Mazarin's own coat of arms, emblem of the power to compel and punish. In front of it Mazarin kneels bare-headed, the red hat set aside on the folds of his cape — humility and imperium worked in the same white marble, above a black sarcophagus.",
+			"context": "The Académie française calls it a cenotaph, commissioned from Coysevox in 1689 and erected in 1693, thirty-two years after Mazarin's death, with the three bronze allegories at its base cast by Jean-Baptiste Tuby and Étienne Le Hongre.",
+			"source": "Académie française",
+			"sourceUrl": "https://www.academie-francaise.fr/phototheque/la-coupole/le-cenotaphe",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:25:55.926Z"
+		},
+		"309727": {
+			"body": "Cherries and wild strawberries in the front bowls ripen in May; the figs, black grapes, chestnuts and artichokes stacked behind her come months later, and the pink roses pushed into the basket rims belong to neither. No stall ever held all of this at once. The heap is a full year of harvest compressed into one morning's market, which is why the tiny pickers are still up their ladder behind.",
+			"context": "The picture belongs to a group of four market and kitchen canvases that hung in Campi's own house in Cremona until his wife's death, after which they were bought by the Hieronymite monks of San Sigismondo.",
+			"source": "Humanitas in Brera (Pinacoteca di Brera artwork page)",
+			"sourceUrl": "https://brera.in.humanitas.it/en/artworks/campi-fruttivendola/",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:28:44.506Z"
+		},
+		"311968": {
+			"body": "Every rib in the hall drains into one dark granite shaft, set dead-centre so that it interrupts the view rather than framing it. Follow the ribs the other way and they land on corbels stopped high up the wall, freeing the bays beneath for glass — which is why the windows run almost the full height. The children round the base are the scale.",
+			"context": "The room is the Summer Refectory of the Teutonic Grand Masters' palace at Marienburg (Malbork), where a stone cannonball is still lodged in the east wall above the fireplace, said to be a shot aimed at the pillar during Jagiełło's siege of 1410.",
+			"source": "Malbork Castle Museum",
+			"sourceUrl": "https://zamek.malbork.pl/en/interior/summer-refectory/",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:29:02.891Z"
+		},
+		"312550": {
+			"body": "The capitals are nearly the last carved thing in the room: beyond them the wall ahead turns wholly to flat paint — stencilled dado, saints in painted frames, a bordered picture-field sitting on plaster like hung cloth — and the vault's ribs are gilded bands rather than stone. Cornelius worked matte and shadowless on purpose, the Nazarene imitation of Italian fresco before Raphael.",
+			"context": "Descriptions of the church note that its groin vaults carry ribs that are decorative rather than structural, part of Gärtner's grafting of Gothic height onto a round-arched Rundbogenstil shell.",
+			"source": "DeWiki (mirror of the German Wikipedia article \"St. Ludwig (München)\")",
+			"sourceUrl": "https://dewiki.de/Lexikon/St._Ludwig_(M%C3%BCnchen)",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:25:36.247Z"
+		},
+		"313392": {
+			"body": "The roundel is not a picture with a frame; it is a letter. Its bowl holds the enthroned figure, its tail is the long flourish sweeping right and down to end in a beast's head, and the seven letters left over from QVOTIENS had to be stacked one per line in the narrow strip between the painting and the edge of the parchment.",
+			"context": "The three-volume Moralia it comes from was copied in 1134 for the Cistercian abbey of La Ferté-sur-Grosne, whose books reached Châlon through revolutionary confiscations.",
+			"source": "IRHT, Initiale: Catalogue de manuscrits enluminés (CNRS)",
+			"sourceUrl": "https://initiale.irht.cnrs.fr/en/codex/1347",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:29:47.597Z"
+		},
+		"314848": {
+			"body": "From this angle the saint is nothing but cloth: a mound of heavy habit whose folds churn, buckle and slide where a body should be. The angel above her is the opposite — thin drapery pressed flat, the arm and shoulder legible beneath it. The same white marble, worked two entirely different ways, and only one of them convulses.",
+			"context": "The light falling across the group comes not from the church but from a window concealed behind the chapel's pediment, striking the gilded bronze rods behind the figures.",
+			"source": "Artnet News",
+			"sourceUrl": "https://news.artnet.com/art-world/bernini-the-ecstasy-of-saint-teresa-2659785",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:25:18.300Z"
+		},
+		"314979": {
+			"body": "The knight is not painted. Horse, rider and dragon are freestanding sculpture set well forward of a canvas, and the glow behind them comes from a window concealed above the arch. That is why the armour has almost no modelling, only a rim of glints against the light — while the dragon's tail and the princess's red cloak spill forward over the frame onto the altar steps.",
+			"context": "The abbey records the sculptural group as begun by Egid Quirin Asam in 1721, with the backdrop painted in 1724 by their sister Maria Salome Bornschlögl, the whole staged as a \"Theatrum sacrum\" lit by the apse window.",
+			"source": "Benediktinerabtei St. Georg, Weltenburg",
+			"sourceUrl": "https://www.kloster-weltenburg.de/en/abbey-church/kirche/high-altar/",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:29:12.649Z"
+		},
+		"317976": {
+			"body": "Nothing within reach was made for a child: a bottle tipped on its side, two grown-up boots with their soles turned up, and the coat itself, spread over bare floorboards to serve as a play mat. One boot has been hauled halfway into the lap. The smock and the face are the only pale notes in a picture otherwise built from browns.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:31:13.642Z"
+		},
+		"318551": {
+			"body": "Follow the voussoirs up past the arch: they don't stop. The wedges keep rising through architrave and frieze until they split the cornice and push the little pediment apart. That collision is the whole demonstration — rough blocks left as if straight from the quarry, driven up through a finished Corinthian order, the work of nature set against the work of the hand.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:29:59.788Z"
+		},
+		"319057": {
+			"body": "Gabriel's arm crosses the whole width of the canvas to hold out the lily, and it reaches a Virgin who is not looking: eyes shut, head bowed away, palms pressed together. The open book on the draped ledge behind her is what she has just left. That closed-eyed bow marks the last stage of the encounter — assent, after the alarm and the question.",
+			"context": "The full-scale version of this composition belongs to a set of four Life of the Virgin canvases van Loo painted around 1746 for a chapel at Saint-Sulpice in Paris, exhibited at the Salon of 1747.",
+			"source": "Lexart, French art-history image and document database",
+			"sourceUrl": "https://www.lexart.fr/medias/view/1725",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:29:04.593Z"
+		},
+		"320686": {
+			"body": "The black stops at the outer wall: Matthias's eight years bought the ring of chapels and their buttresses, nothing more. Everything drawn inside it is Parler's — and the high choir is where the plan gives him away, the ribs chaining from bay to bay as one diamond mesh with no transverse arch cutting across. A French plan would divide the vessel into separate cells; this one does not.",
+			"context": "Peter Parler was called to Prague at twenty-three, four years after Matthias of Arras died, and his St Vitus vaults are described as the first true net vaults on the Continent.",
+			"source": "Encyclopaedia Britannica",
+			"sourceUrl": "https://www.britannica.com/biography/Petr-Parler",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:27:52.192Z"
+		},
+		"324003": {
+			"body": "The dark band down the left edge and along the bottom is water: the house stands on its own rectangular island, crossed by bridges to north and south. That moat is fortification vocabulary with the defence taken out — its rim carries a stone balustrade, and a bastion-shaped spur pushes out below the terrace, shaped to hold a reflection rather than repel anything.",
+			"context": "The platform-and-moat arrangement was a deliberate archaism at Vaux, reached by two bridges and echoing the pools of Le Nôtre's gardens along the central axis.",
+			"source": "France Today (excerpted from Picon, *Vaux-le-Vicomte: A Private Invitation*, Flammarion/Rizzoli)",
+			"sourceUrl": "https://francetoday.com/accommodation/chateaux/vaux-le-vicomte-a-visionary-masterpiece/",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:29:42.676Z"
+		},
+		"325817": {
+			"body": "At every junction between the conches sits a small hatched block, drawn heavier than the wall it stands against. Those are the added piers that take the ribs of the ten-part dome, and the dashed line looping outside the curve — the legend's Dekagon — is the casing built around the old oval, straightening its eight lobes into ten flat faces without demolishing them.",
+			"context": "The plan overlays two buildings: a late-Roman oval memorial hall with four conches to each side, re-encased between 1219 and 1227 as a decagon under a ten-part ribbed dome.",
+			"source": "baukunst-nrw",
+			"sourceUrl": "https://www.baukunst-nrw.de/objekte/St-Gereon-Koeln--623.htm",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:29:39.273Z"
+		},
+		"326422": {
+			"body": "The lightest thing here is the wedge of page at lower right, and the light climbs from it: strongest in the beard, weaker on the cheek, gone by the forehead, which the brim seals under one dark ellipse. That brim is the widest shape in the picture and holds no detail at all — a flat silhouette against a ground that dissolves before it reaches the edges.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:26:20.516Z"
+		},
+		"327458": {
+			"body": "Read the slab for depth rather than subject. The two attendants at left are scarcely raised from the ground, the pilasters behind them barely scored into it, while the kneeling old man at right comes almost clear of the block and the seated boy's bare foot pushes over the lower framing edge. One piece of marble worked from near-drawing to near-statue.",
+			"context": "Della Valle trained in Florence under Giovanni Battista Foggini before settling in Rome in 1724, carrying a Tuscan relief practice into Roman commissions.",
+			"source": "Wikipedia",
+			"sourceUrl": "https://en.wikipedia.org/wiki/Filippo_della_Valle",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:27:40.957Z"
+		},
+		"329189": {
+			"body": "In the strip of blue back wall left over between each pair of life-size saints stands a small dark figure on its own bracket — easiest to catch in the wings, where a statuette fills the gap at about shoulder height. Nuremberg shrine carvers used these interstices for prophets, scaled right down, so the dead space between the mantles became a second, lower tier instead of a void.",
+			"context": "The Zwickau town council paid Michael Wolgemut 1,400 Rhenish gulden for the retable, delivered from Nuremberg in 1479.",
+			"source": "Virtuelles Museum Nürnberger Kunst (nuernberg.museum)",
+			"sourceUrl": "https://www.nuernberg.museum/projects/show/451-zwickauer-hochaltarretabel",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:27:08.020Z"
+		},
+		"343226": {
+			"body": "Count the horses: four muzzles, but only one animal is drawn whole, the rest dissolving into a tangle of overlapping legs. The riders behind the crowned figure get helmets and shoulders in alternating blue and orange, and no faces at all — the illuminator's shorthand for a host, built by repeating a contour rather than drawing men. Only the bearded man on the threshold has a face, and he is the one not moving.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:25:57.505Z"
+		},
+		"344761": {
+			"body": "The upper strip has no gate, no wall, no city at all — only a green band the horses cross. That is what its Latin line says: Henry rides in \"per fossata planata\", over ditches filled and ramparts flattened as the surrender terms demanded, so Brescia is present solely as the crowd pressed against the right edge. The only masonry left anywhere on the page is the arcaded block beneath his throne.",
+			"context": "Brescia capitulated in September 1311 after a months-long siege, and this folio pairs Henry's entry over the demolished fortifications with the public court he held over the city on 1 October 1311.",
+			"source": "Deutsche Digitale Bibliothek / Bildarchiv Foto Marburg",
+			"sourceUrl": "https://www.deutsche-digitale-bibliothek.de/item/W3TQTBCTZRU5N5HSMHREVKDC5QMYM7RE",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:29:26.226Z"
+		},
+		"345073": {
+			"body": "The line cut beneath the plate is in the first person: the corpse being lifted from the tub at right speaks, and blames not a woman but \"ils\" — them, plural. Look back at the crowd and the arithmetic of the picture changes: one assassin held in white at the centre, a room already filling with pikes and bayonets. The plural is the argument the print was made to sell.",
+			"context": "The same sentence was used as the title of other Paris prints of Marat's death in 1793, including one attributed to Villeneuve, so it circulated as a ready-made slogan rather than as Brion's caption.",
+			"source": "Bibliothèque nationale de France / Gallica",
+			"sourceUrl": "https://gallica.bnf.fr/ark:/12148/btv1b69497821",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:28:33.738Z"
+		},
+		"2006800699": {
+			"body": "Cover the lower third of each plate and the towns nearly vanish: walls, spires and bastions shrink to a hairline along the horizon. The wagons, horsemen and river boats below stand taller than the churches behind them. In views like these the town profile was copied from a survey or an earlier print, while the foreground crowd was supplied in the workshop — scaled to fill the sheet, not to measure distance.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:29:37.980Z"
+		},
+		"2006802583": {
+			"body": "Wider than it is tall. The volume was bound oblong, against the upright shape of a book of text, because what it holds are landscape plates — wide prospects and plans of fortified towns that would otherwise have to be folded to fit the page. The swellings running down the spine are the sewing cords beneath the calf, laced in and left plain, untooled and unlettered.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:28:17.558Z"
+		},
+		"2006833519": {
+			"body": "At the right edge a boy holds a round dish tilted toward us, left as bare paper — the only unworked white in a plate hatched dark from the arch down through the packed crowd. The charger is Salome's attribute, and it has been brought in early: the head's destination is already standing in the room while the sword is still raised.",
+			"context": "A preparatory sketch for the etching survives on the back of a Rembrandt drawing in the Rijksmuseum, where the executioner's head and body were drawn twice as the artist restarted the figure.",
+			"source": "Rijksmuseum, catalogue entry for RP-T-1930-28",
+			"sourceUrl": "https://www.rijksmuseum.nl/en/collection/object/The-Entombment-over-a-Sketch-of-an-Executioner--bc2d99c19d8ee4fea6b1619861a5a965/catalogue-entry",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:30:35.115Z"
+		},
+		"2006856712": {
+			"body": "Almost all the light in this small panel lands on the crown of the skull; the eye sockets, the ear and the entire shoulder are allowed to sink away into the brown ground. Look at how that dome is painted — blended flat and smooth, without the ridged, dragged paint Rembrandt built lit flesh out of. The lighting is copied; the handling is not.",
+			"context": "The Rijksmuseum catalogues this 18.3 × 14.5 cm panel as a copy after Rembrandt, possibly by the Dresden pasticheur Christian Wilhelm Ernst Dietrich (1712–1774).",
+			"source": "Rijksmuseum, object SK-A-3298",
+			"sourceUrl": "https://www.rijksmuseum.nl/en/collection/SK-A-3298",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:25:19.564Z"
+		},
+		"2006864890": {
+			"body": "The only lettering in the plate sits on the tablet the kneeling angel braces against its shoulder, and it faces us rather than the preacher. That is how a frontispiece works: the book's title is not set in type below the image but carried inside it, an object in the same smoky air as the cross-staff and the altar flame. The trumpet lies unused on the step.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:27:06.296Z"
+		},
+		"2006890032": {
+			"body": "Two names sit under the plate: \"E. Verboeckhoven Del.\" at the left, \"Faber\" at the right. Del. is delineavit — Verboeckhoven furnished the drawing of the goat, Faber only bit and printed the copper, the usual division of labour in Brussels animal prints. The date beside the first name reads 1832, not the 1882 it is often taken for.",
+			"context": "Faber, born in Brussels in 1782, died in 1844, which rules out any date after his lifetime on the plate.",
+			"source": "Wikipedia (after Bryan's Dictionary of Painters and Engravers)",
+			"sourceUrl": "https://en.wikipedia.org/wiki/Fr%C3%A9d%C3%A9ric_Th%C3%A9odore_Faber",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:28:32.131Z"
+		},
+		"2006908373": {
+			"body": "Cut into the stone ledge below the oval, in letters smaller than anything else on the sheet: Ob. 26 Oct. 1661. The sitter had been dead ninety-nine years when the plate was printed. Houbraken engraved it naar het Orig. — after an existing painting — and the oval, the plinth and the paper-looking label beneath are engraved furniture, repeated with identical proportions across a whole series of such heads.",
+			"context": "Houbraken's oval portrait plates of this type were cut for Jan Wagenaar's twenty-one-volume Vaderlandsche historie, published in Amsterdam by Isaak Tirion, whose name appears at the foot of the sheet.",
+			"source": "Rijksmuseum",
+			"sourceUrl": "https://www.rijksmuseum.nl/en/collection/RP-P-OB-48.889",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:29:57.916Z"
+		},
+		"2006944825": {
+			"body": "The sky is ruled with unbroken horizontal lines running edge to edge, packed tight at the top and thinning as they approach the hills. The clouds are not drawn at all — they are the gaps, places where the needle simply stopped and the plate was left bare. Sunset in a medium without colour has to be built this way, out of the spacing of lines rather than any glow.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:27:42.340Z"
+		},
+		"2006946356": {
+			"body": "Look at the gold band: the gemstones are still bare pencil circles, outlined but never filled, though the yellow around them is fully laid in. The front panel carries rows of small handwriting where ornament would go, and the description at right is indented to run around the crown's silhouette — the drawing went down first, and the words were fitted around it.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:27:58.546Z"
+		},
+		"2007012764": {
+			"body": "The thing swung over the smith's head is not a weapon: it is a driepoot, the iron three-legged trivet that stood in his own hearth, a few feet from where he is using it. Bendorp keeps the forge in the frame at far left, cold and black, so the tool can be read against the place it came from. The kneeling figure at right is his daughter.",
+			"context": "The Rijksmuseum records the subject as Van de Eijcken defending his house with sword and trivet against Spanish troops at Naarden on 1 December 1572, his daughter kneeling in prayer at right.",
+			"source": "Rijksmuseum",
+			"sourceUrl": "https://www.rijksmuseum.nl/nl/collectie/RP-P-OB-79.218",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:30:19.653Z"
+		},
+		"2007018768": {
+			"body": "The empty paper is doing work: cursive verse fills it in several blocks, each closing with a small name — the kyōka poets, who on a privately printed sheet like this were the ones paying. Shumman's own signature sits lowest and smallest, level with her hem. The figure has been pushed down and left so the writing keeps the top of the strip.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:25:37.166Z"
+		},
+		"2007039468": {
+			"body": "He holds a bamboo rake, she a long broom laid across her lap — the fixed attributes of the aged Takasago couple, one to gather good fortune in, the other to sweep trouble away. Yet neither face is old: no white hair, no lines, just the smooth features of kabuki actors. In the Noh play the two sweepers finally drop the disguise of age and stand revealed as the spirits of the paired pines.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:26:20.253Z"
+		},
+		"2015899327": {
+			"body": "The two straight sides converge on a point below the sheet: this is a cone unrolled, a flat pattern to be traced onto silver and raised. The half-scrolls cut off at either edge are one motif split in two — roll the sheet, close the seam, and they complete each other. Ornament crowds the wide arc that becomes the lip; the narrow arc below gets only a thin band.",
+			"context": "Flindt issued such plates in numbered pattern books for the trade, one of them titled as a book of forty pieces made by Paulus Flindt of Nuremberg in 1594 and published there by Friedrich Dürer.",
+			"source": "The Metropolitan Museum of Art",
+			"sourceUrl": "https://www.metmuseum.org/art/collection/search/778702",
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:26:31.644Z"
+		},
+		"2015916294": {
+			"body": "Count the hairpins: some twenty tortoiseshell kanzashi splayed in tiers around the wig like the spokes of a wheel. That number was a rank marker — only the highest grade of courtesan wore a head so loaded — and the weight of it fixed the skull in place. Hence the pose: the face turns on the neck alone, chin lifted, while the shoulders stay squared to us.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:24:56.085Z"
+		},
+		"2015916327": {
+			"body": "At his knee a black sandal thong is held taut in one hand, a small tool in the other: he is caught mid-repair. The round basket at left holds his kit, and a finished pair of setta waits on the ground beyond the platform — the equipment of a setta naoshi, the itinerant sandal-mender who worked from a portable stand at the roadside.",
+			"context": null,
+			"source": null,
+			"sourceUrl": null,
+			"origin": "MODEL",
+			"model": "claude-opus-5",
+			"writtenAt": "2026-08-06T12:29:55.321Z"
+		}
+	}
+}
