@@ -286,7 +286,7 @@
 			"artist": "Antoine Watteau",
 			"notBefore": 1716,
 			"notAfter": 1717,
-			"institution": "Musée du Louvre",
+			"institution": "Louvre",
 			"objectKey": "artworks/9094.jpg",
 			"motifs": [
 				"bäume",
@@ -352,7 +352,7 @@
 			"artist": null,
 			"notBefore": 1300,
 			"notAfter": 1400,
-			"institution": "Leipzig, Stadtbibliothek",
+			"institution": "Stadtbibliothek Leipzig",
 			"objectKey": "artworks/B39937.jpg",
 			"motifs": [
 				"ritter",
@@ -440,7 +440,7 @@
 			"artist": "John Neagle",
 			"notBefore": 1826,
 			"notAfter": 1827,
-			"institution": "Museum of Fine Arts",
+			"institution": "Museum of Fine Arts Boston",
 			"objectKey": "artworks/21261.jpg",
 			"motifs": [
 				"schmied",
@@ -550,7 +550,7 @@
 			"artist": "John Constable",
 			"notBefore": 1823,
 			"notAfter": 1823,
-			"institution": "Victoria & Albert Museum",
+			"institution": "Victoria and Albert Museum",
 			"objectKey": "artworks/8544.jpg",
 			"motifs": [
 				"fels",
@@ -638,7 +638,7 @@
 			"artist": "Anne Louis Girodet Trioson",
 			"notBefore": 1808,
 			"notAfter": 1808,
-			"institution": "Musée du Louvre",
+			"institution": "Louvre",
 			"objectKey": "artworks/3345.jpg",
 			"motifs": [
 				"kreuz",
@@ -704,7 +704,7 @@
 			"artist": "Robert Delaunay",
 			"notBefore": 1913,
 			"notAfter": 1914,
-			"institution": "Musée d'Art Moderne de la Ville de Paris",
+			"institution": "Musée d’art moderne de Paris",
 			"objectKey": "artworks/4903.jpg",
 			"motifs": [
 				"propeller",
@@ -770,7 +770,7 @@
 			"artist": "Domenico Quaglio",
 			"notBefore": 1835,
 			"notAfter": 1836,
-			"institution": "Karlsruhe, Staatliche Kunsthalle",
+			"institution": "Staatliche Kunsthalle Karlsruhe",
 			"objectKey": "artworks/B10542.jpg",
 			"motifs": [
 				"fenster",
@@ -946,7 +946,7 @@
 			"artist": "Vincenzo Campi",
 			"notBefore": 1580,
 			"notAfter": 1580,
-			"institution": "Mailand, Pinacoteca di Brera",
+			"institution": "Pinacoteca di Brera",
 			"objectKey": "artworks/B20539.jpg",
 			"motifs": [
 				"obst",
@@ -990,7 +990,7 @@
 			"artist": "Franz Hanfstaengl",
 			"notBefore": 1887,
 			"notAfter": 1904,
-			"institution": "Stadtmuseum",
+			"institution": "Münchner Stadtmuseum",
 			"objectKey": "artworks/29074.jpg",
 			"motifs": [
 				"frauen",
@@ -1408,7 +1408,7 @@
 			"artist": "Jacques de Gheyn II.",
 			"notBefore": 1603,
 			"notAfter": 1603,
-			"institution": "The Metropolitan Museum of Art",
+			"institution": "Metropolitan Museum of Art",
 			"objectKey": "artworks/12251.jpg",
 			"motifs": [
 				"tulpe",
@@ -1430,7 +1430,7 @@
 			"artist": "Anton Woensam",
 			"notBefore": 1531,
 			"notAfter": 1531,
-			"institution": "Köln, Stadtmuseum",
+			"institution": "Kölnisches Stadtmuseum",
 			"objectKey": "artworks/B34493.jpg",
 			"motifs": [
 				"schiffe",
@@ -1452,7 +1452,7 @@
 			"artist": "Ludwig Knaus",
 			"notBefore": 1886,
 			"notAfter": 1886,
-			"institution": "Düsseldorf, Kunstmuseum",
+			"institution": "Museum Kunstpalast",
 			"objectKey": "artworks/B26329.jpg",
 			"motifs": [
 				"flasche",
@@ -1584,7 +1584,7 @@
 			"artist": "Johann Heinrich Ramberg",
 			"notBefore": 1786,
 			"notAfter": 1787,
-			"institution": "Hannover, Niedersächsisches Landesmuseum",
+			"institution": "Niedersächsisches Landesmuseum Hannover",
 			"objectKey": "artworks/B29197.jpg",
 			"motifs": [
 				"kerze",
@@ -1606,7 +1606,7 @@
 			"artist": "Jean Honoré Fragonard",
 			"notBefore": 1750,
 			"notAfter": 1780,
-			"institution": "The Pushkin State Museum of Fine Arts",
+			"institution": "Puschkin-Museum",
 			"objectKey": "artworks/3618.jpg",
 			"motifs": [
 				"stuhl",
@@ -1628,7 +1628,7 @@
 			"artist": "Andrea Vesalius",
 			"notBefore": 1543,
 			"notAfter": 1543,
-			"institution": "London, Wellcome Library",
+			"institution": "Wellcome Library",
 			"objectKey": "artworks/B25134.jpg",
 			"motifs": [
 				"säulen",
@@ -1738,7 +1738,7 @@
 			"artist": "Antonio Canova",
 			"notBefore": 1815,
 			"notAfter": 1817,
-			"institution": "St. Petersburg, Eremitage",
+			"institution": "Eremitage",
 			"objectKey": "artworks/B22089.jpg",
 			"motifs": [
 				"grazien",
@@ -1892,7 +1892,7 @@
 			"artist": "Jean Baptiste Camille Corot",
 			"notBefore": 1834,
 			"notAfter": 1836,
-			"institution": "Musée du Louvre",
+			"institution": "Louvre",
 			"objectKey": "artworks/1108.jpg",
 			"motifs": [
 				"florenz",
@@ -1933,7 +1933,7 @@
 		{
 			"id": 2006824626,
 			"title": "Pluto met tweetand en Cerberus",
-			"artist": "Jakob Binck",
+			"artist": "Jakob Bink",
 			"notBefore": 1530,
 			"notAfter": 1530,
 			"institution": "Rijksmuseum",
@@ -2156,7 +2156,7 @@
 			"artist": null,
 			"notBefore": 1234,
 			"notAfter": 1239,
-			"institution": "Museo Campano",
+			"institution": "Museum der Provinz Kampanien in Capua",
 			"objectKey": "artworks/25371.jpg",
 			"motifs": [
 				"nase",
@@ -2244,7 +2244,7 @@
 			"artist": "Lovis Corinth",
 			"notBefore": 1893,
 			"notAfter": 1893,
-			"institution": "Stadtmuseum",
+			"institution": "Münchner Stadtmuseum",
 			"objectKey": "artworks/6952.jpg",
 			"motifs": [
 				"mann",
@@ -2574,7 +2574,7 @@
 			"artist": "Fritz Erler",
 			"notBefore": 1903,
 			"notAfter": 1903,
-			"institution": "Stadtmuseum",
+			"institution": "Münchner Stadtmuseum",
 			"objectKey": "artworks/10653.jpg",
 			"motifs": [
 				"fish",
@@ -2596,7 +2596,7 @@
 			"artist": "Hans von Judenburg",
 			"notBefore": 1425,
 			"notAfter": 1425,
-			"institution": "Brixen, Diözesanmuseum",
+			"institution": "Diözesanmuseum Hofburg Brixen",
 			"objectKey": "artworks/B20191.jpg",
 			"motifs": [
 				"frau",
@@ -2816,7 +2816,7 @@
 			"artist": null,
 			"notBefore": 1100,
 			"notAfter": 1200,
-			"institution": "Barcelona, Museo de Arte de Cataluna",
+			"institution": "Museu Nacional d’Art de Catalunya",
 			"objectKey": "artworks/B32541.jpg",
 			"motifs": [
 				"maria",
@@ -2838,7 +2838,7 @@
 			"artist": "Maurice Quentin de La Tour",
 			"notBefore": 1744,
 			"notAfter": 1749,
-			"institution": "Musée du Louvre",
+			"institution": "Louvre",
 			"objectKey": "artworks/9363.jpg",
 			"motifs": [
 				"orden",
@@ -2948,7 +2948,7 @@
 			"artist": "Maurice Quentin de La Tour",
 			"notBefore": 1761,
 			"notAfter": 1761,
-			"institution": "Saint-Quentin, Musée Antoine-Lécuyer",
+			"institution": "Musée Antoine-Lécuyer",
 			"objectKey": "artworks/B27487.jpg",
 			"motifs": [
 				"mann",
@@ -3102,7 +3102,7 @@
 			"artist": "Jan van Eyck",
 			"notBefore": 1434,
 			"notAfter": 1434,
-			"institution": "London, National Gallery",
+			"institution": "National Gallery",
 			"objectKey": "artworks/B33105.jpg",
 			"motifs": [
 				"hund",
@@ -3278,7 +3278,7 @@
 			"artist": "Albert Eckhout",
 			"notBefore": 1646,
 			"notAfter": 1653,
-			"institution": "Kopenhagen, Nationalmuseum",
+			"institution": "Dänisches Nationalmuseum",
 			"objectKey": "artworks/B46583.jpg",
 			"motifs": [
 				"blumen",
@@ -3366,7 +3366,7 @@
 			"artist": "Franz Marc",
 			"notBefore": 1910,
 			"notAfter": 1911,
-			"institution": "Städtische Galerie im Lenbachhaus",
+			"institution": "Städtische Galerie im Lenbachhaus und Kunstbau München",
 			"objectKey": "artworks/12036.jpg",
 			"motifs": [
 				"henkel",
@@ -3432,7 +3432,7 @@
 			"artist": "Arnold Böcklin",
 			"notBefore": 1898,
 			"notAfter": 1898,
-			"institution": "Kunstmuseum",
+			"institution": "Kunstmuseum Basel",
 			"objectKey": "artworks/6613.jpg",
 			"motifs": [
 				"death",
@@ -3564,7 +3564,7 @@
 			"artist": "Bartolomé Esteban Murillo",
 			"notBefore": 1675,
 			"notAfter": 1680,
-			"institution": "München, Alte Pinakothek",
+			"institution": "Alte Pinakothek",
 			"objectKey": "artworks/B29857.jpg",
 			"motifs": [
 				"kinder",
@@ -3608,7 +3608,7 @@
 			"artist": "Andrea Pisano",
 			"notBefore": 1334,
 			"notAfter": 1334,
-			"institution": "Florenz, Museo dell’Opera del Duomo",
+			"institution": "Museo dell'Opera del Duomo",
 			"objectKey": "artworks/B25353.jpg",
 			"motifs": [
 				"sechseck",
@@ -3674,7 +3674,7 @@
 			"artist": "Pierre Henri de Valenciennes",
 			"notBefore": 1782,
 			"notAfter": 1784,
-			"institution": "Musée du Louvre",
+			"institution": "Louvre",
 			"objectKey": "artworks/604.jpg",
 			"motifs": [
 				"dach",
@@ -3872,7 +3872,7 @@
 			"artist": null,
 			"notBefore": 1356,
 			"notAfter": 1356,
-			"institution": "Wien, Österreichische Nationalbibliothek",
+			"institution": "Österreichische Nationalbibliothek",
 			"objectKey": "artworks/B3652.jpg",
 			"motifs": [
 				"frau",
@@ -3960,7 +3960,7 @@
 			"artist": "Albert Eckhout",
 			"notBefore": 1646,
 			"notAfter": 1653,
-			"institution": "Kopenhagen, Nationalmuseum",
+			"institution": "Dänisches Nationalmuseum",
 			"objectKey": "artworks/B46579.jpg",
 			"motifs": [
 				"kind",
@@ -4048,7 +4048,7 @@
 			"artist": "Albert Eckhout",
 			"notBefore": 1646,
 			"notAfter": 1653,
-			"institution": "Kopenhagen, Nationalmuseum",
+			"institution": "Dänisches Nationalmuseum",
 			"objectKey": "artworks/B46577.jpg",
 			"motifs": [
 				"hund",
@@ -4224,7 +4224,7 @@
 			"artist": "Telemaco Signorini",
 			"notBefore": 1881,
 			"notAfter": 1881,
-			"institution": "Galleria d'Arte Moderna",
+			"institution": "Galleria d'arte moderna di Firenze",
 			"objectKey": "artworks/6375.jpg",
 			"motifs": [
 				"kinderwagen",
@@ -4378,7 +4378,7 @@
 			"artist": null,
 			"notBefore": 1210,
 			"notAfter": 1210,
-			"institution": "Oxford, Bodleian Library",
+			"institution": "Bodleian Library",
 			"objectKey": "artworks/B8500.jpg",
 			"motifs": [
 				"blau",
@@ -4422,7 +4422,7 @@
 			"artist": "Claude Monet",
 			"notBefore": 1897,
 			"notAfter": 1897,
-			"institution": "The Art Institute of Chicago",
+			"institution": "Art Institute of Chicago",
 			"objectKey": "artworks/26512.jpg",
 			"motifs": [
 				"blau",
@@ -4444,7 +4444,7 @@
 			"artist": "Wenzel Hollar",
 			"notBefore": 1656,
 			"notAfter": 1656,
-			"institution": "Köln, Stadtmuseum",
+			"institution": "Kölnisches Stadtmuseum",
 			"objectKey": "artworks/B34499.jpg",
 			"motifs": [
 				"wappen",
@@ -4774,7 +4774,7 @@
 			"artist": "Pierre Auguste Renoir",
 			"notBefore": 1876,
 			"notAfter": 1876,
-			"institution": "Musée d'Orsay",
+			"institution": "Musée d’Orsay",
 			"objectKey": "artworks/8208.jpg",
 			"motifs": [
 				"kleid",
@@ -5060,7 +5060,7 @@
 			"artist": "Adolf Loos",
 			"notBefore": null,
 			"notAfter": null,
-			"institution": "Albertina, Wien",
+			"institution": "Albertina",
 			"objectKey": "artworks/ALA108.jpg",
 			"motifs": [
 				"bücher",
@@ -5126,7 +5126,7 @@
 			"artist": "Guercino",
 			"notBefore": 1620,
 			"notAfter": 1620,
-			"institution": "Paris, Musée du Louvre",
+			"institution": "Louvre",
 			"objectKey": "artworks/B23278.jpg",
 			"motifs": [
 				"bild",
@@ -5214,7 +5214,7 @@
 			"artist": "Lovis Corinth",
 			"notBefore": 1911,
 			"notAfter": 1911,
-			"institution": "Kunstmuseum",
+			"institution": "Kunstmuseum Basel",
 			"objectKey": "artworks/7395.jpg",
 			"motifs": [
 				"man",
@@ -5258,7 +5258,7 @@
 			"artist": "Giovanni Battista Tiepolo",
 			"notBefore": 1732,
 			"notAfter": 1732,
-			"institution": "Scuola di San Rocco",
+			"institution": "Scuola Grande di San Rocco",
 			"objectKey": "artworks/3158.jpg",
 			"motifs": [
 				"frau",
@@ -5500,7 +5500,7 @@
 			"artist": null,
 			"notBefore": 1140,
 			"notAfter": 1160,
-			"institution": "München, Bayerische Staatsbibliothek",
+			"institution": "Bayerische Staatsbibliothek",
 			"objectKey": "artworks/B24850.jpg",
 			"motifs": [
 				"gewand",
@@ -5588,7 +5588,7 @@
 			"artist": "Théodore Géricault",
 			"notBefore": 1812,
 			"notAfter": 1812,
-			"institution": "Musée du Louvre",
+			"institution": "Louvre",
 			"objectKey": "artworks/126.jpg",
 			"motifs": [
 				"säbel",
@@ -5786,7 +5786,7 @@
 			"artist": "Rudolf Koppitz",
 			"notBefore": 1926,
 			"notAfter": 1926,
-			"institution": "Albertina, Wien",
+			"institution": "Albertina",
 			"objectKey": "artworks/FotoGLV2000_4181.jpg",
 			"motifs": [
 				"nackt",
@@ -5830,7 +5830,7 @@
 			"artist": "Carl Josef Alois Bourdet",
 			"notBefore": 1880,
 			"notAfter": 1880,
-			"institution": "Städtisches Museum",
+			"institution": "Städtisches Museum (Braunschweig)",
 			"objectKey": "artworks/8347.jpg",
 			"motifs": [
 				"fassade",
@@ -5852,7 +5852,7 @@
 			"artist": "Georg Friedrich Kersting",
 			"notBefore": 1811,
 			"notAfter": 1811,
-			"institution": "Kunsthalle",
+			"institution": "Hamburger Kunsthalle",
 			"objectKey": "artworks/4966.jpg",
 			"motifs": [
 				"staffelei",
@@ -6248,7 +6248,7 @@
 			"artist": null,
 			"notBefore": 1100,
 			"notAfter": 1125,
-			"institution": "Paris, Bibliothèque Mazarine",
+			"institution": "Bibliothèque Mazarine",
 			"objectKey": "artworks/B23476.jpg",
 			"motifs": [
 				"frauen",
@@ -6314,7 +6314,7 @@
 			"artist": "Leopold Karl Walter Graf von Kalckreuth",
 			"notBefore": 1912,
 			"notAfter": 1912,
-			"institution": "Kunsthalle",
+			"institution": "Hamburger Kunsthalle",
 			"objectKey": "artworks/9149.jpg",
 			"motifs": [
 				"mann",
@@ -6575,7 +6575,7 @@
 		{
 			"id": 20771,
 			"title": "Zirkus",
-			"artist": "Olga Rozanowa",
+			"artist": "Olga Rosanowa",
 			"notBefore": 1913,
 			"notAfter": 1914,
 			"institution": null,
@@ -6600,7 +6600,7 @@
 			"artist": "Bonaventura Genelli",
 			"notBefore": 1864,
 			"notAfter": 1866,
-			"institution": "Schack-Galerie",
+			"institution": "Sammlung Schack",
 			"objectKey": "artworks/11605.jpg",
 			"motifs": [
 				"teppich",
@@ -6622,7 +6622,7 @@
 			"artist": "Léon Bakst",
 			"notBefore": 1922,
 			"notAfter": 1922,
-			"institution": "The Metropolitan Museum of Art",
+			"institution": "Metropolitan Museum of Art",
 			"objectKey": "artworks/40177.jpg",
 			"motifs": [
 				"red",
@@ -6798,7 +6798,7 @@
 			"artist": null,
 			"notBefore": 1500,
 			"notAfter": 1600,
-			"institution": "Florenz, Bargello",
+			"institution": "Bargello",
 			"objectKey": "artworks/B7443.jpg",
 			"motifs": [
 				"blau",
@@ -6886,7 +6886,7 @@
 			"artist": "Thomas Girtin",
 			"notBefore": 1800,
 			"notAfter": 1800,
-			"institution": "Tate Gallery",
+			"institution": "Tate",
 			"objectKey": "artworks/8948.jpg",
 			"motifs": [
 				"wolken",
@@ -6952,7 +6952,7 @@
 			"artist": "William Turner",
 			"notBefore": 1806,
 			"notAfter": 1806,
-			"institution": "Tate Gallery",
+			"institution": "Tate",
 			"objectKey": "artworks/12497.jpg",
 			"motifs": [
 				"felsen",
@@ -6974,7 +6974,7 @@
 			"artist": "Claude Monet",
 			"notBefore": 1921,
 			"notAfter": 1925,
-			"institution": "The Minneapolis Institute of Arts",
+			"institution": "Minneapolis Institute of Art",
 			"objectKey": "artworks/1142.jpg",
 			"motifs": [
 				"rot",
@@ -7106,7 +7106,7 @@
 			"artist": "William Kent",
 			"notBefore": 1734,
 			"notAfter": 1735,
-			"institution": "Stowe Landscape Gardens",
+			"institution": "Stowe House",
 			"objectKey": "artworks/22391.jpg",
 			"motifs": [
 				"grass",
@@ -7128,7 +7128,7 @@
 			"artist": "Théodore Géricault",
 			"notBefore": 1819,
 			"notAfter": 1819,
-			"institution": "Montauban, Musée Ingres",
+			"institution": "Musée Ingres",
 			"objectKey": "artworks/B45431.jpg",
 			"motifs": [
 				"muskeln",
@@ -7194,7 +7194,7 @@
 			"artist": "Christian Morgenstern",
 			"notBefore": 1829,
 			"notAfter": 1829,
-			"institution": "Kunsthalle",
+			"institution": "Hamburger Kunsthalle",
 			"objectKey": "artworks/4448.jpg",
 			"motifs": [
 				"felsen",
@@ -7326,7 +7326,7 @@
 			"artist": "Franz Ludwig Catel",
 			"notBefore": 1820,
 			"notAfter": 1838,
-			"institution": "The Cleveland Museum of Art",
+			"institution": "Cleveland Museum of Art",
 			"objectKey": "artworks/7153.jpg",
 			"motifs": [
 				"vorhang",
@@ -7480,7 +7480,7 @@
 			"artist": null,
 			"notBefore": 1300,
 			"notAfter": 1350,
-			"institution": "Florenz, Museo dell’Opera del Duomo",
+			"institution": "Museo dell'Opera del Duomo",
 			"objectKey": "artworks/B45362.jpg",
 			"motifs": [
 				"engel",
@@ -7546,7 +7546,7 @@
 			"artist": "Auguste Rodin",
 			"notBefore": 1878,
 			"notAfter": 1878,
-			"institution": "Paris, Musée Rodin",
+			"institution": "Musée Rodin",
 			"objectKey": "artworks/B37272.jpg",
 			"motifs": [
 				"mann",
@@ -7634,7 +7634,7 @@
 			"artist": null,
 			"notBefore": 969,
 			"notAfter": 976,
-			"institution": "Darmstadt, Hessische Landesbibliothek",
+			"institution": "Hessische Landesbibliothek Wiesbaden",
 			"objectKey": "artworks/B38912.jpg",
 			"motifs": [
 				"johannes",
@@ -7656,7 +7656,7 @@
 			"artist": "August Macke",
 			"notBefore": 1909,
 			"notAfter": 1909,
-			"institution": "Kunstmuseum",
+			"institution": "Kunstmuseum Basel",
 			"objectKey": "artworks/6257.jpg",
 			"motifs": [
 				"mann",
@@ -7876,7 +7876,7 @@
 			"artist": "Franz von Stuck",
 			"notBefore": 1899,
 			"notAfter": 1899,
-			"institution": "Musée d'Orsay",
+			"institution": "Musée d’Orsay",
 			"objectKey": "artworks/15217.jpg",
 			"motifs": [
 				"rot",
@@ -7986,7 +7986,7 @@
 			"artist": "Cornelis Cornelisz van Haarlem",
 			"notBefore": 1546,
 			"notAfter": 1591,
-			"institution": "Haarlem, Frans Hals Museum",
+			"institution": "Frans Hals Museum",
 			"objectKey": "artworks/B45169.jpg",
 			"motifs": [
 				"nackt",
@@ -8052,7 +8052,7 @@
 			"artist": "Franz Joseph Kauffmann",
 			"notBefore": 1766,
 			"notAfter": 1768,
-			"institution": "Landesmuseum",
+			"institution": "Landesmuseum Mainz",
 			"objectKey": "artworks/20915.jpg",
 			"motifs": [
 				"rot",
@@ -8162,7 +8162,7 @@
 			"artist": "Karl Rottmann",
 			"notBefore": 1836,
 			"notAfter": 1838,
-			"institution": "Staatliche Kunsthalle",
+			"institution": "Staatliche Kunsthalle Karlsruhe",
 			"objectKey": "artworks/25928.jpg",
 			"motifs": [
 				"landschaft",
@@ -8184,7 +8184,7 @@
 			"artist": "Joshua Reynolds",
 			"notBefore": 1753,
 			"notAfter": 1755,
-			"institution": "London, Tate Gallery",
+			"institution": "Tate",
 			"objectKey": "artworks/B37515.jpg",
 			"motifs": [
 				"mann",
@@ -8316,7 +8316,7 @@
 			"artist": "Magius",
 			"notBefore": 950,
 			"notAfter": 950,
-			"institution": "New York, Pierpont Morgan Library",
+			"institution": "Morgan Library & Museum",
 			"objectKey": "artworks/B40047.jpg",
 			"motifs": [
 				"gelb",
@@ -8338,7 +8338,7 @@
 			"artist": "Peter Cornelius",
 			"notBefore": 1817,
 			"notAfter": 1817,
-			"institution": "Leipzig, Museum der bildenden Künste",
+			"institution": "Museum der bildenden Künste",
 			"objectKey": "artworks/B30944.jpg",
 			"motifs": [
 				"zeichnung",
@@ -8404,7 +8404,7 @@
 			"artist": null,
 			"notBefore": 850,
 			"notAfter": 855,
-			"institution": "Paris, Bibliothèque Nationale",
+			"institution": "Bibliothèque nationale",
 			"objectKey": "artworks/B42295.jpg",
 			"motifs": [
 				"verschnörkelt",
@@ -8536,7 +8536,7 @@
 			"artist": "Giovanni Giacometti",
 			"notBefore": 1903,
 			"notAfter": 1903,
-			"institution": "Kunstmuseum",
+			"institution": "Kunstmuseum Basel",
 			"objectKey": "artworks/25774.jpg",
 			"motifs": [
 				"tree",
@@ -8712,7 +8712,7 @@
 			"artist": "Paul Gauguin",
 			"notBefore": 1890,
 			"notAfter": 1890,
-			"institution": "Wadsworth Atheneum",
+			"institution": "Athenäum Wadsworth",
 			"objectKey": "artworks/6067.jpg",
 			"motifs": [
 				"mann",
@@ -8778,7 +8778,7 @@
 			"artist": "Justus Glesker",
 			"notBefore": 1640,
 			"notAfter": 1640,
-			"institution": "Florenz, Museo degli Argenti",
+			"institution": "Tesoro dei Granduchi",
 			"objectKey": "artworks/B3131.jpg",
 			"motifs": [
 				"gold",
@@ -8822,7 +8822,7 @@
 			"artist": "Charles Lock Eastlake",
 			"notBefore": 1827,
 			"notAfter": 1827,
-			"institution": "Tate Gallery",
+			"institution": "Tate",
 			"objectKey": "artworks/25923.jpg",
 			"motifs": [
 				"kamel",
@@ -8866,7 +8866,7 @@
 			"artist": "Paul Cézanne",
 			"notBefore": 1890,
 			"notAfter": 1890,
-			"institution": "London, British Museum",
+			"institution": "British Museum",
 			"objectKey": "artworks/B25173.jpg",
 			"motifs": [
 				"kind",
@@ -8954,7 +8954,7 @@
 			"artist": "Leone Leoni",
 			"notBefore": 1550,
 			"notAfter": 1553,
-			"institution": "Madrid, Museo del Prado",
+			"institution": "Museo del Prado",
 			"objectKey": "artworks/B1043.jpg",
 			"motifs": [
 				"füße",
@@ -9064,7 +9064,7 @@
 			"artist": null,
 			"notBefore": 1200,
 			"notAfter": 1200,
-			"institution": "Karlsruhe, Badische Landesbibliothek",
+			"institution": "Badische Landesbibliothek",
 			"objectKey": "artworks/B34273.jpg",
 			"motifs": [
 				"könige",
@@ -9086,7 +9086,7 @@
 			"artist": "Bernardo Strozzi",
 			"notBefore": 1600,
 			"notAfter": 1650,
-			"institution": "St. Petersburg, Eremitage",
+			"institution": "Eremitage",
 			"objectKey": "artworks/B24767.jpg",
 			"motifs": [
 				"büste",
@@ -9460,7 +9460,7 @@
 			"artist": "Robert Delaunay",
 			"notBefore": 1912,
 			"notAfter": 1912,
-			"institution": "The Museum of Modern Art",
+			"institution": "Museum of Modern Art",
 			"objectKey": "artworks/4904.jpg",
 			"motifs": [
 				"gelb",
@@ -9614,7 +9614,7 @@
 			"artist": "Jean-Victor Schnetz",
 			"notBefore": 1834,
 			"notAfter": 1834,
-			"institution": "Paris, Musée du Petit Palais",
+			"institution": "Musée des Beaux-Arts de la ville de Paris",
 			"objectKey": "artworks/B28705.jpg",
 			"motifs": [
 				"flagge",
@@ -9812,7 +9812,7 @@
 			"artist": "Hans Memling",
 			"notBefore": 1480,
 			"notAfter": 1480,
-			"institution": "Brügge, Memlingmuseum",
+			"institution": "Sint-Janshospitaal",
 			"objectKey": "artworks/B36405.jpg",
 			"motifs": [
 				"bäume",
@@ -9988,7 +9988,7 @@
 			"artist": "Peter Cornelius",
 			"notBefore": 1816,
 			"notAfter": 1816,
-			"institution": "Frankfurt, Städelsches Kunstinstitut",
+			"institution": "Städelsches Kunstinstitut",
 			"objectKey": "artworks/B30935.jpg",
 			"motifs": [
 				"bühne",
@@ -10120,7 +10120,7 @@
 			"artist": "Michelangelo Merisi da Caravaggio",
 			"notBefore": 1538,
 			"notAfter": 1540,
-			"institution": "London,  British Museum",
+			"institution": "British Museum",
 			"objectKey": "artworks/B20128.jpg",
 			"motifs": [
 				"kreuz",
@@ -10274,7 +10274,7 @@
 			"artist": "James Tissot",
 			"notBefore": 1872,
 			"notAfter": 1872,
-			"institution": "National Museums and Galleries of Wales",
+			"institution": "National Museum von Wales",
 			"objectKey": "artworks/810.jpg",
 			"motifs": [
 				"fenster",
@@ -10340,7 +10340,7 @@
 			"artist": null,
 			"notBefore": 1374,
 			"notAfter": 1374,
-			"institution": "Paris, Archives nationales",
+			"institution": "Archives nationales",
 			"objectKey": "artworks/B44540.jpg",
 			"motifs": [
 				"schrift",
@@ -10384,7 +10384,7 @@
 			"artist": "Georg Friedrich Hoch",
 			"notBefore": 1783,
 			"notAfter": 1785,
-			"institution": "Landesmuseum",
+			"institution": "Landesmuseum Mainz",
 			"objectKey": "artworks/20901.jpg",
 			"motifs": [
 				"schlacht",
@@ -10450,7 +10450,7 @@
 			"artist": "Hugo Freiherr von Habermann",
 			"notBefore": 1898,
 			"notAfter": 1902,
-			"institution": "Kunsthalle",
+			"institution": "Hamburger Kunsthalle",
 			"objectKey": "artworks/9069.jpg",
 			"motifs": [
 				"bart",
@@ -10956,7 +10956,7 @@
 			"artist": "Friedrich von Gärtner",
 			"notBefore": 1843,
 			"notAfter": 1843,
-			"institution": "Architekturmuseum der Technischen Universität",
+			"institution": "Architekturmuseum der Technischen Universität München",
 			"objectKey": "artworks/23729.jpg",
 			"motifs": [
 				"säulen",
@@ -11088,7 +11088,7 @@
 			"artist": "Rembrandt",
 			"notBefore": 1665,
 			"notAfter": 1665,
-			"institution": "New York, The Metropolitan Museum of  Art",
+			"institution": "Metropolitan Museum of Art",
 			"objectKey": "artworks/B40910.jpg",
 			"motifs": [
 				"blume",
@@ -11176,7 +11176,7 @@
 			"artist": "Henri Rousseau",
 			"notBefore": 1910,
 			"notAfter": 1910,
-			"institution": "The Museum of Modern Art",
+			"institution": "Museum of Modern Art",
 			"objectKey": "artworks/6234.jpg",
 			"motifs": [
 				"frau",
@@ -11264,7 +11264,7 @@
 			"artist": null,
 			"notBefore": 1033,
 			"notAfter": 1066,
-			"institution": "Wien, Schatzkammer",
+			"institution": "Schatzkammer",
 			"objectKey": "artworks/B21402.jpg",
 			"motifs": [
 				"könig",
@@ -11418,7 +11418,7 @@
 			"artist": "Giovanni Fattori",
 			"notBefore": 1880,
 			"notAfter": 1890,
-			"institution": "Galleria d'Arte Moderna",
+			"institution": "Galleria d'arte moderna di Firenze",
 			"objectKey": "artworks/6406.jpg",
 			"motifs": [
 				"haus",
@@ -11528,7 +11528,7 @@
 			"artist": null,
 			"notBefore": 1203,
 			"notAfter": 1203,
-			"institution": "Quedlinburg, Domschatz",
+			"institution": "Domschatz Quedlinburg",
 			"objectKey": "artworks/B45817.jpg",
 			"motifs": [
 				"könig",
@@ -11550,7 +11550,7 @@
 			"artist": "Paul Klee",
 			"notBefore": 1903,
 			"notAfter": 1903,
-			"institution": "Städtische Galerie im Lenbachhaus",
+			"institution": "Städtische Galerie im Lenbachhaus und Kunstbau München",
 			"objectKey": "artworks/10678.jpg",
 			"motifs": [
 				"bart",
@@ -11594,7 +11594,7 @@
 			"artist": "Domenico Giovanni Tiepolo",
 			"notBefore": 1750,
 			"notAfter": 1753,
-			"institution": "Berlin, Kupferstichkabinett",
+			"institution": "Kupferstichkabinett Berlin",
 			"objectKey": "artworks/B46181.jpg",
 			"motifs": [
 				"esel",
@@ -11770,7 +11770,7 @@
 			"artist": "Paul Cézanne",
 			"notBefore": 1904,
 			"notAfter": 1906,
-			"institution": "Musée du Louvre",
+			"institution": "Louvre",
 			"objectKey": "artworks/104.jpg",
 			"motifs": [
 				"trees",
@@ -11902,7 +11902,7 @@
 			"artist": "Paul Signac",
 			"notBefore": 1903,
 			"notAfter": 1907,
-			"institution": "Musée du Louvre",
+			"institution": "Louvre",
 			"objectKey": "artworks/11623.jpg",
 			"motifs": [
 				"windmühle",
@@ -12056,7 +12056,7 @@
 			"artist": "Donatello",
 			"notBefore": 1426,
 			"notAfter": 1427,
-			"institution": "London, Victoria and Albert Museum",
+			"institution": "Victoria and Albert Museum",
 			"objectKey": "artworks/B6365.jpg",
 			"motifs": [
 				"mann",
@@ -12232,7 +12232,7 @@
 			"artist": "Kaiser Friedrich II.",
 			"notBefore": 1210,
 			"notAfter": 1220,
-			"institution": "Bibliothèque Nationale.",
+			"institution": "Bibliothèque nationale",
 			"objectKey": "artworks/24696.jpg",
 			"motifs": [
 				"turm",
@@ -12713,7 +12713,7 @@
 		{
 			"id": 2006847216,
 			"title": "Waartoe dient een beker?",
-			"artist": "Francisco de Goya",
+			"artist": "Francisco José Goya Lucientes",
 			"notBefore": 1810,
 			"notAfter": 1820,
 			"institution": "Rijksmuseum",
@@ -12738,7 +12738,7 @@
 			"artist": "Frans Hals",
 			"notBefore": 1625,
 			"notAfter": 1627,
-			"institution": "Frans Halsmuseum",
+			"institution": "Frans Hals Museum",
 			"objectKey": "artworks/40245.jpg",
 			"motifs": [
 				"men",
@@ -12782,7 +12782,7 @@
 			"artist": "Broncia Koller",
 			"notBefore": 1910,
 			"notAfter": 1910,
-			"institution": "Niederösterreichisches Landesmuseum",
+			"institution": "Museum Niederösterreich",
 			"objectKey": "artworks/20987.jpg",
 			"motifs": [
 				"woman",
@@ -12826,7 +12826,7 @@
 			"artist": "Adolph Menzel",
 			"notBefore": 1830,
 			"notAfter": 1850,
-			"institution": "Kupferstichkabinett",
+			"institution": "Kupferstichkabinett Berlin",
 			"objectKey": "artworks/314.jpg",
 			"motifs": [
 				"gras",
@@ -13090,7 +13090,7 @@
 			"artist": null,
 			"notBefore": 1140,
 			"notAfter": 1160,
-			"institution": "Lüttich, Universitätsbibliothek",
+			"institution": "Universitätsbibliothek Lüttich",
 			"objectKey": "artworks/B986.jpg",
 			"motifs": [
 				"buchmalerei",
@@ -13112,7 +13112,7 @@
 			"artist": "Mathis Gothard Neithart",
 			"notBefore": 1509,
 			"notAfter": 1510,
-			"institution": "Karlsruhe, Staatliche Kunsthalle",
+			"institution": "Staatliche Kunsthalle Karlsruhe",
 			"objectKey": "artworks/B23321.jpg",
 			"motifs": [
 				"frau",
@@ -13134,7 +13134,7 @@
 			"artist": "Jean Honoré Fragonard",
 			"notBefore": 1760,
 			"notAfter": 1765,
-			"institution": "Musée du Louvre",
+			"institution": "Louvre",
 			"objectKey": "artworks/3629.jpg",
 			"motifs": [
 				"klavier",
@@ -13222,7 +13222,7 @@
 			"artist": "Anselm Feuerbach",
 			"notBefore": 1864,
 			"notAfter": 1865,
-			"institution": "Frankfurt, Städelsches Kunstinstitut",
+			"institution": "Städelsches Kunstinstitut",
 			"objectKey": "artworks/B26389.jpg",
 			"motifs": [
 				"frau",
@@ -13332,7 +13332,7 @@
 			"artist": "Robert Koehler",
 			"notBefore": 1886,
 			"notAfter": 1886,
-			"institution": "Berlin, Deutsches Historisches Museum",
+			"institution": "Deutsches Historisches Museum",
 			"objectKey": "artworks/B35453.jpg",
 			"motifs": [
 				"stadt",
@@ -13354,7 +13354,7 @@
 			"artist": null,
 			"notBefore": 1332,
 			"notAfter": 1332,
-			"institution": "Paris, Archives nationales",
+			"institution": "Archives nationales",
 			"objectKey": "artworks/B44501.jpg",
 			"motifs": [
 				"text",
@@ -13574,7 +13574,7 @@
 			"artist": "Antoine-Francois Callet",
 			"notBefore": 1789,
 			"notAfter": 1789,
-			"institution": "Clermont-Ferrand, Musée d’art Roger-Quilliot",
+			"institution": "Musée d’Art Roger-Quilliot",
 			"objectKey": "artworks/B42417.jpg",
 			"motifs": [
 				"könig",
@@ -13596,7 +13596,7 @@
 			"artist": "William Turner",
 			"notBefore": 1846,
 			"notAfter": 1846,
-			"institution": "Tate Gallery",
+			"institution": "Tate",
 			"objectKey": "artworks/25598.jpg",
 			"motifs": [
 				"licht",
@@ -13728,7 +13728,7 @@
 			"artist": "Aqa Mirak",
 			"notBefore": 1535,
 			"notAfter": 1540,
-			"institution": "The Metropolitan Museum of Art",
+			"institution": "Metropolitan Museum of Art",
 			"objectKey": "artworks/23010.jpg",
 			"motifs": [
 				"schrift",
@@ -13816,7 +13816,7 @@
 			"artist": "François Boucher",
 			"notBefore": 1746,
 			"notAfter": 1746,
-			"institution": "Nationalmuseum",
+			"institution": "Schwedisches Nationalmuseum",
 			"objectKey": "artworks/1182.jpg",
 			"motifs": [
 				"spiegel",
@@ -14058,7 +14058,7 @@
 			"artist": "Thomas Fearnley",
 			"notBefore": 1831,
 			"notAfter": 1831,
-			"institution": "Städtische Galerie im Lenbachhaus",
+			"institution": "Städtische Galerie im Lenbachhaus und Kunstbau München",
 			"objectKey": "artworks/13440.jpg",
 			"motifs": [
 				"horses",

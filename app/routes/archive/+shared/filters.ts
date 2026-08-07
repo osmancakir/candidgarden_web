@@ -29,6 +29,14 @@ export type ArchiveFilters = {
 	sense: string
 	motif: string
 	category: string
+	/**
+	 * A collection, as a Wikidata QID — `Q190804`, not "Amsterdam, Rijksmuseum".
+	 *
+	 * The QID rather than `Institution.id` because the register is re-runnable
+	 * and keyed on `wikiDataId`, so the integer is free to move under a re-import
+	 * while a cited URL is not. Legacy literal spellings are still honoured; see
+	 * `isInstitutionId`.
+	 */
 	institution: string
 	century: number | null
 	verification: string
@@ -65,7 +73,10 @@ export type ArchiveWork = {
 	artist: string | null
 	notBefore: number | null
 	notAfter: number | null
+	/** What the cataloguer wrote. Null means no holder was recorded at all. */
 	institution: string | null
+	/** The reconciled holder, where one was identified. Null means unreconciled. */
+	collection: ArchiveCollection | null
 	objectKey: string | null
 	verification: VerificationStatus
 	verifiedAt: Date | string | null
@@ -106,9 +117,40 @@ export type SenseCoverage = {
 	publishedReadings: number
 }
 
+/** A holder of works, as the console and the record components need it. */
+export type ArchiveCollection = {
+	name: string
+	/** Null only for a legacy literal standing in for an unreconciled holder. */
+	wikiDataId: string | null
+}
+
+export type ArchiveInstitutionFacet = ArchiveCollection & {
+	wikiDataId: string
+	works: number
+}
+
+/**
+ * What the Collection filter can and cannot reach.
+ *
+ * The register covers 27,186 of the 37,934 works that name a holder; the rest
+ * name one in wording that could not be reconciled to an entity. A select built
+ * from the register is therefore a partial view of the archive by construction,
+ * and — as with `SenseReport` — the number travels with it rather than being
+ * left for the reader to discover by not finding something.
+ */
+export type InstitutionCoverage = {
+	/** Institutions in the register that hold at least one work. */
+	institutions: number
+	/** Works reachable through the register. */
+	works: number
+	/** Works naming a holder that could not be reconciled. */
+	unreconciled: number
+}
+
 export type ArchiveFacets = {
 	categories: Array<string>
-	institutions: Array<string>
+	institutions: Array<ArchiveInstitutionFacet>
+	institutionCoverage: InstitutionCoverage
 	centuries: Array<{ century: number; count: number }>
 }
 
@@ -144,6 +186,28 @@ export function parseFilters(url: URL): ArchiveFilters {
 				? sortRaw
 				: 'title',
 	}
+}
+
+/**
+ * True when the Collection filter names an entity rather than a spelling.
+ *
+ * `?institution=` carried a literal string for as long as the archive had only
+ * strings to carry, and those URLs are cited in the wild. Rather than break
+ * them, the parameter is read as a QID when it looks like one and as the old
+ * exact-match spelling when it does not.
+ */
+export function isInstitutionId(value: string): boolean {
+	return /^Q\d+$/.test(value)
+}
+
+/** The register entry for one holder. Addressed by QID; see the route's note. */
+export function collectionHref(wikiDataId: string): string {
+	return `/archive/collection/${encodeURIComponent(wikiDataId)}`
+}
+
+/** The index, narrowed to one holder. */
+export function collectionIndexHref(wikiDataId: string): string {
+	return `/?institution=${encodeURIComponent(wikiDataId)}`
 }
 
 /**

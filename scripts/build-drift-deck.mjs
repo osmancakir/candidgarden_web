@@ -34,8 +34,9 @@
  *
  *   node --env-file=.env scripts/build-drift-deck.mjs
  *   node --env-file=.env scripts/build-drift-deck.mjs --cards 400 --seed 7
+ *   node --env-file=.env scripts/build-drift-deck.mjs --refresh-metadata
  */
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import pg from 'pg'
 import { configFromUrl } from './lib/credentials.mjs'
@@ -139,6 +140,100 @@ const client = new Client(
 	await configFromUrl(connectionString, 'candidgarden-drift-deck'),
 )
 await client.connect()
+
+/**
+ * What a card says about a work, for every card in the deck.
+ *
+ * `institution` is resolved through the register: the reconciled holder's name
+ * where there is one, the cataloguer's wording where there is not. A card is a
+ * caption under a picture, and "Amsterdam, Rijksmuseum/ Inv. Nr.:
+ * RP-T-1954-.182" is an inventory line rather than the name of a museum.
+ * `app/routes/archive/+shared/drift.server.ts` resolves the nearest cards the
+ * same way, so both decks caption a collection identically.
+ */
+async function cardMetadata(ids) {
+	const { rows } = await client.query(
+		`SELECT r.id,
+		        r.title,
+		        r.title_en,
+		        r.not_before,
+		        r.not_after,
+		        COALESCE(i.name, r.institution) AS institution,
+		        r."objectKey",
+		        a.name AS artist,
+		        COALESCE(
+		            (SELECT array_agg(t.name ORDER BY tg.frequency DESC)
+		               FROM (
+		                   SELECT tag_id, frequency
+		                     FROM "Tagging"
+		                    WHERE resource_id = r.id
+		                    ORDER BY frequency DESC
+		                    LIMIT $2
+		               ) tg
+		               JOIN "Tag" t ON t.id = tg.tag_id),
+		            ARRAY[]::text[]
+		        ) AS motifs
+		   FROM "Resource" r
+		   LEFT JOIN "Artist" a ON a.id = r.artist_id
+		   LEFT JOIN "Institution" i ON i.id = r.institution_id
+		  WHERE r.id = ANY($1::int[])`,
+		[ids, MOTIFS_PER_CARD],
+	)
+	return rows
+}
+
+/** One metadata row as the deck writes it. */
+function describe(row) {
+	return {
+		id: row.id,
+		title: row.title_en ?? row.title ?? null,
+		artist: row.artist ?? null,
+		notBefore: row.not_before,
+		notAfter: row.not_after,
+		institution: row.institution ?? null,
+		objectKey: row.objectKey,
+		motifs: row.motifs ?? [],
+	}
+}
+
+/**
+ * `--refresh-metadata`: re-read what the existing deck's cards say, and change
+ * nothing else.
+ *
+ * The spread is a published sample and rebuilding it is not a free action — the
+ * draw depends on which works were embedded on the day, so a rebuild run to fix
+ * a caption would silently deal a different deck and invalidate every drift
+ * anyone has taken. This path keeps the card ids, the clusters and the
+ * `represents` counts exactly as they are and refreshes only what the database
+ * now says about those works, which is the right tool when a name has been
+ * corrected upstream rather than when the sample is wrong.
+ */
+if (args.get('refresh-metadata')) {
+	const existing = JSON.parse(await readFile(outputPath, 'utf8'))
+	const rows = await cardMetadata(existing.cards.map((card) => card.id))
+	const fresh = new Map(rows.map((row) => [row.id, describe(row)]))
+
+	let changed = 0
+	for (const card of existing.cards) {
+		const next = fresh.get(card.id)
+		// A card whose work has since been deleted keeps what it had. Dropping it
+		// would change the sample, which is the one thing this path must not do.
+		if (!next) continue
+		for (const [key, value] of Object.entries(next)) {
+			if (JSON.stringify(card[key]) === JSON.stringify(value)) continue
+			card[key] = value
+			changed++
+		}
+	}
+
+	await writeFile(outputPath, JSON.stringify(existing, null, '\t') + '\n')
+	await client.end()
+	console.log(
+		`Refreshed ${existing.cards.length} cards in ${outputPath}: ${changed} field(s) changed.\n` +
+			`  The spread, its clusters and its counts are untouched.`,
+	)
+	process.exit(0)
+}
 
 /**
  * One model per deck, for the reason the atlas export gives: vectors from two
@@ -374,49 +469,14 @@ for (
 const spreadIds = chosen.map((slot) => resourceIds[slot])
 const allIds = [...spreadIds, ...unreadPicks]
 
-const { rows: metadata } = await client.query(
-	`SELECT r.id,
-	        r.title,
-	        r.title_en,
-	        r.not_before,
-	        r.not_after,
-	        r.institution,
-	        r."objectKey",
-	        a.name AS artist,
-	        COALESCE(
-	            (SELECT array_agg(t.name ORDER BY tg.frequency DESC)
-	               FROM (
-	                   SELECT tag_id, frequency
-	                     FROM "Tagging"
-	                    WHERE resource_id = r.id
-	                    ORDER BY frequency DESC
-	                    LIMIT $2
-	               ) tg
-	               JOIN "Tag" t ON t.id = tg.tag_id),
-	            ARRAY[]::text[]
-	        ) AS motifs
-	   FROM "Resource" r
-	   LEFT JOIN "Artist" a ON a.id = r.artist_id
-	  WHERE r.id = ANY($1::int[])`,
-	[allIds, MOTIFS_PER_CARD],
-)
+const metadata = await cardMetadata(allIds)
 
 const byId = new Map(metadata.map((row) => [row.id, row]))
 
 function toCard(id, extra) {
 	const row = byId.get(id)
 	if (!row) return null
-	return {
-		id: row.id,
-		title: row.title_en ?? row.title ?? null,
-		artist: row.artist ?? null,
-		notBefore: row.not_before,
-		notAfter: row.not_after,
-		institution: row.institution ?? null,
-		objectKey: row.objectKey,
-		motifs: row.motifs ?? [],
-		...extra,
-	}
+	return { ...describe(row), ...extra }
 }
 
 const cards = [

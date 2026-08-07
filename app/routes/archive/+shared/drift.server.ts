@@ -562,7 +562,11 @@ async function nearestUnseen({
 			        r.title_en,
 			        r.not_before,
 			        r.not_after,
-			        r.institution,
+			        -- The register's name where the holder was reconciled. Cards
+			        -- built into the deck resolve this the same way, in
+			        -- scripts/build-drift-deck.mjs, so a nearest card and a
+			        -- spread card caption a collection identically.
+			        COALESCE(i.name, r.institution) AS institution,
 			        r."objectKey",
 			        a.name AS artist,
 			        COALESCE(
@@ -580,6 +584,7 @@ async function nearestUnseen({
 			   FROM best b
 			   JOIN "Resource" r ON r.id = b.resource_id
 			   LEFT JOIN "Artist" a ON a.id = r.artist_id
+			   LEFT JOIN "Institution" i ON i.id = r.institution_id
 			  WHERE r."objectKey" IS NOT NULL
 			  ORDER BY b.distance
 			  LIMIT $4`,

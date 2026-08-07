@@ -27,6 +27,7 @@ import {
 } from '#app/utils/archive.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { getWorkImgSrc } from '#app/utils/misc.tsx'
+import { collectionHref } from './+shared/filters.ts'
 import { type Route } from './+types/$resourceId.ts'
 
 /**
@@ -70,6 +71,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 			notAfter: true,
 			location: true,
 			institution: true,
+			institutionRef: { select: { name: true, wikiDataId: true } },
 			objectKey: true,
 			wikiDataId: true,
 			artist: { select: { id: true, name: true, wikiDataId: true } },
@@ -156,6 +158,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 			notAfter: resource.notAfter,
 			location: resource.location,
 			institution: resource.institution,
+			collection: resource.institutionRef,
 			objectKey: resource.objectKey,
 			wikiDataId: resource.wikiDataId,
 		},
@@ -265,15 +268,17 @@ export default function Dossier({ loaderData }: Route.ComponentProps) {
 						<table className="border-rule border-t">
 							<caption className="sr-only">Catalogue facts</caption>
 							<tbody>
-								{[
-									['Record', `#${work.id}`],
-									['Title (EN)', work.titleEn ?? '—'],
-									['Period', period],
-									['Collection', work.institution ?? '—'],
-									['Location', work.location ?? '—'],
-									['Wikidata', work.wikiDataId ?? '—'],
-									['Attribution', verification],
-								].map(([term, value]) => (
+								{(
+									[
+										['Record', `#${work.id}`],
+										['Title (EN)', work.titleEn ?? '—'],
+										['Period', period],
+										['Collection', <CollectionCell key="c" work={work} />],
+										['Location', work.location ?? '—'],
+										['Wikidata', work.wikiDataId ?? '—'],
+										['Attribution', verification],
+									] as Array<[string, React.ReactNode]>
+								).map(([term, value]) => (
 									<tr key={term} className="border-rule border-b">
 										<th
 											scope="row"
@@ -532,6 +537,45 @@ export default function Dossier({ loaderData }: Route.ComponentProps) {
 				</Data>
 			</nav>
 		</article>
+	)
+}
+
+/**
+ * The holder of the work — both of the archive's answers to that question.
+ *
+ * The register's name is the navigable one: it links to every work under that
+ * institution, including the ones filed under a different spelling. The
+ * cataloguer's wording is kept beneath it whenever the two differ, because it
+ * is the record and it frequently carries what the register cannot — an
+ * inventory number, a city, a department. Where nothing was reconciled the
+ * archive's own words stand alone, which is exactly what they are: unlinked,
+ * unverified, and all that is known.
+ */
+function CollectionCell({
+	work,
+}: {
+	work: Route.ComponentProps['loaderData']['work']
+}) {
+	const { collection, institution } = work
+	// The register is keyed on the QID, so a row without one has nothing for the
+	// filter to name. It cannot presently happen — the import requires a QID —
+	// but the column is nullable, and a link to `?institution=` would silently
+	// mean "every work in the archive".
+	if (!collection?.wikiDataId) return <>{institution ?? '—'}</>
+	return (
+		<>
+			<Link
+				to={collectionHref(collection.wikiDataId)}
+				className="hover:text-link underline underline-offset-4"
+			>
+				{collection.name}
+			</Link>
+			{institution && institution !== collection.name ? (
+				<span className="text-ground-muted block text-[0.6875rem]">
+					recorded as “{institution}”
+				</span>
+			) : null}
+		</>
 	)
 }
 

@@ -2,6 +2,8 @@ import { Link } from 'react-router'
 import {
 	DocumentPage,
 	DocumentSection,
+	Ledger,
+	LedgerRow,
 } from '#app/components/institute/document.tsx'
 import {
 	Data,
@@ -87,7 +89,84 @@ export default function EssaysRoute() {
 				</p>
 			</DocumentSection>
 
-			<DocumentSection n="III" heading="Register of corrections">
+			<DocumentSection
+				n="III"
+				heading="On borrowing other people’s identifiers"
+			>
+				<p>
+					A record that only means something inside its own database is a dead
+					end. The archive can say that a work is by Rembrandt and hangs in the
+					Rijksmuseum, and nothing outside this website can act on either claim,
+					because “Rembrandt” and “Rijksmuseum” are strings we happen to have
+					stored. So the three things this archive names most often — artists,
+					works, and the institutions holding them — have been reconciled
+					against Wikidata, and now carry identifiers that other collections
+					already use.
+				</p>
+				<div className="mt-6 not-italic">
+					<Ledger>
+						<LedgerRow
+							label="Artists"
+							value="5,371 of 6,910 carry a QID (77.7%), resolving to 5,363 distinct people."
+						/>
+						<LedgerRow
+							label="Works"
+							value="3,066 of 54,497 carry a QID — 8.0% of the 38,304 that reconciliation could reach at all."
+						/>
+						<LedgerRow
+							label="Collections"
+							value="956 institutions on file, holding 27,186 works (71.7% of everything with a named holder)."
+						/>
+					</Ledger>
+				</div>
+				<p className="mt-6">
+					The works are the honest disappointment, and the headline 5.6% is the
+					wrong number to read either way. A title is only ever matched inside
+					its own artist’s list of works, so a work with no artist, or with an
+					artist who has no identifier, was never a candidate: 16,193 of them,
+					before the matching began. What the rest miss on is mostly
+					translation. Rembrandt’s <em>Die Heimkehr des verlorenen Sohnes</em>{' '}
+					is <em>Die Rückkehr des verlorenen Sohnes</em> on Wikidata — the same
+					painting, and no amount of normalising gets from one string to the
+					other.
+				</p>
+				<p>
+					The collections went better, and are the part a reader will actually
+					notice. What the archive held was a free-text field on each work:
+					4,181 distinct spellings over 37,934 works, from “Rijksmuseum” to
+					“Paris, Musée du Louvre (inv. 3890)”. Reconciling the string rather
+					than the work is what collapses the variants — the Rijksmuseum is
+					named four ways here and is{' '}
+					<Link to="/archive/collection/Q190804">Q190804</Link> every time — and
+					it is why a collection now has a page of its own, listing the
+					spellings it answers to and linking out so the claim can be checked
+					rather than believed.
+				</p>
+				<p>
+					Nothing was written on a name alone. A candidate had to be called what
+					the archive calls it in some language, be the kind of thing that holds
+					works, and sit in the right city, compared across every name that city
+					has anywhere — which is what lets “Venedig” meet Venezia without a
+					table of exonyms. Where more than one candidate survived all three,
+					the group was refused rather than guessed at: 773 strings are held for
+					review and 2,083 matched nothing, most of them private hands that have
+					no identifier and never will. The tests earned their strictness. An
+					earlier pass proposed a street plaque outside the old Bibliothèque
+					nationale as the library itself, and was about to claim 254 works for
+					it.
+				</p>
+				<p>
+					None of this is verified. There are zero human confirmations on
+					record, and the table that would hold them is empty for the same
+					reason Levels II and III are empty above: it is the record of a person
+					having checked, and no person has. Three identifiers are known to be
+					wrong and excluded by hand; more are wrong and not yet known to be. A
+					QID here is a machine’s claim, published because a checkable claim is
+					worth more than a private one — not because it is settled.
+				</p>
+			</DocumentSection>
+
+			<DocumentSection n="IV" heading="Register of corrections">
 				<p>
 					Corrections accepted against published records are listed here in
 					perpetuity, with the original reading, the correction, and the person
@@ -98,13 +177,11 @@ export default function EssaysRoute() {
 					<Data className="text-ground-muted mb-3 block">
 						Corrections on file
 					</Data>
-					<NoRecords>
-						No correction is in the queue currently.
-					</NoRecords>
+					<NoRecords>No correction is in the queue currently.</NoRecords>
 				</div>
 			</DocumentSection>
 
-			<DocumentSection n="IV" heading="Submitting a dispute">
+			<DocumentSection n="V" heading="Submitting a dispute">
 				<p>
 					Cite the record number and the stamp beneath it, describe what the
 					machine got wrong, and say what you would put in its place. Send it

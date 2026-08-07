@@ -21,6 +21,8 @@ import { cn, getWorkImgSrc } from '#app/utils/misc.tsx'
 import {
 	activeFilterCount,
 	centuryLabel,
+	collectionHref,
+	isInstitutionId,
 	isSenseMode,
 	PAGE_SIZE,
 	SENSE_MAX_LENGTH,
@@ -42,7 +44,11 @@ function toSummary(work: ArchiveWork): WorkSummary {
 		artist: work.artist,
 		notBefore: work.notBefore,
 		notAfter: work.notAfter,
-		institution: work.institution,
+		// The register's name in a list, the cataloguer's wording on the work page.
+		// A column scanned down 60 rows wants one name per holder — not "Amsterdam,
+		// Rijksmuseum/ Inv. Nr.: RP-T-1954-.182" — and the record itself is where
+		// the archive's own words are owed in full.
+		institution: work.collection?.name ?? work.institution,
 		objectKey: work.objectKey,
 		motifs: work.taggings.map((t) => t.name),
 		updatedAt: work.verifiedAt,
@@ -57,6 +63,14 @@ export function ArchiveIndexView({ data }: { data: ArchiveIndexData }) {
 	// A failed reading search falls back to the filtered index, so the presence
 	// of a phrase and the presence of a ranking are not the same question.
 	const ranked = isSenseMode(filters) && !sense?.error
+	const legacySpelling =
+		filters.institution && !isInstitutionId(filters.institution)
+			? filters.institution
+			: null
+	const collection = isInstitutionId(filters.institution)
+		? (facets.institutions.find((i) => i.wikiDataId === filters.institution) ??
+			null)
+		: null
 
 	function hrefWith(changes: Record<string, string | number | null>) {
 		const next = new URLSearchParams(searchParams)
@@ -241,16 +255,27 @@ export function ArchiveIndexView({ data }: { data: ArchiveIndexData }) {
 						</ConsoleSelect>
 					</ConsoleField>
 
-					<ConsoleField label="Collection" htmlFor="f-institution">
+					<ConsoleField
+						label="Collection"
+						htmlFor="f-institution"
+						hint={`${facets.institutionCoverage.institutions.toLocaleString('en-US')} holders · ${facets.institutionCoverage.unreconciled.toLocaleString('en-US')} works unreconciled`}
+					>
 						<ConsoleSelect
 							id="f-institution"
 							name="institution"
 							defaultValue={filters.institution}
 						>
 							<option value="">any</option>
+							{/* A cited URL may still carry a literal spelling from before the
+							    register existed. It filters correctly, so the control admits
+							    it rather than resetting itself to "any" and telling the
+							    reader something false about the index they are looking at. */}
+							{legacySpelling ? (
+								<option value={legacySpelling}>{legacySpelling}</option>
+							) : null}
 							{facets.institutions.map((i) => (
-								<option key={i} value={i}>
-									{i}
+								<option key={i.wikiDataId} value={i.wikiDataId}>
+									{i.name} ({i.works.toLocaleString('en-US')})
 								</option>
 							))}
 						</ConsoleSelect>
@@ -316,6 +341,24 @@ export function ArchiveIndexView({ data }: { data: ArchiveIndexData }) {
 						</ConsoleField>
 					)}
 				</FilterConsole>
+
+				{/* Filtering to a collection is an argument that several spellings are
+				    one institution. The reader is one click from the evidence. */}
+				{collection ? (
+					<p className="font-body text-prose-sm text-ground-muted mt-3">
+						Narrowed to <span className="font-data">{collection.name}</span>,
+						which holds {collection.works.toLocaleString('en-US')}{' '}
+						{collection.works === 1 ? 'work' : 'works'} here — gathered from
+						every spelling the archive filed them under.{' '}
+						<Link
+							to={collectionHref(collection.wikiDataId)}
+							className="hover:text-link underline underline-offset-4"
+						>
+							The register entry
+						</Link>{' '}
+						names the identifier and lists those spellings.
+					</p>
+				) : null}
 
 				<SenseDisclosure sense={sense} ranked={ranked} />
 			</section>
@@ -554,14 +597,18 @@ function Pagination({
 	if (pageCount <= 1) return null
 	const from = (page - 1) * PAGE_SIZE + 1
 	const to = Math.min(page * PAGE_SIZE, total)
+	// `?page=9999` is reachable by hand and by a stale link, and the arithmetic
+	// on it reads "599,941–1,284 of 1,284". State the total instead.
+	const inRange = from <= total
 	return (
 		<nav
 			aria-label="Index pages"
 			className="border-rule mt-12 flex flex-wrap items-center justify-between gap-4 border-t pt-4"
 		>
 			<Data className="text-ground-muted tabular-nums">
-				{from.toLocaleString('en-US')}–{to.toLocaleString('en-US')} of{' '}
-				{total.toLocaleString('en-US')}
+				{inRange
+					? `${from.toLocaleString('en-US')}–${to.toLocaleString('en-US')} of ${total.toLocaleString('en-US')}`
+					: `${total.toLocaleString('en-US')} in all`}
 			</Data>
 			<div className="flex items-center gap-4">
 				{page > 1 ? (

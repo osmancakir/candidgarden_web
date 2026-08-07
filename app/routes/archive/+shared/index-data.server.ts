@@ -8,6 +8,7 @@ import {
 import { type Timings } from '#app/utils/timing.server.ts'
 import { type Prisma } from '#prisma-client'
 import {
+	isInstitutionId,
 	isSenseMode,
 	PAGE_SIZE,
 	parseFilters,
@@ -75,7 +76,15 @@ function buildWhere(f: ArchiveFilters): Prisma.ResourceWhereInput {
 	}
 
 	if (f.institution) {
-		and.push({ institution: f.institution })
+		// A QID collects every spelling the archive used for one holder — the
+		// Rijksmuseum is filed under four of them and the Hamburger Kunsthalle
+		// under ten. A legacy literal can only ever match its own spelling, which
+		// is precisely the limitation the register exists to remove.
+		and.push(
+			isInstitutionId(f.institution)
+				? { institutionRef: { is: { wikiDataId: f.institution } } }
+				: { institution: f.institution },
+		)
 	}
 
 	if (f.century != null) {
@@ -129,6 +138,7 @@ const WORK_SELECT = {
 	notBefore: true,
 	notAfter: true,
 	institution: true,
+	institutionRef: { select: { name: true, wikiDataId: true } },
 	objectKey: true,
 	artist: { select: { name: true } },
 	wikiDataVerification: { select: { status: true, verifiedAt: true } },
@@ -156,6 +166,7 @@ function toWork(r: WorkRow, match: ReadingMatch | null = null): ArchiveWork {
 		notBefore: r.notBefore,
 		notAfter: r.notAfter,
 		institution: r.institution,
+		collection: r.institutionRef,
 		objectKey: r.objectKey,
 		verification: verificationLabel(r.wikiDataVerification?.status),
 		verifiedAt: r.wikiDataVerification?.verifiedAt ?? null,
@@ -418,28 +429,41 @@ async function loadSenseCoverage(
  */
 async function loadFacets(timings?: Timings): Promise<ArchiveFacets> {
 	return cachified({
-		key: 'archive:facets:v1',
+		// v2: `institutions` changed from a list of spellings to the register.
+		key: 'archive:facets:v2',
 		cache,
 		timings,
 		ttl: 1000 * 60 * 60 * 6,
 		staleWhileRevalidate: 1000 * 60 * 60 * 24,
 		async getFreshValue() {
-			const [categories, institutions, centuries] = await Promise.all([
-				prisma.tag.findMany({
-					where: { category: { not: null } },
-					distinct: ['category'],
-					select: { category: true },
-					orderBy: { category: 'asc' },
-					take: 60,
-				}),
-				prisma.resource.findMany({
-					where: { institution: { not: null } },
-					distinct: ['institution'],
-					select: { institution: true },
-					orderBy: { institution: 'asc' },
-					take: 200,
-				}),
-				prisma.$queryRaw<Array<{ century: number; count: bigint }>>`
+			const [categories, institutions, unreconciled, centuries] =
+				await Promise.all([
+					prisma.tag.findMany({
+						where: { category: { not: null } },
+						distinct: ['category'],
+						select: { category: true },
+						orderBy: { category: 'asc' },
+						take: 60,
+					}),
+					// The register, not the spellings. `DISTINCT institution` gave 4,190
+					// options for 956 holders and had to be capped at 200 to be a usable
+					// control at all — a cap that alphabetically cut the list off inside
+					// the Bs and put 96% of the archive's works out of reach. There is no
+					// cap here because there is no longer anything to cap: one row per
+					// institution is a list a reader can hold.
+					prisma.institution.findMany({
+						where: { deletedAt: null, wikiDataId: { not: null } },
+						select: {
+							name: true,
+							wikiDataId: true,
+							_count: { select: { resources: true } },
+						},
+						orderBy: { name: 'asc' },
+					}),
+					prisma.resource.count({
+						where: { institution: { not: null }, institutionId: null },
+					}),
+					prisma.$queryRaw<Array<{ century: number; count: bigint }>>`
 					SELECT FLOOR((COALESCE("not_before", "not_after") - 1) / 100) + 1 AS century,
 					       COUNT(*)::bigint AS count
 					FROM "Resource"
@@ -447,15 +471,28 @@ async function loadFacets(timings?: Timings): Promise<ArchiveFacets> {
 					GROUP BY century
 					ORDER BY century ASC
 				`,
-			])
+				])
+
+			// An institution holding nothing is a register entry, not a filter: it
+			// would offer the reader a collection and then show them an empty index.
+			const held = institutions
+				.filter((i) => i._count.resources > 0 && i.wikiDataId)
+				.map((i) => ({
+					name: i.name,
+					wikiDataId: i.wikiDataId!,
+					works: i._count.resources,
+				}))
 
 			return {
 				categories: categories
 					.map((c) => c.category)
 					.filter((c): c is string => Boolean(c)),
-				institutions: institutions
-					.map((i) => i.institution)
-					.filter((i): i is string => Boolean(i)),
+				institutions: held,
+				institutionCoverage: {
+					institutions: held.length,
+					works: held.reduce((sum, i) => sum + i.works, 0),
+					unreconciled,
+				},
 				centuries: centuries.map((c) => ({
 					century: Number(c.century),
 					count: Number(c.count),

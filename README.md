@@ -21,11 +21,13 @@ machine truth.
   motif, subject class, period, collection, attribution, agreement, or Panofsky
   level.
 - **Searches by meaning.** Queries are embedded with `bge-m3` and ranked against
-  1,024-dimensional interpretation vectors in PostgreSQL with pgvector. 
-  
+  1,024-dimensional interpretation vectors in PostgreSQL with pgvector.
 - **Keeps uncertainty visible.** Generated readings are labelled provisional;
   confidence represents observed agreement rather than truth, and authenticated
   researchers can review the underlying records.
+- **Joins the corpus to the rest of the world.** Artists, works, and the
+  institutions holding them carry Wikidata identifiers, so a row here can be
+  joined against anything else that names the same thing.
 - **Turns the corpus into a spatial argument.** The Atlas projects the reading
   corpus into a stable three-dimensional UMAP layout so a search becomes a
   constellation rather than another reordered list.
@@ -63,6 +65,55 @@ Some of the less visible engineering behind the view:
 
 The complete data pipeline, binary layout, rendering decisions, and known gaps
 are documented in [The Atlas](./docs/atlas.md).
+
+## Interoperability: Wikidata identifiers
+
+An archive whose identifiers are local to itself cannot be joined to anything.
+Artists, works, and the institutions holding them have therefore been reconciled
+against Wikidata.
+
+| Entity                           | Reconciled                           | Denominator                                         |
+| -------------------------------- | ------------------------------------ | --------------------------------------------------- |
+| **Artists**                      | 5,371 (77.7%), 5,363 distinct people | 6,910 artists                                       |
+| **Works**                        | 3,066 (8.0%)                         | 38,304 works reachable by matching, of 54,497 total |
+| **Institutions**                 | 956 rows, every one with a QID       | 4,181 distinct free-text strings                    |
+| **Works placed in a collection** | 27,186 (71.7%)                       | 37,934 works naming a holder                        |
+
+The collection work is what a reader sees. `Resource.institution` was free
+text—the Rijksmuseum arrives as "Rijksmuseum", "Amsterdam, Rijksmuseum",
+"Rijksmuseum Amsterdam" and one string carrying an inventory number—so the
+string, not the work, was the unit of reconciliation. All four now resolve to
+Q190804, one `Institution` row, addressed by QID at
+[`/archive/collection/Q190804`](https://candidgarden.com/archive/collection/Q190804)
+and filterable across the index.
+
+A QID was only written where three tests passed together: the archive's string
+is a name the entity goes by in some language; the entity is the kind of thing
+that holds works, established by walking `instance of` upward; and the city
+agrees, compared against every name that place has in every language, so
+"Venedig" meets Venezia without a table of exonyms. Ambiguity was refused rather
+than guessed—773 strings are held for review and 2,083 matched nothing, largely
+private collections that have no identifier.
+
+The limits are worth stating plainly:
+
+- **Nothing is human-verified.** `WikiDataVerification` is empty by design.
+  Every identifier is a machine's claim, and that table stays the record of a
+  person having confirmed one.
+- **Three known-bad matches** are excluded by hand rather than by a rule,
+  because every rule strict enough to catch them also loses correct matches
+  covering hundreds of works.
+- **Work matching fails on translation, not on bugs.** Rembrandt's _Die Heimkehr
+  des verlorenen Sohnes_ is _Die Rückkehr des verlorenen Sohnes_ on Wikidata;
+  string comparison cannot bridge that, and 16,193 works were unreachable to
+  begin with because they have no artist or an unreconciled one.
+
+The reconciliation pipeline—fetching candidates, scoring them, and importing the
+survivors—is operational tooling rather than application code and is kept out of
+this repository. What ships here is the schema, the import's effects, and the
+[collection route](./app/routes/archive/collection.%24qid.tsx) that makes each
+assertion inspectable. The reasoning is written up for readers in
+[Reprise, §III](https://candidgarden.com/essays#on-borrowing-other-people-s-identifiers).
 
 ## Architecture
 
