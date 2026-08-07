@@ -118,9 +118,16 @@ checked-in migrations **manually, before pushing**, from a machine whose IP the
 security group permits:
 
 ```sh
-DATABASE_URL="$PRODUCTION_DATABASE_URL" npx prisma migrate deploy
-DATABASE_URL="$STAGING_DATABASE_URL" npx prisma migrate deploy
+DATABASE_URL="$PRODUCTION_DATABASE_URL?connect_timeout=30" npx prisma migrate deploy
+DATABASE_URL="$STAGING_DATABASE_URL?connect_timeout=30" npx prisma migrate deploy
 ```
+
+`connect_timeout=30` is not optional over a slow or distant link. Prisma's
+default is five seconds, and the engine reports a timeout as **P1001, "Can't
+reach database server"** — which reads like an allowlist problem and is not one.
+If you see P1001, check `nc -z <host> 5432` first: if the port answers, the
+security group is fine and the timeout is what needs raising. (Use `?` above
+only if the URL has no query string of its own; otherwise append `&`.)
 
 Migrations must land before the code that depends on them. For anything
 destructive, use **widen then narrow**: add the new column, deploy code that

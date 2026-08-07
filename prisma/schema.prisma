@@ -163,20 +163,28 @@ model Artist {
 }
 
 model Resource {
-  id          Int     @id @default(autoincrement())
-  artistId    Int?    @map("artist_id")
-  title       String?
-  titleEn     String? @map("title_en")
-  notBefore   Int?    @map("not_before")
-  notAfter    Int?    @map("not_after")
-  location    String?
-  institution String?
-  path        String?
-  objectKey   String? @unique
-  wikiDataId  String?
-  highlight   Boolean @default(false)
+  id            Int     @id @default(autoincrement())
+  artistId      Int?    @map("artist_id")
+  title         String?
+  titleEn       String? @map("title_en")
+  notBefore     Int?    @map("not_before")
+  notAfter      Int?    @map("not_after")
+  location      String?
+  /// What the cataloguer wrote. Kept as written: it is what the archive filter
+  /// and the work page still read, and it is the only record for the ~10,500
+  /// works whose holder could not be reconciled. `institutionId` is the
+  /// resolved form beside it, not a replacement for it.
+  institution   String?
+  /// The reconciled holder, where one was identified with a Wikidata QID.
+  /// Null means "not reconciled", never "no holder" — check `institution`.
+  institutionId Int?    @map("institution_id")
+  path          String?
+  objectKey     String? @unique
+  wikiDataId    String?
+  highlight     Boolean @default(false)
 
   artist                Artist?                   @relation(fields: [artistId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  institutionRef        Institution?              @relation(fields: [institutionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   taggings              Tagging[]
   relationsAsFirst      Relation[]                @relation("Resource1")
   relationsAsSecond     Relation[]                @relation("Resource2")
@@ -190,18 +198,28 @@ model Resource {
   @@index([artistId])
   @@index([highlight])
   @@index([title, location])
+  @@index([institutionId])
 }
 
+/// A holder of works, reconciled to one Wikidata entity.
+///
+/// One row per institution, not per spelling: the archive names the Rijksmuseum
+/// four different ways and they are all Q190804, which is the whole point of
+/// carrying an identifier. `name` is the archive's own commonest spelling rather
+/// than the Wikidata label, because the label is English-first — "Louvre
+/// Museum", "Museum of Art and Crafts Hamburg" — and this is a German archive
+/// that already shows the cataloguer's wording on the work page.
 model Institution {
   id                   Int                   @id @default(autoincrement())
   name                 String
-  wikiDataId           String?
+  wikiDataId           String?               @unique
   imageUrl             String?
   objectKey            String?               @unique
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   deletedAt            DateTime?
   wikiDataVerification WikiDataVerification?
+  resources            Resource[]
 
   @@index([name])
 }
@@ -350,16 +368,16 @@ model Favorite {
 /// reader silently curated, and it is what marks a card as seen so the deck does
 /// not offer it twice.
 model DriftVerdict {
-  id         String   @id @default(cuid())
-  driftId    String   @map("drift_id")
-  userId     String?  @map("user_id")
-  resourceId Int      @map("resource_id")
+  id         String  @id @default(cuid())
+  driftId    String  @map("drift_id")
+  userId     String? @map("user_id")
+  resourceId Int     @map("resource_id")
   /// PULL | PUSH | REST.
   verdict    String
   /// Which deck the card came from: SPREAD (a cluster representative) or
   /// NEAREST (drawn towards the drift vector). Kept so the readout can say how
   /// much of the drift was exploration and how much was confirmation.
-  origin     String   @default("SPREAD")
+  origin     String  @default("SPREAD")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
