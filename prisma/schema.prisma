@@ -182,6 +182,12 @@ model Resource {
   objectKey     String? @unique
   wikiDataId    String?
   highlight     Boolean @default(false)
+  /// The work's place in a fixed shuffle of the corpus, dealt once at insert and
+  /// never read as a fact about the work. It exists because the index has to
+  /// open in *some* order and every meaningful one puts the same 60 works at the
+  /// head of the archive forever — ordering by title opens on 120 sheets of one
+  /// Hiroshige series, which is a fact about the alphabet, not the collection.
+  shuffle       Float   @default(dbgenerated("random()"))
 
   artist                Artist?                   @relation(fields: [artistId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   institutionRef        Institution?              @relation(fields: [institutionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
@@ -199,6 +205,7 @@ model Resource {
   @@index([highlight])
   @@index([title, location])
   @@index([institutionId])
+  @@index([shuffle])
 }
 
 /// A holder of works, reconciled to one Wikidata entity.

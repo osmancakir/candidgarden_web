@@ -8,6 +8,7 @@ import {
 import { type Timings } from '#app/utils/timing.server.ts'
 import { type Prisma } from '#prisma-client'
 import {
+	dealOffset,
 	isInstitutionId,
 	isSenseMode,
 	PAGE_SIZE,
@@ -115,10 +116,25 @@ function buildWhere(f: ArchiveFilters): Prisma.ResourceWhereInput {
 	return and.length ? { AND: and } : {}
 }
 
+/**
+ * The order of the deal: the stored permutation, tie-broken by id.
+ *
+ * `shuffle` is a double and collisions across 54,497 draws are vanishingly
+ * unlikely, but an order that is only *almost* total is one Postgres may return
+ * differently on two runs of the same query — which for a paginated ring means
+ * a work shown twice and another never.
+ */
+const DEAL_ORDER: Prisma.ResourceOrderByWithRelationInput[] = [
+	{ shuffle: 'asc' },
+	{ id: 'asc' },
+]
+
 function orderBy(
 	sort: ArchiveFilters['sort'],
 ): Prisma.ResourceOrderByWithRelationInput[] {
 	switch (sort) {
+		case 'chance':
+			return DEAL_ORDER
 		case 'period':
 			// `nulls: 'last'` keeps undated works from crowding the head of a
 			// chronological view — they are shown, but they are shown last.
@@ -204,16 +220,21 @@ async function loadFilteredIndex(
 	const where = buildWhere(filters)
 	const skip = (filters.page - 1) * PAGE_SIZE
 
-	const [total, rows] = await Promise.all([
-		prisma.resource.count({ where }),
-		prisma.resource.findMany({
-			where,
-			orderBy: orderBy(filters.sort),
-			skip,
-			take: PAGE_SIZE,
-			select: WORK_SELECT,
-		}),
-	])
+	const [total, rows] =
+		filters.sort === 'chance'
+			? // A deal has to be counted before it can be cut, so this one pays a
+				// round trip the column orders do not — see `dealPage`.
+				await dealPage(filters, where)
+			: await Promise.all([
+					prisma.resource.count({ where }),
+					prisma.resource.findMany({
+						where,
+						orderBy: orderBy(filters.sort),
+						skip,
+						take: PAGE_SIZE,
+						select: WORK_SELECT,
+					}),
+				])
 
 	const facets = await loadFacets(timings)
 
@@ -225,6 +246,53 @@ async function loadFilteredIndex(
 		pageCount: Math.max(1, Math.ceil(total / PAGE_SIZE)),
 		sense,
 	}
+}
+
+/**
+ * One page of a deal, and the size of the pack it was dealt from.
+ *
+ * The permutation is stored, so a deal is a *cut* rather than a shuffle: the
+ * seed picks a place in `Resource.shuffle` and the page is the sixty works from
+ * there. Cutting rather than reshuffling is what lets the same rows be paged
+ * through — `ORDER BY random()` would deal a new deck on every page turn and
+ * show the reader works they had already passed.
+ *
+ * The deal is a ring. A page that runs off the end of the permutation is
+ * completed from the front of it, so whichever cut a reader is dealt, turning
+ * every page still shows them every work exactly once.
+ *
+ * Two round trips at worst, and the count is the first of them because the cut
+ * cannot be placed without knowing what it is cutting into.
+ */
+async function dealPage(
+	filters: ArchiveFilters,
+	where: Prisma.ResourceWhereInput,
+): Promise<[number, Array<WorkRow>]> {
+	const total = await prisma.resource.count({ where })
+	const skip = (filters.page - 1) * PAGE_SIZE
+	// `?page=9999` is reachable by hand and by a stale link. It is empty, as it
+	// is under every other order — the ring closes over the result set, not over
+	// the reader's arithmetic.
+	if (skip >= total) return [total, []]
+
+	const take = Math.min(PAGE_SIZE, total - skip)
+	const from = (skip + dealOffset(filters.seed, total)) % total
+	const head = await prisma.resource.findMany({
+		where,
+		orderBy: DEAL_ORDER,
+		skip: from,
+		take,
+		select: WORK_SELECT,
+	})
+	if (head.length >= take) return [total, head]
+
+	const tail = await prisma.resource.findMany({
+		where,
+		orderBy: DEAL_ORDER,
+		take: take - head.length,
+		select: WORK_SELECT,
+	})
+	return [total, [...head, ...tail]]
 }
 
 /**

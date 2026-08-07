@@ -21,6 +21,16 @@ export const PAGE_SIZE = 60
  */
 export const SENSE_MAX_LENGTH = 200
 
+/**
+ * What a deal identifier may contain.
+ *
+ * Seeds are minted here (a date, or `nextDeal`'s base-36 digest) and read back
+ * from the URL, where anyone may have typed anything. Nothing downstream is
+ * injectable — the seed only ever reaches a hash function — but it is also
+ * printed on the page, so it is kept to the alphabet it is written in.
+ */
+const SEED_PATTERN = /^[A-Za-z0-9-]{1,32}$/
+
 export type BrowseLevel = 1 | 2 | 3
 
 export type ArchiveFilters = {
@@ -43,7 +53,15 @@ export type ArchiveFilters = {
 	minAgreement: number
 	level: BrowseLevel
 	page: number
-	sort: 'title' | 'period' | 'motifs'
+	sort: 'chance' | 'title' | 'period' | 'motifs'
+	/**
+	 * Which deal of the archive is being read, when the order is `chance`.
+	 *
+	 * Always resolved to a concrete value — today's date when the URL says
+	 * nothing — because a deal that only exists implicitly cannot be cited, and
+	 * §8 asks that every view of the archive have an address.
+	 */
+	seed: string
 }
 
 export type ArchiveTagging = {
@@ -164,12 +182,13 @@ export type ArchiveIndexData = {
 	sense: SenseReport | null
 }
 
-export function parseFilters(url: URL): ArchiveFilters {
+export function parseFilters(url: URL, now?: Date): ArchiveFilters {
 	const p = url.searchParams
 	const levelRaw = Number(p.get('level') ?? 1)
 	const level = (levelRaw === 2 || levelRaw === 3 ? levelRaw : 1) as BrowseLevel
 	const centuryRaw = Number(p.get('century'))
 	const sortRaw = p.get('sort')
+	const seedRaw = (p.get('seed') ?? '').trim()
 	return {
 		q: (p.get('q') ?? '').trim(),
 		sense: (p.get('sense') ?? '').trim().slice(0, SENSE_MAX_LENGTH),
@@ -182,10 +201,57 @@ export function parseFilters(url: URL): ArchiveFilters {
 		level,
 		page: Math.max(1, Number(p.get('page') ?? 1) || 1),
 		sort:
-			sortRaw === 'period' || sortRaw === 'motifs' || sortRaw === 'title'
+			sortRaw === 'period' ||
+			sortRaw === 'motifs' ||
+			sortRaw === 'title' ||
+			sortRaw === 'chance'
 				? sortRaw
-				: 'title',
+				: 'chance',
+		seed: SEED_PATTERN.test(seedRaw) ? seedRaw : todaysDeal(now),
 	}
+}
+
+/**
+ * The deal the archive opens on today.
+ *
+ * A date rather than a random token: the homepage has to be different from
+ * yesterday's without being different from itself, or the reader turning to
+ * page 2 is dealt a new deck and shown works they have already passed. UTC so
+ * that the archive changes hands at one moment for everyone rather than at
+ * whatever midnight the reader happens to keep.
+ */
+export function todaysDeal(now: Date = new Date()): string {
+	return now.toISOString().slice(0, 10)
+}
+
+/**
+ * The next deal after this one. Deterministic on purpose: "deal again" is a
+ * link, and a link whose target is drawn from `Math.random()` is a different
+ * link on the server than in the browser that hydrates it.
+ */
+export function nextDeal(seed: string): string {
+	return hash32(`${seed}/again`).toString(36)
+}
+
+/**
+ * Where in the shuffle a deal begins.
+ *
+ * The permutation stored on `Resource.shuffle` is fixed — dealing again cuts it
+ * at a different place rather than reshuffling it, which is what makes a deal
+ * both cheap (an indexed offset) and stable while it is being paged through.
+ */
+export function dealOffset(seed: string, total: number): number {
+	return total > 0 ? hash32(seed) % total : 0
+}
+
+/** FNV-1a, 32-bit. Not a hash for keeping secrets — a hash for cutting a deck. */
+function hash32(value: string): number {
+	let h = 0x811c9dc5
+	for (let i = 0; i < value.length; i++) {
+		h ^= value.charCodeAt(i)
+		h = Math.imul(h, 0x01000193)
+	}
+	return h >>> 0
 }
 
 /**

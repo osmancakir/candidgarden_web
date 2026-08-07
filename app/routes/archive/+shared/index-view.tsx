@@ -24,6 +24,7 @@ import {
 	collectionHref,
 	isInstitutionId,
 	isSenseMode,
+	nextDeal,
 	PAGE_SIZE,
 	SENSE_MAX_LENGTH,
 	type ArchiveIndexData,
@@ -63,6 +64,9 @@ export function ArchiveIndexView({ data }: { data: ArchiveIndexData }) {
 	// A failed reading search falls back to the filtered index, so the presence
 	// of a phrase and the presence of a ranking are not the same question.
 	const ranked = isSenseMode(filters) && !sense?.error
+	// A ranking has its own order, so the deal is only in play when nothing is
+	// being ranked — the same condition that decides which Order control is shown.
+	const dealt = filters.sort === 'chance' && !ranked
 	const legacySpelling =
 		filters.institution && !isInstitutionId(filters.institution)
 			? filters.institution
@@ -125,19 +129,6 @@ export function ArchiveIndexView({ data }: { data: ArchiveIndexData }) {
 						<p className="font-body text-prose-sm text-ground-muted">
 							{PANOFSKY[filters.level].blurb}
 						</p>
-						{/* The fourth chip leaves the index, so it gets its own line — and
-						    the line says what it is not. The descent stops at III; this is
-						    where those readings are held, not a step beneath them. */}
-						<p className="font-body text-prose-sm text-ground-muted">
-							<Link
-								to="/archive/atlas"
-								className="underline underline-offset-4"
-							>
-								Latent space
-							</Link>{' '}
-							is not a fourth level. It is the same Level II and III readings
-							seen from outside — as the space the model holds them in.
-						</p>
 						{/* The one way into the archive that starts from the reader rather
 						    than from the record. It belongs beside the atlas because it is
 						    built out of the same space: the spread of cards it deals is
@@ -149,9 +140,9 @@ export function ArchiveIndexView({ data }: { data: ArchiveIndexData }) {
 							>
 								The drift
 							</Link>{' '}
-							goes the other way: a passage across that same space, pulled and
-							pushed by a few dozen works, ending somewhere that is a reading of
-							you rather than of them.
+							is a passage across the latent space, pulled and pushed by a few
+							dozen works, ending somewhere that is a reading of you rather than
+							of them.
 						</p>
 					</div>
 				</div>
@@ -186,6 +177,11 @@ export function ArchiveIndexView({ data }: { data: ArchiveIndexData }) {
 				>
 					{/* The view mode has to survive a submit, so it rides along hidden. */}
 					<input type="hidden" name="level" value={filters.level} />
+					{/* And so does the deal: narrowing a page of works must narrow *those*
+					    works, not hand back sixty others cut from the same pack. */}
+					{dealt ? (
+						<input type="hidden" name="seed" value={filters.seed} />
+					) : null}
 
 					<ConsoleField label="Keyword" htmlFor="f-q" hint="title or artist">
 						<ConsoleInput
@@ -334,10 +330,25 @@ export function ArchiveIndexView({ data }: { data: ArchiveIndexData }) {
 								name="sort"
 								defaultValue={filters.sort}
 							>
+								<option value="chance">chance</option>
 								<option value="title">title</option>
 								<option value="period">period</option>
 								<option value="motifs">motif count</option>
 							</ConsoleSelect>
+							{/* The seed is shown rather than hidden because it is the deal's
+							    only name, and a reader who wants this one tomorrow has no
+							    other way to ask for it. */}
+							{dealt ? (
+								<Data className="text-ground-muted normal-case opacity-70">
+									cut at {filters.seed} ·{' '}
+									<Link
+										to={hrefWith({ seed: nextDeal(filters.seed) })}
+										className="hover:text-link underline underline-offset-4"
+									>
+										deal again
+									</Link>
+								</Data>
+							) : null}
 						</ConsoleField>
 					)}
 				</FilterConsole>
@@ -357,6 +368,24 @@ export function ArchiveIndexView({ data }: { data: ArchiveIndexData }) {
 							The register entry
 						</Link>{' '}
 						names the identifier and lists those spellings.
+					</p>
+				) : null}
+
+				{/* §6, "uncertainty as content", applied to an ordering. A shuffled
+				    index looks like an editorial selection unless it says otherwise,
+				    and the reader who liked what they were dealt deserves to know it
+				    can be kept. */}
+				{dealt ? (
+					<p className="font-body text-prose-sm text-ground-muted measure mt-3">
+						Dealt, not sorted. Any meaningful order of{' '}
+						<span className="font-data tabular-nums">
+							{total.toLocaleString('en-US')}
+						</span>{' '}
+						works opens the archive on the same page forever — by title, on one
+						Hiroshige series, which is a fact about the alphabet rather than
+						about the collection. So the index is cut at a different place each
+						day and nothing here is a selection. A deal worth keeping is the one
+						in the address bar; “deal again” hands you another.
 					</p>
 				) : null}
 
