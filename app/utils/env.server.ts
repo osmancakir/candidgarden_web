@@ -14,6 +14,10 @@ const schema = z.object({
 
 	ALLOW_INDEXING: z.enum(['true', 'false']).optional(),
 
+	// Cloudflare Web Analytics site token. Public by design and set only on the
+	// production Worker; when it is absent no beacon is rendered.
+	WEB_ANALYTICS_TOKEN: z.string().optional(),
+
 	// Amazon S3 configuration. Credentials use the AWS SDK provider chain.
 	AWS_ACCESS_KEY_ID: z.string(),
 	AWS_SECRET_ACCESS_KEY: z.string(),
@@ -60,6 +64,7 @@ export function getEnv() {
 		MODE: process.env.NODE_ENV,
 		SENTRY_DSN: process.env.SENTRY_DSN,
 		ALLOW_INDEXING: process.env.ALLOW_INDEXING,
+		WEB_ANALYTICS_TOKEN: process.env.WEB_ANALYTICS_TOKEN,
 	}
 }
 

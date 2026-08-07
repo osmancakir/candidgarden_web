@@ -184,6 +184,24 @@ function Document({
 				/>
 				<ScrollRestoration nonce={nonce} />
 				<Scripts nonce={nonce} />
+				{/*
+				 * Cloudflare Web Analytics. Injected here rather than by Cloudflare's
+				 * automatic setup because the CSP in `entry.server.tsx` uses
+				 * `strict-dynamic`, which only trusts scripts carrying the request
+				 * nonce. The site token is public by design. Only the production
+				 * Worker sets `WEB_ANALYTICS_TOKEN`, so staging and local runs send
+				 * nothing.
+				 */}
+				{env?.WEB_ANALYTICS_TOKEN ? (
+					<script
+						nonce={nonce}
+						type="module"
+						src="https://static.cloudflareinsights.com/beacon.min.js"
+						data-cf-beacon={JSON.stringify({
+							token: env.WEB_ANALYTICS_TOKEN,
+						})}
+					/>
+				) : null}
 			</body>
 		</html>
 	)

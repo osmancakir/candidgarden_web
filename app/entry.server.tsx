@@ -63,12 +63,22 @@ export default async function handleRequest(...args: DocRequestArgs) {
 					'connect-src': [
 						MODE === 'development' ? 'ws:' : undefined,
 						process.env.SENTRY_DSN ? '*.sentry.io' : undefined,
+						// Cloudflare Web Analytics posts beacons to
+						// cloudflareinsights.com/cdn-cgi/rum.
+						'https://cloudflareinsights.com',
 						"'self'",
 					],
 					'font-src': ["'self'"],
 					'frame-src': ["'self'"],
 					'img-src': ["'self'", 'data:'],
-					'script-src': ["'strict-dynamic'", "'self'", `'nonce-${nonce}'`],
+					'script-src': [
+						"'strict-dynamic'",
+						"'self'",
+						// Ignored by browsers that honour `strict-dynamic`, kept for
+						// the ones that do not.
+						'https://static.cloudflareinsights.com',
+						`'nonce-${nonce}'`,
+					],
 					'script-src-attr': [`'nonce-${nonce}'`],
 				},
 			},

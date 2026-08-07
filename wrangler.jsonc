@@ -165,6 +165,10 @@
 			],
 			"vars": {
 				"ALLOW_INDEXING": "true",
+				// Cloudflare Web Analytics site token for candidgarden.com. Public by
+				// design (it ships in the HTML); the beacon in `app/root.tsx` renders
+				// only when this is set, so staging stays out of the numbers.
+				"WEB_ANALYTICS_TOKEN": "b1b28817e7764e6fa541f839d04bf802",
 			},
 			"secrets": {
 				"required": [
