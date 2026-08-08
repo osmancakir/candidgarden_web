@@ -148,44 +148,66 @@ export function RecordRow({
 }) {
 	return (
 		<tr className="border-rule hover:bg-tint border-b transition-colors">
-			<td className="w-16 py-2 pr-3 align-top">
+			{/* The plate box is a *block* of its own, not the bare <img>: preflight
+			    gives every image `max-width: 100%`, so an img sized only by its own
+			    class collapses along with the column and the table then has no
+			    reason to keep the column wide — which is how a 56px plate ends up a
+			    6px sliver. A fixed-width child (and `min-w-14`) gives the column a
+			    floor the table layout has to honour. */}
+			<td className="w-14 min-w-14 py-2 pr-3 align-top">
 				{imgSrc ? (
-					<Link to={workHref(work.id)} tabIndex={-1} aria-hidden>
+					<Link
+						to={workHref(work.id)}
+						tabIndex={-1}
+						aria-hidden
+						className="block size-14"
+					>
 						<Img
 							src={imgSrc}
 							alt=""
 							width={112}
 							height={112}
-							className="h-14 w-14 object-cover"
+							fit="contain"
+							className="size-full object-contain object-left"
 						/>
 					</Link>
 				) : (
-					<span className="border-rule text-ground-muted font-data flex h-14 w-14 items-center justify-center border text-[0.6rem]">
+					<span className="border-rule text-ground-muted font-data flex size-14 items-center justify-center border text-[0.6rem]">
 						NO IMG
 					</span>
 				)}
 			</td>
-			<td className="py-2 pr-4 align-top">
+			{/* `max-w-0 w-full` makes the title column absorb whatever width the
+			    fixed columns leave, which is what gives the clamp something to
+			    measure against. Two lines rather than one: the row is already a
+			    plate tall, so the second line is free, and on a phone one line of
+			    a museum title is barely a word. */}
+			<td className="w-full max-w-0 py-2 pr-4 align-top">
 				<Link
 					to={workHref(work.id)}
-					className="hover:text-link font-body text-prose no-underline hover:underline"
+					className="hover:text-link font-body text-prose line-clamp-2 wrap-break-word no-underline hover:underline"
+					title={work.title ?? undefined}
 				>
 					{work.title ?? <span className="italic opacity-70">Untitled</span>}
 				</Link>
 				{match?.excerpt ? (
-					<p className="font-body text-prose-sm text-ground-muted measure mt-1 italic">
+					<p className="font-body text-prose-sm text-ground-muted mt-1 truncate italic">
 						“{match.excerpt}”
 					</p>
 				) : null}
 			</td>
 			<td className="font-body text-prose-sm py-2 pr-4 align-top italic">
-				{work.artist ?? <span className="opacity-60">Unattributed</span>}
+				<span className="line-clamp-2 max-w-24 sm:max-w-36 lg:max-w-none lg:whitespace-nowrap">
+					{work.artist ?? <span className="opacity-60">Unattributed</span>}
+				</span>
 			</td>
-			<td className="font-data text-data-sm py-2 pr-4 align-top tabular-nums">
+			<td className="font-data text-data-sm py-2 pr-4 align-top whitespace-nowrap tabular-nums">
 				{displayPeriod(work.notBefore, work.notAfter)}
 			</td>
 			<td className="font-data text-data-sm text-ground-muted hidden py-2 pr-4 align-top md:table-cell">
-				{work.institution ?? '—'}
+				<span className="block max-w-48 truncate">
+					{work.institution ?? '—'}
+				</span>
 			</td>
 			<td className="hidden py-2 align-top lg:table-cell">
 				<div className="flex flex-wrap gap-1">
