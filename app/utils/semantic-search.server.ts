@@ -39,6 +39,38 @@ const OVERFETCH = 4
  */
 const PROBES = 10
 
+/**
+ * Why the planner has to be told not to scan the table.
+ *
+ * A 1024-dimension vector is TOASTed out of line, so `pg_relation_size` on
+ * `InterpretationEmbedding` reports 16 MB against 1201 MB of real storage. The
+ * planner costs a sequential scan off that 16 MB and charges nothing for
+ * detoasting the ~480 MB it then reads, while production's `effective_cache_size`
+ * of 360 MB — honest for a ~1 GB instance — inflates the estimated cost of
+ * walking the 702 MB index. The two errors compound into a seq-scan plan costing
+ * 8,350 against the index's 9,275, and that 10% margin buys a plan 25x slower:
+ * 12.4s of parallel sequential scan where the index takes 0.5s.
+ *
+ * The margin is thin enough to flip with row growth or an instance change, so
+ * this is not a production-only correction — development happens to plan it
+ * right, on 40 GB of `effective_cache_size` and the same data.
+ *
+ * `SET LOCAL` for exactly the reason `probes` is set that way, and blunt only in
+ * the abstract: the transaction holds one query whose sole sensible plan is the
+ * vector index.
+ */
+const DISABLE_SEQSCAN = 'SET LOCAL enable_seqscan = off'
+
+/**
+ * How long the ANN transaction may run, against Prisma's 5s default.
+ *
+ * A cold index scan measures 3.0s on production where a warm one takes 0.5s,
+ * leaving no headroom under the default — and an expired transaction does not
+ * cost the reader a slow page, it costs them the ranking, because
+ * `loadRankedIndex` can only degrade to the unranked index.
+ */
+const TRANSACTION_TIMEOUT = 15_000
+
 export type SemanticHit = {
 	resourceId: number
 	/** Panofsky level of the passage that matched: 2 or 3. */
@@ -133,10 +165,11 @@ function toVectorLiteral(vector: number[]) {
  * `vector_cosine_ops`, and switching to `<#>` or `<->` silently drops to a
  * sequential scan over 108k rows rather than failing.
  *
- * Wrapped in a transaction solely so `SET LOCAL ivfflat.probes` applies to the
- * query that follows. A plain `SET` would be wrong here: Prisma hands out
- * pooled connections, so it would leak the setting to whatever ran next on that
- * connection and, worse, would not reliably be set for this one.
+ * Wrapped in a transaction solely so `SET LOCAL ivfflat.probes` and
+ * `SET LOCAL enable_seqscan` apply to the query that follows. A plain `SET`
+ * would be wrong here: Prisma hands out pooled connections, so it would leak the
+ * settings to whatever ran next on that connection and, worse, would not
+ * reliably be set for this one.
  */
 export async function searchInterpretations({
 	query,
@@ -151,12 +184,14 @@ export async function searchInterpretations({
 	const vector = toVectorLiteral(await embedQuery(query))
 	const candidates = limit * OVERFETCH
 
-	const rows = await prisma.$transaction(async (tx) => {
-		await tx.$executeRawUnsafe(`SET LOCAL ivfflat.probes = ${PROBES}`)
-		return tx.$queryRawUnsafe<
-			Array<{ resource_id: number; level: number; distance: number }>
-		>(
-			`WITH candidates AS (
+	const rows = await prisma.$transaction(
+		async (tx) => {
+			await tx.$executeRawUnsafe(`SET LOCAL ivfflat.probes = ${PROBES}`)
+			await tx.$executeRawUnsafe(DISABLE_SEQSCAN)
+			return tx.$queryRawUnsafe<
+				Array<{ resource_id: number; level: number; distance: number }>
+			>(
+				`WITH candidates AS (
 		     SELECT e.resource_id, e.level, e.embedding <=> $1::vector AS distance
 		       FROM "InterpretationEmbedding" e
 		      ${level ? 'WHERE e.level = $4' : ''}
@@ -169,9 +204,11 @@ export async function searchInterpretations({
 		      ORDER BY resource_id, distance
 		 )
 		 SELECT resource_id, level, distance FROM best ORDER BY distance LIMIT $3`,
-			...[vector, candidates, limit, ...(level ? [level] : [])],
-		)
-	})
+				...[vector, candidates, limit, ...(level ? [level] : [])],
+			)
+		},
+		{ timeout: TRANSACTION_TIMEOUT },
+	)
 
 	return rows.map((row) => ({
 		resourceId: row.resource_id,
@@ -204,19 +241,23 @@ export async function searchInterpretationPoints({
 }): Promise<Array<SemanticPoint>> {
 	const vector = toVectorLiteral(await embedQuery(query))
 
-	const rows = await prisma.$transaction(async (tx) => {
-		await tx.$executeRawUnsafe(`SET LOCAL ivfflat.probes = ${PROBES}`)
-		return tx.$queryRawUnsafe<
-			Array<{ resource_id: number; level: number; distance: number }>
-		>(
-			`SELECT e.resource_id, e.level, e.embedding <=> $1::vector AS distance
-			   FROM "InterpretationEmbedding" e
-			  ORDER BY e.embedding <=> $1::vector
-			  LIMIT $2`,
-			vector,
-			limit,
-		)
-	})
+	const rows = await prisma.$transaction(
+		async (tx) => {
+			await tx.$executeRawUnsafe(`SET LOCAL ivfflat.probes = ${PROBES}`)
+			await tx.$executeRawUnsafe(DISABLE_SEQSCAN)
+			return tx.$queryRawUnsafe<
+				Array<{ resource_id: number; level: number; distance: number }>
+			>(
+				`SELECT e.resource_id, e.level, e.embedding <=> $1::vector AS distance
+				   FROM "InterpretationEmbedding" e
+				  ORDER BY e.embedding <=> $1::vector
+				  LIMIT $2`,
+				vector,
+				limit,
+			)
+		},
+		{ timeout: TRANSACTION_TIMEOUT },
+	)
 
 	return rows.map((row) => ({
 		resourceId: row.resource_id,
