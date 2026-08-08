@@ -205,7 +205,10 @@ model Resource {
   @@index([highlight])
   @@index([title, location])
   @@index([institutionId])
-  @@index([shuffle])
+  /// Both columns, because the deal orders by both: ("shuffle") alone leaves the
+  /// `id` tie-break to a sort, which is free at the head of the permutation and
+  /// ruinous at the depth the deal actually cuts.
+  @@index([shuffle, id])
 }
 
 /// A holder of works, reconciled to one Wikidata entity.
@@ -330,6 +333,10 @@ model Tag {
 
   @@index([name, language])
   @@index([category, safety])
+  /// Trigrams, because the motif filter matches names case-insensitively and no
+  /// b-tree answers ILIKE — `@@index([name, language])` above is consulted for
+  /// exact lookups and skipped for the one the archive's readers actually use.
+  @@index([name(ops: raw("gin_trgm_ops"))], map: "Tag_name_trgm_idx", type: Gin)
 }
 
 model Tagging {
@@ -342,6 +349,11 @@ model Tagging {
   tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([resourceId, tagId])
+  /// The other direction. ("resource_id", "tag_id") answers "what does this work
+  /// carry" and cannot answer "what carries this motif" — a composite b-tree is
+  /// not enterable from its second column — which left the motif filter reading
+  /// all 5.8M rows of this table.
+  @@index([tagId])
 }
 
 model Favorite {
