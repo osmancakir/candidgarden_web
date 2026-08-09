@@ -519,19 +519,20 @@ one implementation in `app/routes/archive/+shared/`. Filter state lives entirely
 in the URL, so any view of the archive is citable, works without JavaScript, and
 degrades to a plain GET form.
 
-| Route                             | Register                      | Notes                                                                                 |
-| --------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------- |
-| `/`, `/archive`                   | paper (level 3 flips to void) | Statement, filter console, records at the chosen level                                |
-| `/archive/:id`                    | **the descent**               | The signature. Paper → slate → void                                                   |
-| `/archive/atlas`                  | void                          | `Latent space` — the fourth chip, not a fourth level (§2). See [atlas.md](./atlas.md) |
-| `/about`                          | paper                         | Institute charter (§7)                                                                |
-| `/glossary`                       | paper                         | §8, with the German original per term                                                 |
-| `/essays`                         | paper                         | The _Reprise_ chapter (§5) — methodology and the corrections register                 |
-| `/privacy`, `/tos`, `/support`    | paper                         | Notice, attribution ethics, and the invitation to dispute                             |
-| `/login`, `/signup`, `/verify`, … | paper                         | `AccessPage` — no centred product card                                                |
-| `/settings/profile/*`             | paper                         | `Ledger` rows; the archive files its users like its works                             |
-| `/users`, `/users/:username`      | paper                         | The contributor register                                                              |
-| `*` (404)                         | paper                         | §8: a real work at Level I, captioned `INTERPRETATION NOT FOUND`                      |
+| Route                             | Register                      | Notes                                                                                                                                   |
+| --------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`, `/archive`                   | paper (level 3 flips to void) | Statement, filter console, records at the chosen level                                                                                  |
+| `/archive/:id`                    | **the descent**               | The signature. Paper → slate → void                                                                                                     |
+| `/archive/atlas`                  | void                          | `Latent space` — the fourth chip, not a fourth level (§2). See [atlas.md](./atlas.md)                                                   |
+| `/about`                          | paper                         | Institute charter (§7)                                                                                                                  |
+| `/glossary`                       | paper                         | §8, with the German original per term                                                                                                   |
+| `/essays`                         | paper                         | The _Reprise_ chapter (§5) — methodology and the corrections register                                                                   |
+| `/privacy`, `/tos`, `/support`    | paper                         | Notice, attribution ethics, and the invitation to dispute                                                                               |
+| `/companions`                     | paper                         | Out of series — a reading companion no machine wrote, kept for the readers who ask for it. Not in `InstituteNav`; listed in the sitemap |
+| `/login`, `/signup`, `/verify`, … | paper                         | `AccessPage` — no centred product card                                                                                                  |
+| `/settings/profile/*`             | paper                         | `Ledger` rows; the archive files its users like its works                                                                               |
+| `/users`, `/users/:username`      | paper                         | The contributor register                                                                                                                |
+| `*` (404)                         | paper                         | §8: a real work at Level I, captioned `INTERPRETATION NOT FOUND`                                                                        |
 
 **One route group is not part of the archive.** `/stadel-research/*` is an
 unlisted working area holding a single dated deliverable for the Städel Museum's

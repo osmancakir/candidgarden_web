@@ -50,6 +50,7 @@ export const STATIC_PATHS = [
 	'/about',
 	'/essays',
 	'/glossary',
+	'/companions',
 	'/support',
 	'/privacy',
 	'/tos',
@@ -170,7 +171,9 @@ export function urlSet(origin: string, paths: Array<string>): Response {
 /** A sitemap index, which may hold sitemaps and nothing else. */
 export function sitemapIndex(origin: string, paths: Array<string>): Response {
 	const maps = paths
-		.map((path) => `  <sitemap><loc>${escapeXml(origin + path)}</loc></sitemap>`)
+		.map(
+			(path) => `  <sitemap><loc>${escapeXml(origin + path)}</loc></sitemap>`,
+		)
 		.join('\n')
 	return xml(
 		`<?xml version="1.0" encoding="UTF-8"?>\n` +
