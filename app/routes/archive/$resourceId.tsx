@@ -25,7 +25,9 @@ import {
 	uncertaintyNotice,
 	verificationLabel,
 } from '#app/utils/archive.ts'
+import { cache, cachified } from '#app/utils/cache.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
+import { pipeHeaders } from '#app/utils/headers.server.ts'
 import { getWorkImgSrc } from '#app/utils/misc.tsx'
 import { collectionHref } from './+shared/filters.ts'
 import { type Route } from './+types/$resourceId.ts'
@@ -51,6 +53,26 @@ import { type Route } from './+types/$resourceId.ts'
 
 const MAX_MOTIFS = 60
 
+/**
+ * How long a built dossier is served from cache, and how long a stale one may
+ * still be served while it is rebuilt behind the response.
+ *
+ * A dossier is about as static as this archive gets: the tags come from a
+ * finished ARTigo corpus, the readings are imported in batches, and the
+ * verification stamp changes only when a reconciliation run touches the work.
+ * Nothing here is per-reader, so there is no correctness reason to go to the
+ * database twice for the same id.
+ *
+ * There is a cost reason not to. This route is the archive's crawl surface —
+ * 54,497 addresses reachable by walking the index — and it was the single
+ * largest source of Hyperdrive traffic, because every crawler hit on every
+ * dossier was a live query against a 1 GB RDS instance. The `staleWhileRevalidate`
+ * window is deliberately a week: for a crawler re-walking the archive, a
+ * seven-day-old dossier is not merely acceptable, it is the correct answer.
+ */
+const DOSSIER_TTL = 1000 * 60 * 60 * 6
+const DOSSIER_SWR = 1000 * 60 * 60 * 24 * 7
+
 export async function loader({ params }: Route.LoaderArgs) {
 	const resourceId = Number(params.resourceId)
 	invariantResponse(
@@ -61,6 +83,24 @@ export async function loader({ params }: Route.LoaderArgs) {
 		},
 	)
 
+	const dossier = await cachified({
+		key: `archive:dossier:v1:${resourceId}`,
+		cache,
+		ttl: DOSSIER_TTL,
+		staleWhileRevalidate: DOSSIER_SWR,
+		getFreshValue: () => buildDossier(resourceId),
+	})
+
+	// A miss is cached as `null` rather than thrown from inside `cachified`, so
+	// that a crawler enumerating ids finds the 404 in KV instead of in Postgres.
+	invariantResponse(dossier, 'Not found', { status: 404 })
+
+	return dossier
+}
+
+export const headers: Route.HeadersFunction = pipeHeaders
+
+async function buildDossier(resourceId: number) {
 	const resource = await prisma.resource.findUnique({
 		where: { id: resourceId },
 		select: {
@@ -108,7 +148,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 		},
 	})
 
-	invariantResponse(resource, 'Not found', { status: 404 })
+	if (!resource) return null
 
 	const maxFrequency = resource.taggings[0]?.frequency ?? 0
 	const motifs = resource.taggings.map((t) => ({
@@ -143,7 +183,13 @@ export async function loader({ params }: Route.LoaderArgs) {
 	const modelLeaning = motifs.filter((m) => m.ai > m.human).length
 
 	const verification = verificationLabel(resource.wikiDataVerification?.status)
-	const generatedAt = resource.wikiDataVerification?.verifiedAt ?? new Date(0)
+	// ISO string, not a `Date`: this payload round-trips through KV as JSON, so a
+	// `Date` here would survive an LRU hit and arrive as a string on a KV hit.
+	// Both stamp components and `archivalDate` accept a string, so normalising at
+	// the source is cheaper than reviving at every consumer.
+	const generatedAt = (
+		resource.wikiDataVerification?.verifiedAt ?? new Date(0)
+	).toISOString()
 
 	const readingAt = (level: number) =>
 		resource.interpretations.find((i) => i.level === level) ?? null

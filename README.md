@@ -227,6 +227,7 @@ setup.
 - [Image storage](./docs/image-storage.md)
 - [Deployment](./docs/deployment.md)
 - [Security model](./docs/security.md)
+- [Bot mitigation](./docs/bot-mitigation.md)
 - [Architecture decisions](./docs/decisions/README.md)
 
 ## Contact
