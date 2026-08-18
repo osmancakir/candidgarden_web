@@ -45,6 +45,91 @@ The lesson worth keeping: the load was not a spike or an attack. It was the
 steady-state cost of being publicly crawlable at this size, which means it
 returns on its own unless something structural changes.
 
+## Update, 2026-08-12: the traffic changed shape entirely
+
+Three days after `robots.txt` shipped, the same 24-hour query returns a
+completely different site. **The SEO crawlers are gone.** Semrush, Awario and
+MJ12 — 66% of all traffic — no longer appear in the top 25 user agents at all.
+Layer 2 worked exactly as predicted.
+
+What replaced them is larger and is not the same problem:
+
+| Source                          | Requests | Notes                                   |
+| ------------------------------- | -------- | --------------------------------------- |
+| Chrome / Windows (forged)       | 17,741   | almost entirely `/resources/images`      |
+| **Claude-SearchBot**            | 17,427   | `/` and `/support`, mostly receiving 503 |
+| (empty user agent)              | 17,012   |                                          |
+| Chrome / macOS (forged)         | 9,251    | almost entirely `/resources/images`      |
+| Chrome / Linux                  | 1,986    |                                          |
+
+Status codes, ~71,000 requests total:
+
+| Status | Count  |
+| ------ | ------ |
+| 200    | 35,666 |
+| 503    | 15,550 |
+| 504    | 8,514  |
+| 204    | 8,445  |
+| 500    | 1,362  |
+
+And the paths, which is where the actual finding is:
+
+| Path                | Requests |
+| ------------------- | -------- |
+| `/resources/images` | 25,539   |
+| `/`                 | 10,701   |
+| `/support`          | 3,841    |
+| `/robots.txt`       | 114      |
+
+**`/archive/*` is no longer in the top paths at all.** The crawl trap is closed.
+The dossier enumeration that motivated this entire document has stopped.
+
+### The image endpoint is now the whole story
+
+The homepage emits **180 `/resources/images` references** — 60 images × three
+`<picture>` sources (avif, webp, fallback). Every one that the browser actually
+requests is a separate Worker invocation that signs an S3 URL and runs a
+Cloudflare image transformation. Measured directly, each takes 0.6–1.2 s.
+
+Cross-tabulating path × status × user agent shows the consequence, and the ratio
+is nearly identical for every browser user agent:
+
+| UA               | 200   | 204   | 504   |
+| ---------------- | ----- | ----- | ----- |
+| Chrome / Windows | 4,598 | 4,610 | 4,531 |
+| Chrome / macOS   | 2,423 | 2,341 | 2,404 |
+| Chrome / Linux   | 520   | 522   | 508   |
+
+A clean one-third split into success, empty response and gateway timeout. Fetched
+one at a time from outside, the same URLs return 200 every time. So this is a
+**concurrency failure, not a bot**: sixty near-simultaneous subrequests per page
+load, a third of which time out. It would happen with one real reader and no
+bots at all.
+
+That reframes the 503s on `/` too. A bot that receives a 503 retries, so the
+error rate is partly *manufacturing* the traffic volume that appears to be
+causing it.
+
+### The policy that followed
+
+The decision on 2026-08-12 was to challenge **all** traffic, with no exception
+for verified search engines — accepting that the archive will fall out of
+Google's index over the following weeks. That is a deliberate trade, not an
+oversight, and it is reversible by narrowing the rule to `(not cf.client.bot)`.
+
+It is worth being clear about what this does and does not buy, because the two
+halves of the problem are independent:
+
+- It **does** remove the Claude-SearchBot volume and the forged-Chrome traffic,
+  which is most of the invocation count.
+- It **does not** fix the image fan-out or the CPU cap. Once a real reader solves
+  the challenge they receive a `cf_clearance` cookie good for the whole zone, and
+  every one of their sixty image subrequests passes straight through to the
+  Worker exactly as before. A challenged site with one human on it still returns
+  504s on a third of its images.
+
+The image fan-out and the plan upgrade below remain the actual fixes.
+
 ## The four layers
 
 Blocking is the last of them, not the first. Each layer catches what the one
@@ -91,14 +176,15 @@ the cache over adding a block.
 ### 4. Stop it at the edge — WAF
 
 For the crawlers that ignore `robots.txt`. **This layer is not in the repository
-and must be configured in the Cloudflare dashboard** — see below.
+and lives in the Cloudflare zone, not the repo** — but it is scriptable with the
+current token; see below.
 
-## Manual step: the WAF rule
+## The WAF rule
 
 `candidgarden.com` is on the Free plan, which allows 5 custom WAF rules. One is
 enough.
 
-> **Note — this step resists automation, and the obvious fix does not work.**
+> **Note — this step resists automation, and both obvious fixes are now closed.**
 >
 > `Zone → Firewall Services → Edit` was added to the `.env` token and verified
 > to take effect: `GET /zones/{id}/firewall/rules` and `/filters` both went from
@@ -109,13 +195,101 @@ enough.
 > re-tested over several minutes to rule out propagation delay.
 >
 > So Firewall Services grants the *legacy* Firewall Rules API, not the Rulesets
-> API where custom rules actually live. The correct permission group could not
-> be identified from inside the account — `GET /accounts/{id}/tokens/permission_groups`
-> needs user-level access the token does not have.
+> API where custom rules actually live.
 >
-> Unless someone finds the right group, **create this rule in the dashboard.**
-> It is a one-time, two-minute task, and the WAF is not something this repo
-> needs to manage as code.
+> **2026-08-12: the legacy API is no longer a way around this.** Writing to it
+> now fails with `firewallrules.api.maintenance_mode` — "This API is in
+> maintenance mode and no longer accepts modifications." Reads still work, which
+> is why the one existing rule is still listed. The Rulesets API is the only
+> write path that exists, and this token cannot use it: `PUT` to the
+> `http_request_firewall_custom` entrypoint returns `Authentication error`, while
+> `GET /zones/{id}/rulesets` succeeds — so the token has ruleset *read* and lacks
+> ruleset *write*.
+>
+> The missing permission group is **`Zone → WAF → Edit`**. It could not be
+> confirmed by name from inside the account —
+> `GET /accounts/{id}/tokens/permission_groups` returns
+> `9109 Unauthorized to access requested resource`, and `/user/tokens/verify`
+> returns `Invalid API Token`, both because this is an account-scoped token
+> without user-level token-management access.
+>
+> **Resolved, same day.** `Zone → WAF → Edit` was added to the `.env` token and
+> is confirmed working — both read and write against the Rulesets API now
+> succeed, and Rule 0 below was created through it rather than by hand. The WAF
+> is scriptable from this repo again.
+>
+> Keep the dashboard route in mind anyway: it stays available when the token is
+> rotated or scoped down, and it is faster than debugging a permission.
+
+### Rule 0 — Managed Challenge, everything — **LIVE since 2026-08-12**
+
+This supersedes rules 1 and 2 below rather than joining them: a challenge on all
+traffic already catches everything they name. They are kept because they are the
+rules to fall back to when the site-wide gate is narrowed or removed.
+
+Action **Managed Challenge**, description `Human verification - all traffic`,
+expression:
+
+```
+(http.host eq "candidgarden.com") or (http.host eq "www.candidgarden.com")
+```
+
+Verified live: `GET /` returns `403` with `cf-mitigated: challenge` and the
+"Just a moment" interstitial, on the apex, on `www`, and on
+`/resources/images`.
+
+#### Append, don't replace
+
+The rule was added with `POST .../rulesets/{ruleset_id}/rules`, which **appends**
+to the phase. Use that, not `PUT` on the entrypoint — a `PUT` **replaces every
+rule in the phase**, and this zone carries a second rule created by the
+dashboard's AI Crawl Control feature (`AI Crawl Control - Block AI bots by User
+Agent`, blocking Amazonbot and bingbot) that a careless `PUT` would silently
+delete.
+
+```bash
+# needs CLOUDFLARE_API_TOKEN from .env with Zone → WAF → Edit
+ZONE=fc077e2f12af9e5c0e4f7f3d0df0336e
+RULESET=41077959698342a1a1d3d373bd496f8a   # http_request_firewall_custom, kind=zone
+curl -s -X POST \
+  "https://api.cloudflare.com/client/v4/zones/$ZONE/rulesets/$RULESET/rules" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "action": "managed_challenge",
+    "expression": "(http.host eq \"candidgarden.com\") or (http.host eq \"www.candidgarden.com\")",
+    "description": "Human verification - all traffic",
+    "enabled": true
+  }'
+```
+
+Rules evaluate top to bottom and the AI Crawl Control block sits first, so
+Amazonbot and bingbot are still blocked outright rather than challenged. That is
+the intended order; appending preserves it.
+
+#### Narrowing it later
+
+To let verified search engines back through without removing the gate, change
+the expression to:
+
+```
+(not cf.client.bot)
+```
+
+That is the setting to reach for once the archive needs to be findable again.
+It restores Googlebot and Bingbot; it does **not** restore `ChatGPT-User`,
+`Claude-User` or `OAI-SearchBot`, which cannot solve a challenge.
+
+#### Known consequences
+
+- `/resources/healthcheck` is challenged along with everything else, so any
+  external uptime monitor pointed at it will fail until a path exception is
+  added.
+- Playwright tests in `tests/` that hit production will be challenged. They run
+  against a local server, so this is only a problem if a smoke test is ever
+  pointed at the live host.
+- The archive will fall out of Google's index over the following weeks. This was
+  a deliberate choice, not an oversight — see the policy note above.
 
 ### Rule 1 — Block, the crawlers that identify themselves
 
@@ -321,6 +495,16 @@ This was not confirmed against the billing API — the token lacks subscription
 read permission — so verify the current plan under **Workers & Pages → Plans**
 before concluding. If the account is already on Paid, the exact-10 ms cap needs
 a different explanation and is worth investigating on its own.
+
+**2026-08-12:** `GET /zones/{id}` confirms the *zone* is on `Free Website`. That
+is the CDN plan, which is a separate product from the Workers plan, so it does
+not settle the question on its own. The behavioural evidence still does:
+16,191 invocations in 24 hours terminated at a `cpuTimeP50` of exactly
+10,000 µs, while successful invocations sat just under it at 9,406 µs. A cap
+that sharp at exactly the documented Free-plan ceiling is not a coincidence.
+The upgrade remains the single highest-value change available, and it is
+unaffected by the WAF work — the challenge reduces how many requests reach the
+10 ms wall, not how much CPU each one needs.
 
 ## Checking whether it worked
 
