@@ -35,15 +35,15 @@ const DECK = deckData as unknown as {
 	model: string
 	seed: number
 	builtAt: string
-	corpus: { spreadOver: number; unread: number }
+	pool: { painters: number; paintings: number; considered: number | null }
 	coverage: {
 		cards: number
-		spreadCards: number
-		unreadCards: number
 		largestCluster: number
 		medianCluster: number
 		meanDistanceToNearestCard: number
+		periods: Array<{ century: number; cards: number; paintings: number }>
 	}
+	poolWorks: Array<number>
 	cards: Array<{
 		id: number
 		title: string | null
@@ -123,8 +123,20 @@ const DECK_CARDS: Array<DriftCard> = DECK.cards.map((card) => ({
 
 const DECK_BY_ID = new Map(DECK_CARDS.map((card) => [card.id, card]))
 
+/**
+ * Every painting the deck was allowed to deal, dealt or not.
+ *
+ * The cards drawn towards a reader mid-drift come from the reading index rather
+ * than from the deck, so without this they would come from the whole archive —
+ * and the whole archive is what the deck exists to stop dealing. A reader who
+ * has pulled four Vermeers would be answered with an engraved copy of one:
+ * genuinely the nearest thing in the space, and not a painting.
+ */
+const POOL = DECK.poolWorks
+
 export const deckFacts: DriftDeckFacts = {
-	spreadOver: DECK.corpus.spreadOver,
+	paintings: DECK.pool.paintings,
+	painters: DECK.pool.painters,
 	cards: DECK.coverage.cards,
 	meanDistanceToNearestCard: DECK.coverage.meanDistanceToNearestCard,
 	medianCluster: DECK.coverage.medianCluster,
@@ -141,8 +153,28 @@ const PROBES = 10
  * rather than inside it — both readings of a work collapse to one row, works
  * the reader has already seen drop out, and works with no image are unusable as
  * cards — and a scan sized for the answer would come back short of it.
+ *
+ * The pool filter is the one exception: it runs *inside* the scan rather than
+ * after it. It has to, because the pool is a seventh of the index and a scan
+ * sized to return 48 rows before filtering would come back with seven.
  */
 const NEAREST_OVERFETCH = 12
+
+/**
+ * Cards one painter may hold among the nearest, mirroring the deck's own cap.
+ */
+const MAX_NEAREST_PER_PAINTER = 2
+
+/**
+ * How many rows come back so that cap has something to choose from.
+ *
+ * Eight times the answer, which is not paranoia: measured against a drift that
+ * had pulled eight Flemish altarpieces, the nearest 48 paintings in the pool
+ * were 43 Rubenses and five other painters, and thinning them left six works
+ * for a list of twelve. At eight times, the same drift has fourteen painters to
+ * choose from.
+ */
+const PAINTER_OVERFETCH = 8
 
 /**
  * Rocchio's β: how far a push moves the drift vector away.
@@ -456,9 +488,10 @@ export async function nextCards({
  * one 1024-float row where fetching the inputs would pull one per reading per
  * work across Hyperdrive to compute the same thing.
  *
- * Returns null when nothing the index can see has pulled the reader — which is a
- * real state, not an error, for someone whose pulls have all landed on the
- * unread tail.
+ * Returns null when nothing the index can see has pulled the reader — which is
+ * a real state rather than an error, and stays reachable after the deck became
+ * paintings only: a drift resumed from a cookie older than the current deck
+ * carries verdicts on works this deck no longer deals.
  */
 async function driftVector(state: DriftState): Promise<number[] | null> {
 	const pulled = state.pulled.slice(0, MAX_VECTOR_INPUTS)
@@ -547,6 +580,7 @@ async function nearestUnseen({
 			`WITH candidates AS (
 			     SELECT e.resource_id, e.embedding <=> $1::vector AS distance
 			       FROM "InterpretationEmbedding" e
+			      WHERE e.resource_id = ANY($5::int[])
 			      ORDER BY e.embedding <=> $1::vector
 			      LIMIT $2
 			 ),
@@ -589,13 +623,39 @@ async function nearestUnseen({
 			  ORDER BY b.distance
 			  LIMIT $4`,
 			literal,
-			limit * NEAREST_OVERFETCH,
+			limit * NEAREST_OVERFETCH * PAINTER_OVERFETCH,
 			excluded,
-			limit,
+			limit * PAINTER_OVERFETCH,
+			POOL,
 		)
 	})
 
-	return rows.map((row) => ({
+	// Nearest by reading, then thinned by hand — the two rules the deck builder
+	// applies to its own cards, applied here for the same reasons.
+	//
+	// A painter cap, because the pool is paintings by 228 of them and a reader
+	// who has pulled four Rubenses is nearest, quite correctly, to eleven more
+	// Rubenses: the readout came back one painter, twelve times. And one card per
+	// picture, because the archive holds several plates of one work as several
+	// records — two of Giotto's *Kruzifix*, which arrived side by side and read
+	// as a bug in the list rather than as a fact about the archive.
+	const perPainter = new Map<string, number>()
+	const pictures = new Set<string>()
+	const thinned = rows.filter((row) => {
+		const painter = row.artist ?? `unattributed:${row.resource_id}`
+		const picture = `${painter}|${(row.title_en ?? row.title ?? '')
+			.toLowerCase()
+			.replace(/[^\p{L}\p{N}]+/gu, ' ')
+			.trim()}`
+		if (pictures.has(picture)) return false
+		const taken = perPainter.get(painter) ?? 0
+		if (taken >= MAX_NEAREST_PER_PAINTER) return false
+		perPainter.set(painter, taken + 1)
+		pictures.add(picture)
+		return true
+	})
+
+	return thinned.slice(0, limit).map((row) => ({
 		id: row.resource_id,
 		title: row.title_en ?? row.title ?? null,
 		artist: row.artist,

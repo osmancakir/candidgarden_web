@@ -87,11 +87,11 @@ export default function DriftReadout({ loaderData }: Route.ComponentProps) {
 							<span className="font-data text-data-lg tabular-nums">
 								{tally.pulledRepresents.toLocaleString('en-US')}
 							</span>{' '}
-							works of the{' '}
+							paintings of the{' '}
 							<span className="font-data text-data-lg tabular-nums">
-								{deck.spreadOver.toLocaleString('en-US')}
+								{deck.paintings.toLocaleString('en-US')}
 							</span>{' '}
-							the spread was taken over.
+							the deck was dealt from.
 						</p>
 					</div>
 					<div className="flex flex-col justify-end gap-3 lg:col-span-5">

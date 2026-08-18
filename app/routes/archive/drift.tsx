@@ -31,7 +31,7 @@ export const meta: Route.MetaFunction = () => [
 	{
 		name: 'description',
 		content:
-			'A few dozen works chosen to span the archive rather than to represent it. Each one pulls you, pushes you or leaves you at rest; the readout says which motifs your pulls over-represent and which works sit nearest them.',
+			'Forty paintings, six centuries, no two alike. Each one pulls you, pushes you or leaves you at rest; the readout says which motifs your pulls over-represent and which paintings sit nearest them.',
 	},
 ]
 
@@ -71,14 +71,21 @@ export default function Drift({ loaderData }: Route.ComponentProps) {
 							</Link>{' '}
 							holds every work in this archive as a point in one space, six
 							centuries of them at once, near each other when their readings say
-							similar things. This is a passage across it.{' '}
+							similar things. This is a passage across one part of it:{' '}
+							<span className="font-data text-data-lg tabular-nums">
+								{deck.paintings.toLocaleString('en-US')}
+							</span>{' '}
+							paintings by{' '}
+							<span className="font-data text-data-lg tabular-nums">
+								{deck.painters}
+							</span>{' '}
+							painters, Giotto to Malevich, dealt as{' '}
 							<span className="font-data text-data-lg tabular-nums">
 								{deck.cards}
 							</span>{' '}
-							works, no two alike, each standing for a neighbourhood of that
-							space. Pull the ones that draw you towards them, push the ones
-							that push you off, leave the rest at rest — and the forces decide
-							where you end up. It takes about three minutes.
+							cards, no two alike. Pull the ones that draw you towards them,
+							push the ones that push you off, leave the rest at rest — and the
+							forces decide where you end up. It takes about three minutes.
 						</p>
 
 						<div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -127,13 +134,18 @@ export default function Drift({ loaderData }: Route.ComponentProps) {
 				<div>
 					<SectionHead eyebrow="How the cards are chosen" />
 					<p className="font-body text-prose-sm measure mt-4">
-						Not at random. A random draw of forty from this corpus is mostly
-						whatever the corpus has most of, and you would pass through forty
-						near-identical panels having learned nothing. The deck is picked so
-						that every card sits as far as possible from the ones already picked
-						— each stands for a neighbourhood of about{' '}
+						Twice over, and neither time at random. First the pool: paintings
+						only, by painters you have some chance of having met. This archive
+						is a teaching collection, so most of it is ground plans, engraved
+						title pages and photographs of façades — you cannot be pulled or
+						pushed by a survey drawing of a portal, only patient with it. Then
+						the deck: every card picked to sit as far as possible from the ones
+						already picked, capped at four per painter and shared out across the
+						centuries so that the nineteenth does not take the lot. Each card
+						stands for about{' '}
 						<span className="font-data tabular-nums">{deck.medianCluster}</span>{' '}
-						works, and the readout counts those works when it counts your pulls.
+						paintings in the pool, and the readout counts those when it counts
+						your pulls.
 					</p>
 				</div>
 				<div>
@@ -144,6 +156,12 @@ export default function Drift({ loaderData }: Route.ComponentProps) {
 						near each other when their readings say similar things, never when
 						they share a palette or a way of handling paint. A reader whose eye
 						is for colour will get a readout about subject matter.
+					</p>
+					<p className="font-body text-prose-sm measure mt-4">
+						Nor anything about painting at large. The list of painters is a
+						canon someone wrote down, and it is this archive's canon: European,
+						with a German centre of gravity, and no printmaker in it however
+						famous — which costs the deck every Hokusai and most of Dürer.
 					</p>
 				</div>
 				<div>

@@ -41,43 +41,70 @@ between one verdict and the next. Locking the viewport is what buys a fixed
 card, and a fixed card is what makes the thing feel like an instrument rather
 than a web page that happens to have pictures on it.
 
-**The sample is the feature.** A drift is thirty or forty cards, so which forty
-decides everything. A random draw is the obvious answer and the wrong one: the
-corpus is what it is, and a random forty is mostly whatever the corpus has most
-of, so the reader swipes through near-identical devotional panels and learns
-nothing. The deck is instead chosen to _span_ the archive — 600 works, no two
-alike, each standing for a neighbourhood of it.
+**The deck is the feature.** A drift is thirty or forty cards, so which forty
+decides everything, and the deck has been rebuilt once already for getting it
+wrong. The first one spread over the whole archive: a correct sample, and a bad
+deck. This is a teaching collection, so a faithful sample of it is ground plans,
+engraved title pages, plates from pattern books and photographs of façades — and
+a reader cannot be pulled towards or pushed off a survey drawing of a portal.
+They can only be patient with it.
 
-**And it spans meaning, not looks.** The spread is taken over the same bge-m3
-reading vectors the atlas is drawn from, which are vectors of prose a model
-wrote _about_ the pictures. Two works sit near each other when their readings
-say similar things, never when they look alike. The deck spans subject and mood;
-it does not span palette, handling or composition, because this archive holds no
-data about any of those. The page says so in type rather than letting the
-interaction imply otherwise.
+So the deck is now dealt from a pool with two curatorial conditions on it:
+**paintings**, by **painters a reader has some chance of having met**. 235
+painters from Giotto to Malevich, 7,774 paintings, dealt as 320 cards, no two
+alike, capped at four per painter and shared out across the centuries so the
+nineteenth does not take the lot. What that costs is stated on the page: no
+printmakers, however famous, which loses every Hokusai and most of Dürer; and a
+canon that is this archive's own — European, with a German centre of gravity.
+
+**And it spans meaning, not looks.** Within the pool, the spread is taken over
+the same bge-m3 reading vectors the atlas is drawn from, which are vectors of
+prose a model wrote _about_ the pictures. Two works sit near each other when
+their readings say similar things, never when they look alike. The deck spans
+subject and mood; it does not span palette, handling or composition, because
+this archive holds no data about any of those. The page says so in type rather
+than letting the interaction imply otherwise.
 
 ## Pieces
 
-| Path                                         | Role                                                |
-| -------------------------------------------- | --------------------------------------------------- |
-| `scripts/build-drift-deck.mjs`               | Chooses the spread offline, writes `deck.json`      |
-| `app/data/drift/deck.json`                   | The shipped deck — 640 cards with metadata, 265 KB  |
-| `scripts/write-drift-notes.mjs`              | Looks at each plate, drafts the note on its back    |
-| `app/data/drift/notes.json`                  | The notes, keyed by resource id — hand-editable     |
-| `app/routes/archive/+shared/drift.ts`        | Isomorphic contract, and the readout's arithmetic   |
-| `app/routes/archive/+shared/drift.server.ts` | Cookie, verdicts, batching, drift vector, readout   |
-| `app/components/institute/drift.tsx`         | `DriftShell`, the card stack, the readout's figures |
-| `app/routes/archive/drift.tsx`               | The explanation and the way in                      |
-| `app/routes/archive/drift_.session.tsx`      | The screen: loader, flush endpoint, card stack      |
-| `app/routes/archive/drift_.readout.tsx`      | The findings                                        |
-| `DriftVerdict`                               | One row per work per drift                          |
+| Path                                         | Role                                                   |
+| -------------------------------------------- | ------------------------------------------------------ |
+| `scripts/lib/drift-painters.mjs`             | The 235 painters. A curatorial list, not a query       |
+| `scripts/pick-drift-paintings.mjs`           | Decides which of their records are paintings           |
+| `app/data/drift/pool.json`                   | Every verdict, kept and hand-correctable, 1.7 MB       |
+| `scripts/build-drift-deck.mjs`               | Chooses the spread offline, writes `deck.json`         |
+| `scripts/verify-drift-deck.mjs`              | Looks at the dealt cards and throws the wrong ones out |
+| `app/data/drift/deck.json`                   | The shipped deck — 320 cards and the pool, 200 KB      |
+| `scripts/write-drift-notes.mjs`              | Looks at each plate, drafts the note on its back       |
+| `app/data/drift/notes.json`                  | The notes, keyed by resource id — hand-editable        |
+| `app/routes/archive/+shared/drift.ts`        | Isomorphic contract, and the readout's arithmetic      |
+| `app/routes/archive/+shared/drift.server.ts` | Cookie, verdicts, batching, drift vector, readout      |
+| `app/components/institute/drift.tsx`         | `DriftShell`, the card stack, the readout's figures    |
+| `app/routes/archive/drift.tsx`               | The explanation and the way in                         |
+| `app/routes/archive/drift_.session.tsx`      | The screen: loader, flush endpoint, card stack         |
+| `app/routes/archive/drift_.readout.tsx`      | The findings                                           |
+| `DriftVerdict`                               | One row per work per drift                             |
 
 ## Building the deck
 
 ```sh
-npm run drift:deck                       # → app/data/drift/deck.json
+npm run drift:paintings                  # → app/data/drift/pool.json  (~5 min, Haiku)
+npm run drift:deck                       # → app/data/drift/deck.json  (~1 min)
+npm run drift:verify                     # looks at the 320 plates, rejects into pool.json
+npm run drift:deck                       # deal replacements; repeat until verify is clean
 npm run drift:deck -- --cards 400 --seed 7
 ```
+
+**Which records are paintings** is decided by a model reading the record —
+title, painter, dates, holder, tags and both Panofsky readings, which usually
+say outright what the thing is ("in this etching", "the fresco cycle"). A
+tag-weight heuristic was tried first and is not good enough in either direction:
+the tags describe a _photograph of_ the work in three languages, so `foto` lands
+on paintings and `marmor` on anything in a church, and Manet's _Portrait d'Émile
+Zola_ scores as a non-painting while four in five Caravaggios are thrown away.
+10,731 records go in; 7,867 come out as paintings, and every rejection stays in
+the file with the medium the model named, because the rejections are how anyone
+checks that Rembrandt lost his etchings and not his portraits.
 
 Reads the **local** database, for the reason the atlas export gives: the same
 89,800 vectors are here, and pulling 216 MB of them through a ~1 GB production
@@ -103,11 +130,43 @@ from everything already drawn. Three properties earn it the job:
 The seed is fixed at 42 and the run is reproducible. A published sample that
 nobody can regenerate is a sample nobody can check.
 
-Two filters are applied before the spread: a card must have an image on file (a
-work with no plate is a fine record and a useless card), and **40 works with no
-embedded reading are mixed in at random**. Without them the deck would quietly
-become "the part of the archive the model has opinions about" while presenting
-itself as the archive.
+Four rules run around the sampling, and each exists because of something that
+came out of it:
+
+- **Periods are flattened, not reproduced.** Two thirds of the pool is the
+  nineteenth century, which is a fact about what German institutions
+  photographed. Cards per century go as the century's share raised to
+  `PERIOD_FLATTENING` (a half), capped at a quarter of the deck.
+- **Four cards per painter**, lifted only where a period is too thin to fill its
+  quota otherwise — the fourteenth century here is four painters deep, so its
+  fifteen cards cannot be four apiece. What the cap actually came to is recorded
+  as `coverage.maxPerPainter`.
+- **One card per picture.** The archive holds three plates of the Arena Chapel
+  and two of one Domenichino altarpiece as separate records, and their readings
+  differ enough that the spread happily picks two. Painter plus normalised title
+  is the key.
+- **Dates have to be plausible**, both absolutely (1200–1960) and for the
+  painter they are filed under (within 70 years of the middle of that painter's
+  own record). It was written for the keying errors — Klee's _Gartenhaus_ dated
+  `3–1929`, the _Burial of St Lucy_ keyed 1908 for 1608 — and it catches
+  attributions too: this archive files **Michelangelo Buonarroti's works under
+  the artist record for Caravaggio**, which is how the Doni Tondo came to be
+  offered as a Caravaggio. Six works fail the rule and all six are wrong.
+
+`deck.json` also ships `poolWorks`: every painting the deck was allowed to deal,
+because the cards drawn towards a reader mid-drift come from the reading index
+rather than from the deck. Without that list, a reader who had pulled four
+Vermeers would be answered with an engraved copy of one — genuinely the nearest
+thing in the space, and not a painting.
+
+**The verify pass is the second opinion.** Reading a record cannot catch a print
+whose readings never name a medium, so `npm run drift:verify` fetches all 320
+plates and asks Sonnet two questions of the picture itself: is this a painting,
+and could this be by the painter on the card. The attribution question is
+deliberately weak — "could this be", not "is this" — because a model asked to
+authenticate starts rejecting ordinary attributions on stylistic hunches. It is
+looking for the Sistine ceiling under Caravaggio's name. Rejections are written
+back into `pool.json`, so the next build deals around them.
 
 ## The note on the back
 
@@ -123,20 +182,19 @@ npm run drift:notes -- --only 19998 --force
 
 **The archive already had prose about every work, and it is the failure this
 avoids.** The two GPT-4o readings behind the atlas say a Pietà "evokes a deep
-sense of sorrow" and "transcends its historical and religious roots" — text
-that would sit under any other Pietà without anyone noticing, because it was
-written from a title and a date rather than from the picture. So the notes pass
-is a **vision pass**: it sends the actual plate and asks for one specific
-noticing. The banned vocabulary in its prompt is quoted from this archive's own
-readings.
+sense of sorrow" and "transcends its historical and religious roots" — text that
+would sit under any other Pietà without anyone noticing, because it was written
+from a title and a date rather than from the picture. So the notes pass is a
+**vision pass**: it sends the actual plate and asks for one specific noticing.
+The banned vocabulary in its prompt is quoted from this archive's own readings.
 
 **Three kinds of claim, kept apart because their evidence differs.**
 
-| | Claim | Where it can come from |
-| --- | --- | --- |
-| A | *The child is on a leash* — what is in the frame | Looking. Free, and checkable by the reader. |
-| B | *Leading strings were ordinary for toddlers then* — convention | Documented traditions only. |
-| C | *She was 37 years younger and he was showing off* — biography, motive | **Only from a search that actually ran.** |
+|     | Claim                                                                 | Where it can come from                      |
+| --- | --------------------------------------------------------------------- | ------------------------------------------- |
+| A   | _The child is on a leash_ — what is in the frame                      | Looking. Free, and checkable by the reader. |
+| B   | _Leading strings were ordinary for toddlers then_ — convention        | Documented traditions only.                 |
+| C   | _She was 37 years younger and he was showing off_ — biography, motive | **Only from a search that actually ran.**   |
 
 A and B are the note's `body`. C is a separate `context` field and is only ever
 shown next to the source it came from, which is why the writer has web search
@@ -146,26 +204,26 @@ without both a title and a URL is **dropped at write time**, and the server
 drops it again on read in case the file was hand-edited into that state. The
 back also says in type whether a person has been over it.
 
-**Most cards have no note, and that is the resting state.** 119 works in the
-deck have no artist at all and the deck is 429 artists deep — for a great many
-of them the only honest paragraph is no paragraph, so the writer returns a skip
-and the card has no turn-over control. Padding those would cost the notes their
-credibility on the works that have something to say.
+**A blank back is still allowed, and now means something different.** Under the
+old deck most cards were anonymous panels with no honest paragraph available.
+Every card is now a painting by a painter with a literature behind them, so a
+blank back is a pass not yet run rather than a work with nothing to say — but
+the skip stays, because padding a note would cost the notes their credibility on
+the cards that have a real one.
 
-Treat the output as a **draft**. 640 is a hand-checkable number — which is the
+Treat the output as a **draft**. 320 is a hand-checkable number — which is the
 whole reason this is affordable at all, and would not be over 54,497 works.
 Editing a note by hand and setting `"origin": "EDITORIAL"` is the intended
 workflow, and rebuilding the deck does not touch the notes file.
 
-**Turning the card over is always deliberate** — a button and the `f` key,
-never a tap on the plate. The stack is built for the verdict of the first two
-seconds, and a card that flips under a stray thumb turns a reaction into a
-reading exercise. `flippedId` is keyed to the card rather than held as a
-boolean, so advancing the stack cannot deal the next card already reversed.
+**Turning the card over is always deliberate** — a button and the `f` key, never
+a tap on the plate. The stack is built for the verdict of the first two seconds,
+and a card that flips under a stray thumb turns a reaction into a reading
+exercise. `flippedId` is keyed to the card rather than held as a boolean, so
+advancing the stack cannot deal the next card already reversed.
 
-Nearest-drawn cards are pulled from the whole archive at request time rather
-than the deck, so their backs are blank. The notes pass only ever looked at the
-640.
+Nearest-drawn cards are pulled from the pool at request time rather than the
+deck, so their backs are blank. The notes pass only ever looked at the 320.
 
 ## The session layout
 
@@ -268,6 +326,17 @@ Stated plainly, per §7 of the brand document.
   a verdict and the three buttons are reachable, but the card is not focusable
   and nothing is announced when the stack advances, so a screen-reader user gets
   the alt text of whichever card they happen to land on.
+- **The painting classifier is precise and lossy.** About 260 records the model
+  itself labelled a fresco, a watercolour or a pastel came back as "other" —
+  Tiepolo ceilings, Delacroix's Moroccan watercolours, Degas pastels — because
+  the medium it named and the verdict it gave disagreed. Nothing reconciles
+  them, so the pool loses works it should hold. It costs the deck nothing at
+  7,774 paintings for 320 cards, and it would matter to anyone reading
+  `pool.json` as a census of what the archive holds. It is not one.
+- **The painter list is a claim about fame with nobody's name on it.** It was
+  written in one sitting against what the archive turned out to hold. Everyone
+  in it is defensible; the argument is about who is missing, and the list is in
+  one file so that argument can be had in a diff.
 - **The deck ages with the archive.** It is a static file. New works and new
   readings do not enter it until `npm run drift:deck` is run again, and
   rerunning it with the same seed does not preserve the old cards' cluster

@@ -112,20 +112,24 @@ export type DriftCard = {
 	objectKey: string | null
 	motifs: Array<string>
 	/**
-	 * Works whose readings are nearer this card than any other card in the deck.
-	 * 1 for a `NEAREST` card and for the unread tail, which stand only for
-	 * themselves.
+	 * Paintings in the pool whose readings are nearer this card than any other
+	 * card in the deck. 1 for a `NEAREST` card, which stands only for itself.
 	 */
 	represents: number
 	origin: DriftCardOrigin
-	/** False for the works with no embedded reading; the drift vector cannot see them. */
+	/**
+	 * Whether the drift vector can see this card at all. True for every card the
+	 * deck deals — the pool was built from works that carry a reading — and kept
+	 * because a card is a claim about what the machinery can and cannot account
+	 * for, and that claim should not become invisible by being always the same.
+	 */
 	embedded: boolean
 	/**
-	 * Null for most cards, and that is the resting state rather than a gap to be
-	 * filled: the deck is 429 artists deep and mostly anonymous, so a great many
-	 * works have nothing honest to say on the back. A blank back is the correct
-	 * output for those, and padding them would cost the notes their credibility
-	 * on the works that do have one.
+	 * Null until the notes pass has been over the card. Every card is now a
+	 * painting by a painter with a literature behind them, so a blank back is a
+	 * pass not yet run rather than a work with nothing to say — but it stays
+	 * optional, because padding a note would cost the notes their credibility on
+	 * the cards that have a real one.
 	 */
 	note: DriftNote | null
 }
@@ -178,11 +182,13 @@ export type DriftReadout = {
 }
 
 export type DriftDeckFacts = {
-	/** Works the spread was taken over: embedded, with an image on file. */
-	spreadOver: number
+	/** Paintings the spread was taken over: the pool, not the archive. */
+	paintings: number
+	/** Painters those paintings are by. */
+	painters: number
 	/** Cards in the deck. */
 	cards: number
-	/** Mean cosine distance from a work in the archive to its nearest card. */
+	/** Mean cosine distance from a painting in the pool to its nearest card. */
 	meanDistanceToNearestCard: number
 	medianCluster: number
 	builtAt: string
