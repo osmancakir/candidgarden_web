@@ -290,6 +290,64 @@ It restores Googlebot and Bingbot; it does **not** restore `ChatGPT-User`,
   pointed at the live host.
 - The archive will fall out of Google's index over the following weeks. This was
   a deliberate choice, not an oversight — see the policy note above.
+- A challenge that lands on a client-side data request cannot present itself,
+  and the reader is shown a bare 403 instead. See below; this one is handled in
+  the app rather than in the zone.
+
+#### The 403 a returning reader sees — 2026-08-20
+
+Reported from a tab left open overnight: clicking the logo produced a 403, and
+a refresh produced the verification screen. Both halves are this rule working
+correctly.
+
+A Managed Challenge is not a status of its own. Cloudflare serves it as an
+ordinary **`403` with `cf-mitigated: challenge`** and the interstitial as the
+body — confirmed on both `/` and `/_root.data`. What differs is who receives it:
+
+- A **document navigation** renders the interstitial. The browser solves it,
+  Cloudflare issues `cf_clearance`, and the reader barely notices. That is the
+  refresh which appeared to fix things.
+- A **`fetch()` cannot.** React Router's single fetch asks for `/_root.data` and
+  receives five kilobytes of Cloudflare HTML where turbo-stream data was
+  expected. It throws, and `GeneralErrorBoundary` renders the status it was
+  handed: 403.
+
+The header's logo is a `<Link to="/">` (`app/components/institute/chrome.tsx`),
+so clicking it is a client navigation — the second case. And the zone's
+`challenge_ttl` is **1800 seconds**, so any tab idle for more than half an hour
+has certainly lost its clearance. This is not an edge case; it is what a
+returning reader does.
+
+Two changes follow, and they are independent:
+
+1. **`challenge_ttl`.** Thirty minutes is aggressive for a public archive.
+   Raising it does not remove the failure mode, only its frequency:
+
+   ```bash
+   curl -X PATCH \
+     "https://api.cloudflare.com/client/v4/zones/$ZONE/settings/challenge_ttl" \
+     -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+     -H 'Content-Type: application/json' --data '{"value":86400}'
+   ```
+
+2. **`app/utils/challenge.client.ts`**, installed from `entry.client.tsx` before
+   hydration. It wraps `window.fetch`, recognises a same-origin `403` carrying
+   `cf-mitigated: challenge`, and re-issues that request as a document
+   navigation — which *can* render the interstitial. The target is derived from
+   the data request rather than from the current page (`/_root.data` → `/`,
+   `/archive/123.data?motif=ruin` → `/archive/123?motif=ruin`), so the reader
+   lands where they were going rather than where they were. The response is
+   still returned to React Router untouched, so the error boundary flashes for
+   the moment the navigation takes to commit.
+
+   It reloads at most **twice in sixty seconds**, tracked in `sessionStorage`.
+   If clearance genuinely cannot be obtained — cookies refused, a challenge that
+   will not settle — the honest outcome is the error boundary, not a tab that
+   reloads itself forever.
+
+Do not reach for a WAF path exception on `*.data` instead. It would fix the
+symptom and hand every bot an unchallenged door into the same Worker, which is
+the thing Rule 0 exists to close.
 
 ### Rule 1 — Block, the crawlers that identify themselves
 
