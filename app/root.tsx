@@ -222,15 +222,25 @@ export function Layout({ children }: { children: React.ReactNode }) {
 /**
  * Routes that take the whole viewport, masthead and colophon included.
  *
- * Only the drift qualifies, and it qualifies for a reason rather than for
- * effect: it is the one surface here that is *held* rather than read — a stack
- * of cards under a thumb — and a card whose height depends on the page it sits
- * in is a card that jumps between works. Locking the viewport is what lets the
- * plate keep one height and the verdict buttons stay under the thumb where they
- * were on the last card.
+ * Two qualify, and both for a reason rather than for effect.
+ *
+ * The drift is *held* rather than read — a stack of cards under a thumb — and a
+ * card whose height depends on the page it sits in is a card that jumps between
+ * works. Locking the viewport is what lets the plate keep one height and the
+ * verdict buttons stay under the thumb where they were on the last card.
+ *
+ * The prospectus is *shown*: one claim at a time, on a projector, advanced with
+ * an arrow key. A masthead above it would be a navigation offer made to a room
+ * that cannot click, and the deck carries the one control that offer was worth
+ * — the ground toggle — in its own bar instead. The prefix match covers its
+ * funding sibling and any later deck: every route under `/prospectus` is a deck,
+ * and a new one that quietly rendered with a masthead would be a bug found in
+ * front of an audience.
  */
 function isFullscreenRoute(pathname: string) {
-	return pathname === '/archive/drift/session'
+	return (
+		pathname === '/archive/drift/session' || pathname.startsWith('/prospectus')
+	)
 }
 
 function App() {

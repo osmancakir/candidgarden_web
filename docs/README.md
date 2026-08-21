@@ -33,6 +33,9 @@ in the coming weeks. Stay tuned!
   chosen from the archive's famous painters to span six centuries, how a
   reader's pulls and pushes fix a position in that space, and what the readout
   is entitled to say.
+- [The Prospectus](./prospectus.md) - The pitch deck at `/prospectus`: why it is
+  unlisted rather than gated, how its figures are derived from the frozen Städel
+  run, and the one constant that names the pilot client.
 - [Decisions](./decisions/README.md) - The reasoning behind various decisions
   made for the Epic Stack. A good historical record.
 - [Guiding Principles](./guiding-principles.md) - The guiding principles behind
