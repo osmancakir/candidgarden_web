@@ -1,0 +1,6 @@
+interface:
+  display_name: 'Candid Garden Carousel'
+  short_description: 'Create branded artwork carousel cards'
+  default_prompt:
+    'Use $candidgarden-instagram-carousel to create an Instagram carousel from
+    these Candid Garden artwork links.'
