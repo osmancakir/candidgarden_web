@@ -9,26 +9,33 @@ import {
 	Display,
 	NoRecords,
 } from '#app/components/institute/primitives.tsx'
+import { cn } from '#app/utils/misc.tsx'
 import {
+	markForModel,
 	MediumSwitch,
 	Plate,
 	PromptDisclosure,
+	RevisionMark,
+	RevisionNotice,
 	SelectionConsole,
 	SheetPager,
 	useHrefWith,
 	WorkMetadata,
 } from './+shared/components.tsx'
 import {
-	descriptionsForWork,
 	descriptionsForWorkAndModel,
+	descriptionsWithPilotForWork,
+	isRevised,
 	manifest,
 	promptFor,
 	resolveModel,
 	resolveSelection,
+	revision,
 	worksInMedium,
 } from './+shared/pilot.server.ts'
 import {
 	displayDating,
+	isModelMuted,
 	mediumGerman,
 	type DescriptionSet,
 } from './+shared/schema.ts'
@@ -91,6 +98,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 		modelId,
 		language,
 		models: manifest.models,
+		revision,
+		modelIsRevised: isRevised(modelId),
 		prompt: promptFor(medium, 'descriptions'),
 		sheets: sheets.map((w) => ({
 			id: w.id,
@@ -113,8 +122,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 						descriptionsForWorkAndModel(w.id, modelId)?.[language].short ??
 						null,
 				})),
-		/** Sheet mode: every model's four texts for the one sheet. */
-		byModel: work ? descriptionsForWork(work.id) : null,
+		/** Sheet mode: every model's four texts, each with what it replaced. */
+		byModel: work ? descriptionsWithPilotForWork(work.id) : null,
 		position: work ? { index: position + 1, total: sheets.length } : null,
 		previous: work ? neighbour(position - 1) : null,
 		next: work ? neighbour(position + 1) : null,
@@ -122,11 +131,19 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 /** One text, with the count the briefing's limit is measured against. */
-function TextBlock({ kind, text }: { kind: 'long' | 'short'; text: string }) {
+function TextBlock({
+	kind,
+	text,
+	lang,
+}: {
+	kind: 'long' | 'short'
+	text: string
+	lang?: string
+}) {
 	const limit = LIMITS[kind]
 	const over = text.length > limit
 	return (
-		<div className="flex flex-col gap-2">
+		<div className="flex flex-col gap-2" lang={lang}>
 			<div className="border-rule flex flex-wrap items-baseline justify-between gap-x-4 border-b pb-1">
 				<Data className="text-ground-muted">
 					{kind === 'long' ? 'Long' : 'Short'}
@@ -163,8 +180,18 @@ function TextBlock({ kind, text }: { kind: 'long' | 'short'; text: string }) {
 export default function StadelDescriptions({
 	loaderData,
 }: Route.ComponentProps) {
-	const { medium, modelId, language, models, prompt, sheets, work, rows } =
-		loaderData
+	const {
+		medium,
+		modelId,
+		language,
+		models,
+		prompt,
+		sheets,
+		work,
+		rows,
+		revision: rev,
+		modelIsRevised,
+	} = loaderData
 	const hrefWith = useHrefWith()
 	const selectedModel = models.find((m) => m.id === modelId)
 
@@ -196,14 +223,45 @@ export default function StadelDescriptions({
 						/>
 						<p className="font-body text-prose-sm text-ground-muted">
 							Character limits are the briefing's: 800 for the long text, 500
-							for the short. Counts are shown on every text, and marked when
-							exceeded.
+							for the short. Your own published texts run{' '}
+							{rev.houseReference.minLong}–{rev.houseReference.maxLong}{' '}
+							characters, averaging {rev.houseReference.avgLong}, so the prompt
+							now aims at {rev.band.min}–{rev.band.max} rather than at the cap.
 						</p>
 					</div>
 				</div>
 			</header>
 
 			<div className="container flex flex-col gap-8 pb-16">
+				<RevisionNotice>
+					<p>
+						These descriptions were re-run on {rev.date} after your reply to the
+						pilot. They no longer name a material, a printmaking or drawing
+						process, or a period style, and they are written against{' '}
+						{rev.houseReference.texts} of your own published texts — six of
+						which, the ones we hold images for, are shown to the model as
+						examples.
+					</p>
+					<p>
+						Across both media the change is measurable. Of{' '}
+						{rev.descriptions[0]!.before.texts} texts per model, technique was named
+						in every one before and in none after; the average German long text
+						fell from{' '}
+						{rev.descriptions.map((m) => m.before.avgLong).join(' and ')} characters
+						to {rev.descriptions.map((m) => m.after.avgLong).join(' and ')}, against
+						the {rev.houseReference.avgLong} your own texts average. Each text
+						below can be opened against the version it replaced.
+					</p>
+					<p className="text-ground-muted">
+						The <Link to="/staedel-research/tags">keywords</Link> were re-run in
+						the same round, and the{' '}
+						<Link to="/staedel-research/evaluation">scores</Link> re-done with a
+						judge from outside the line-up. Those scores cover the keywords only
+						— nothing here has been scored, which is why your reading of these
+						texts is what we are asking for.
+					</p>
+				</RevisionNotice>
+
 				<PromptDisclosure
 					prompt={prompt}
 					label={`The description prompt for ${mediumGerman(medium)}, in full`}
@@ -219,7 +277,8 @@ export default function StadelDescriptions({
 					summary={
 						work
 							? `${work.objectNumber} · all five models`
-							: `${sheets.length} sheets · ${selectedModel?.label ?? modelId}`
+							: `${sheets.length} sheets · ${selectedModel?.label ?? modelId}` +
+								(modelIsRevised ? ' · revised' : ' · pilot output')
 					}
 					extra={
 						<ConsoleField
@@ -323,7 +382,8 @@ function SheetGrid({
 	)
 }
 
-/** Sheet: the plate once, then all five models' four texts beneath it. */
+/** Sheet: the plate once, then every model's four texts, each marked with
+ *  whether it is revised output or still the pilot's. */
 function SheetView({
 	work,
 	byModel,
@@ -360,40 +420,118 @@ function SheetView({
 			</div>
 
 			<div className="flex flex-col gap-12">
-				{byModel.map(({ model, descriptions }) => (
-					<section key={model.id} className="flex flex-col gap-6">
-						<header className="border-rule-strong border-b pb-3">
-							<Display as="h3" size="title" className="text-[1.0625rem]">
-								{model.label}
-							</Display>
-							<Data className="text-ground-muted mt-1 block normal-case">
-								{model.provider} · {model.id}
-							</Data>
-						</header>
-						{descriptions ? (
-							<TextPair descriptions={descriptions} />
-						) : (
-							<p className="font-body text-prose-sm text-ground-muted italic">
-								This model returned no description for this sheet.
-							</p>
-						)}
-					</section>
-				))}
+				{byModel.map(({ model, descriptions, superseded }) => {
+					const muted = isModelMuted(model.status)
+					return (
+						<section
+							key={model.id}
+							className={cn('flex flex-col gap-6', muted && 'opacity-70')}
+						>
+							<header className="border-rule-strong border-b pb-3">
+								<div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+									<Display as="h3" size="title" className="text-[1.0625rem]">
+										{model.label}
+									</Display>
+									<RevisionMark
+										kind={markForModel(model.status, Boolean(superseded))}
+									/>
+								</div>
+								<Data className="text-ground-muted mt-1 block normal-case">
+									{model.provider} · {model.id}
+								</Data>
+							</header>
+							{descriptions ? (
+								<TextPair descriptions={descriptions} />
+							) : (
+								<p className="font-body text-prose-sm text-ground-muted italic">
+									This model returned no description for this sheet.
+								</p>
+							)}
+							{superseded ? (
+								<SupersededTexts descriptions={superseded} />
+							) : null}
+						</section>
+					)
+				})}
 			</div>
 		</div>
 	)
 }
 
+/**
+ * The version this sheet's text replaced, folded away.
+ *
+ * Closed by default: the revised text is the deliverable and the old one is
+ * evidence that it changed. It is worth keeping visible at all because the
+ * museum asked for a specific removal, and the fastest way to confirm a removal
+ * is to read the sentence that used to be there.
+ */
+function SupersededTexts({ descriptions }: { descriptions: DescriptionSet }) {
+	return (
+		<details className="border-rule group border">
+			<summary className="hover:text-link font-data text-data-sm text-ground-muted cursor-pointer list-none px-4 py-3 tracking-[0.12em] uppercase select-none">
+				<span className="mr-2 inline-block group-open:hidden" aria-hidden>
+					+
+				</span>
+				<span className="mr-2 hidden group-open:inline-block" aria-hidden>
+					−
+				</span>
+				The version this replaced, 1 August
+			</summary>
+			<div className="border-rule border-t p-4 opacity-70">
+				<TextPair descriptions={descriptions} />
+			</div>
+		</details>
+	)
+}
+
+/**
+ * German and English, long and short. Below lg each language reads as one
+ * uninterrupted column; at lg+, where they sit side by side, the two are
+ * interleaved row by row (both labels, then both Long texts, then both
+ * Short texts) so Short starts level across the pair — a stray flex column
+ * per language would let German's longer sentences push its own Short below
+ * where English's already sits, exactly the drift the tags page had.
+ */
 function TextPair({ descriptions }: { descriptions: DescriptionSet }) {
 	return (
-		<div className="grid gap-x-10 gap-y-8 lg:grid-cols-2">
-			{LANGUAGES.map((lang) => (
-				<div key={lang.id} className="flex flex-col gap-6" lang={lang.tag}>
-					<Data className="tracking-[0.2em]">{lang.label}</Data>
-					<TextBlock kind="long" text={descriptions[lang.id].long} />
-					<TextBlock kind="short" text={descriptions[lang.id].short} />
-				</div>
-			))}
-		</div>
+		<>
+			<div className="grid gap-y-8 lg:hidden">
+				{LANGUAGES.map((lang) => (
+					<div key={lang.id} className="flex flex-col gap-6" lang={lang.tag}>
+						<Data className="tracking-[0.2em]">{lang.label}</Data>
+						<TextBlock kind="long" text={descriptions[lang.id].long} />
+						<TextBlock kind="short" text={descriptions[lang.id].short} />
+					</div>
+				))}
+			</div>
+			<div className="hidden gap-x-10 gap-y-6 lg:grid lg:grid-cols-2">
+				{LANGUAGES.map((lang) => (
+					<Data
+						key={`label-${lang.id}`}
+						className="tracking-[0.2em]"
+						lang={lang.tag}
+					>
+						{lang.label}
+					</Data>
+				))}
+				{LANGUAGES.map((lang) => (
+					<TextBlock
+						key={`long-${lang.id}`}
+						kind="long"
+						text={descriptions[lang.id].long}
+						lang={lang.tag}
+					/>
+				))}
+				{LANGUAGES.map((lang) => (
+					<TextBlock
+						key={`short-${lang.id}`}
+						kind="short"
+						text={descriptions[lang.id].short}
+						lang={lang.tag}
+					/>
+				))}
+			</div>
+		</>
 	)
 }

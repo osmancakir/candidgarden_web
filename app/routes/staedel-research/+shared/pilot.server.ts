@@ -1,8 +1,13 @@
+import descriptionsPilotData from '#app/data/stadel-research/descriptions-pilot.json'
 import descriptionsData from '#app/data/stadel-research/descriptions.json'
+import evaluationPilotData from '#app/data/stadel-research/evaluation-pilot.json'
 import evaluationData from '#app/data/stadel-research/evaluation.json'
 import manifestData from '#app/data/stadel-research/manifest.json'
 import promptsData from '#app/data/stadel-research/prompts.json'
+import scoreboardControlData from '#app/data/stadel-research/scoreboard-control.json'
+import scoreboardPilotData from '#app/data/stadel-research/scoreboard-pilot.json'
 import scoreboardData from '#app/data/stadel-research/scoreboard.json'
+import tagsPilotData from '#app/data/stadel-research/tags-pilot.json'
 import tagsData from '#app/data/stadel-research/tags.json'
 import worksData from '#app/data/stadel-research/works.json'
 import {
@@ -37,6 +42,11 @@ const descriptions = descriptionsData as unknown as Record<
 	string,
 	Record<ModelId, DescriptionSet>
 >
+/** The texts the revision superseded, for the two models it re-ran. */
+const descriptionsPilot = descriptionsPilotData as unknown as Record<
+	string,
+	Record<ModelId, DescriptionSet>
+>
 const evaluation = evaluationData as unknown as Record<
 	string,
 	Record<ModelId, WorkEvaluation>
@@ -54,6 +64,11 @@ const worksById = new Map(works.map((w) => [w.id, w]))
 
 export const MODEL_IDS = manifest.models.map((m) => m.id)
 
+/** The two models still being scored; the rest are judge or retired. */
+export const FINALIST_MODEL_IDS = manifest.models
+	.filter((m) => m.status === 'finalist')
+	.map((m) => m.id)
+
 export function modelInfo(id: ModelId) {
 	return manifest.models.find((m) => m.id === id) ?? null
 }
@@ -68,6 +83,54 @@ export function worksInMedium(medium: MediumId) {
 
 export function scoreboardFor(medium: MediumId) {
 	return scoreboard[medium] ?? []
+}
+
+/**
+ * The pilot's five-model ranking. Kept because it is the evidence for cutting
+ * the roster to two — the re-score covers only the two that remain, so it
+ * cannot show why the other three were dropped.
+ */
+const scoreboardPilot = scoreboardPilotData as unknown as Record<
+	MediumId,
+	Array<ScoreRow>
+>
+const evaluationPilot = evaluationPilotData as unknown as Record<
+	string,
+	Record<ModelId, WorkEvaluation>
+>
+
+export function pilotScoreboardFor(medium: MediumId) {
+	return scoreboardPilot[medium] ?? []
+}
+
+/** The neutral judge on the pilot's keywords — the control that separates the
+ *  judge's effect from the revision's. */
+const scoreboardControl = scoreboardControlData as unknown as Record<
+	MediumId,
+	Array<ScoreRow>
+>
+
+export function controlScoreboardFor(medium: MediumId) {
+	return scoreboardControl[medium] ?? []
+}
+
+export function judgeCheckFor(medium: MediumId) {
+	return revision.judgeCheck.find((j) => j.medium === medium)?.models ?? []
+}
+
+export function pilotEvaluationForWorkAndModel(
+	workId: string,
+	modelId: ModelId,
+) {
+	return evaluationPilot[workId]?.[modelId] ?? null
+}
+
+/** Every model scored on one sheet, each paired with its pilot score. */
+export function evaluationWithPilotForWork(workId: string) {
+	return evaluationForWork(workId).map((entry) => ({
+		...entry,
+		superseded: pilotEvaluationForWorkAndModel(workId, entry.model.id),
+	}))
 }
 
 export function promptFor(medium: MediumId, task: 'tags' | 'descriptions') {
@@ -87,9 +150,15 @@ export function resolveSelection(url: URL) {
 	return { medium, work }
 }
 
-export function resolveModel(url: URL, param = 'model'): ModelId {
+export function resolveModel(
+	url: URL,
+	param = 'model',
+	allowedIds: Array<ModelId> = MODEL_IDS,
+): ModelId {
 	const requested = url.searchParams.get(param)
-	return requested && MODEL_IDS.includes(requested) ? requested : MODEL_IDS[0]!
+	return requested && allowedIds.includes(requested)
+		? requested
+		: allowedIds[0]!
 }
 
 /** Every model's tagging of one sheet, in roster order, with counts. */
@@ -120,9 +189,64 @@ export function descriptionsForWorkAndModel(
 	return descriptions[workId]?.[modelId] ?? null
 }
 
+export const revision = manifest.revision
+
+/** The two models the revision re-ran, for both tasks. */
+const REVISED_MODELS = new Set<ModelId>(revision.models)
+
+export function isRevised(modelId: ModelId) {
+	return REVISED_MODELS.has(modelId)
+}
+
+export function revisionFor(
+	modelId: ModelId,
+	task: 'descriptions' | 'tags' = 'descriptions',
+) {
+	return revision[task].find((m) => m.id === modelId) ?? null
+}
+
+/**
+ * The superseded text for one sheet, or null where there is none — either the
+ * model was never re-run, or it returned nothing on 1 August.
+ */
+export function pilotDescriptionsForWorkAndModel(
+	workId: string,
+	modelId: ModelId,
+): DescriptionSet | null {
+	return descriptionsPilot[workId]?.[modelId] ?? null
+}
+
+const tagsPilot = tagsPilotData as unknown as Record<
+	string,
+	Record<ModelId, ModelTags>
+>
+
+export function pilotTagsForWorkAndModel(workId: string, modelId: ModelId) {
+	return tagsPilot[workId]?.[modelId] ?? null
+}
+
+/** Every model's keywords for one sheet, each paired with what it replaced. */
+export function tagsWithPilotForWork(workId: string) {
+	return tagsForWork(workId).map((entry) => ({
+		...entry,
+		superseded: pilotTagsForWorkAndModel(workId, entry.model.id),
+	}))
+}
+
+/** Every model's texts for one sheet, each paired with what it replaced. */
+export function descriptionsWithPilotForWork(workId: string) {
+	return descriptionsForWork(workId).map((entry) => ({
+		...entry,
+		superseded: pilotDescriptionsForWorkAndModel(workId, entry.model.id),
+	}))
+}
+
+/** Only the two finalists are scored — evaluation was never re-run for the
+ *  judge or the retired models. */
 export function evaluationForWork(workId: string) {
 	const byModel = evaluation[workId] ?? {}
 	return manifest.models
+		.filter((model) => model.status === 'finalist')
 		.map((model) => ({ model, result: byModel[model.id] ?? null }))
 		.sort((a, b) => (b.result?.overall ?? 0) - (a.result?.overall ?? 0))
 }

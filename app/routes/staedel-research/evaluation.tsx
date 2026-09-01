@@ -9,6 +9,7 @@ import {
 import {
 	MediumSwitch,
 	Plate,
+	RevisionNotice,
 	ScoreMeter,
 	SelectionConsole,
 	SheetPager,
@@ -17,9 +18,11 @@ import {
 } from './+shared/components.tsx'
 import {
 	evaluationForWork,
+	FINALIST_MODEL_IDS,
 	manifest,
 	resolveModel,
 	resolveSelection,
+	judgeCheckFor,
 	scoreboardFor,
 	tagsForWorkAndModel,
 	worksInMedium,
@@ -29,6 +32,8 @@ import {
 	mediumGerman,
 	mediumLabel,
 	SCORE_CATEGORIES,
+	type JudgeCheckRow,
+	type ModelInfo,
 	type ScoreCategory,
 } from './+shared/schema.ts'
 import { type Route } from './+types/evaluation.ts'
@@ -61,9 +66,10 @@ export const meta: Route.MetaFunction = () => [
 export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url)
 	const { medium, work } = resolveSelection(url)
-	const modelId = resolveModel(url)
+	const modelId = resolveModel(url, 'model', FINALIST_MODEL_IDS)
 	const sheets = worksInMedium(medium)
 	const scoreboard = scoreboardFor(medium)
+	const judgeCheck = judgeCheckFor(medium)
 
 	const position = work ? sheets.findIndex((w) => w.id === work.id) : -1
 	const neighbour = (index: number) => {
@@ -102,18 +108,101 @@ export async function loader({ request }: Route.LoaderArgs) {
 						tagCount: tagsForWorkAndModel(w.id, modelId).total,
 					}
 				}),
-		/** Sheet mode: all five models ranked on the one sheet, with reasons. */
+		/** Sheet mode: both finalists ranked on the one sheet, with reasons. */
 		byModel: work ? evaluationForWork(work.id) : null,
+		judgeCheck,
 		position: work ? { index: position + 1, total: sheets.length } : null,
 		previous: work ? neighbour(position - 1) : null,
 		next: work ? neighbour(position + 1) : null,
 	}
 }
 
+/**
+ * The three readings that make the new scores readable.
+ *
+ * A single before/after would be uninterpretable here, because the pilot column
+ * and the current column differ in both the judge and the keywords. The middle
+ * column holds the keywords fixed, so the two effects can be read off
+ * separately rather than guessed at.
+ */
+function JudgeCheckTable({
+	rows,
+	models,
+}: {
+	rows: Array<JudgeCheckRow>
+	models: Array<ModelInfo>
+}) {
+	if (!rows.length) return null
+	const fmt = (n: number | null) => (n == null ? '—' : n.toFixed(2))
+	const signed = (n: number | null) =>
+		n == null ? '—' : `${n > 0 ? '+' : ''}${n.toFixed(2)}`
+	return (
+		<div className="overflow-x-auto">
+			<table className="min-w-full">
+				<thead>
+					<tr className="border-rule-strong border-b">
+						{[
+							['Model', 'text-left'],
+							['Pilot judge, pilot keywords', 'text-right'],
+							['Neutral judge, pilot keywords', 'text-right'],
+							['Neutral judge, revised keywords', 'text-right'],
+							['Judge effect', 'text-right'],
+							['Revision effect', 'text-right'],
+						].map(([h, align]) => (
+							<th
+								key={h}
+								scope="col"
+								className={`font-data text-data-sm text-ground-muted py-2 pr-4 tracking-[0.12em] uppercase ${align}`}
+							>
+								{h}
+							</th>
+						))}
+					</tr>
+				</thead>
+				<tbody>
+					{rows.map((row) => (
+						<tr key={row.id} className="border-rule border-b">
+							<th scope="row" className="font-body text-prose py-2 pr-4 text-left font-normal">
+								{models.find((m) => m.id === row.id)?.label ?? row.id}
+							</th>
+							<td className="font-data text-data text-ground-muted py-2 pr-4 text-right tabular-nums">
+								{fmt(row.pilotJudge)}
+							</td>
+							<td className="font-data text-data py-2 pr-4 text-right tabular-nums">
+								{fmt(row.neutralOnPilot)}
+							</td>
+							<td className="font-data text-data py-2 pr-4 text-right font-bold tabular-nums">
+								{fmt(row.neutralOnRevised)}
+							</td>
+							<td className="font-data text-data text-stamp-fg py-2 pr-4 text-right tabular-nums">
+								{signed(row.judgeEffect)}
+							</td>
+							<td className="font-data text-data py-2 text-right tabular-nums">
+								{signed(row.revisionEffect)}
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
+	)
+}
+
 export default function StadelEvaluation({ loaderData }: Route.ComponentProps) {
-	const { medium, modelId, models, scoreboard, sheets, work, rows } = loaderData
+	const {
+		medium,
+		modelId,
+		models,
+		scoreboard,
+		sheets,
+		work,
+		rows,
+		judgeCheck,
+	} = loaderData
 	const hrefWith = useHrefWith()
 	const selectedModel = models.find((m) => m.id === modelId)
+	/** Only the finalists were ever scored — the judge and retired models never ran here. */
+	const evaluableModels = models.filter((m) => m.status === 'finalist')
 	const leader = scoreboard[0]
 	const runnerUp = scoreboard[1]
 
@@ -126,14 +215,14 @@ export default function StadelEvaluation({ loaderData }: Route.ComponentProps) {
 							Evaluation · masked judge
 						</Data>
 						<Display as="h1" size="chapter" className="measure-wide">
-							Scored against the picture, not the catalogue
+							Scored against the picture
 						</Display>
 						<p className="font-body text-prose-lg measure mt-6">
 							Each model's keyword output was put back in front of an
 							independent judge model together with the image, and scored out of
 							ten on four categories. Model names were hidden, so the judge
 							could not recognise whose output it was reading. Twenty sheets per
-							medium, five models, one written justification per category per
+							medium, two finalists, one written justification per category per
 							sheet. All of it readable here.
 						</p>
 					</div>
@@ -233,32 +322,61 @@ export default function StadelEvaluation({ loaderData }: Route.ComponentProps) {
 					</ol>
 
 					<UncertaintyNotice
-						notice={`Ranking provisional · the judge was itself one of the contestants · margin over runner-up ${
+						notice={`Ranking provisional · scored by a neutral judge on the revised keywords · margin over runner-up ${
 							leader && runnerUp
 								? (leader.overall! - runnerUp.overall!).toFixed(2)
 								: '—'
-						} · re-score with a neutral judge pending`}
+						} is inside the noise of a 20-sheet sample · no order is being presented`}
 					/>
 					<p className="font-body text-prose-sm measure text-ground-muted">
-						Iconography is the category that separates the models: it spans more
-						than four points across the roster. Atmosphere and emotion sit
-						between 8.0 and 9.0 for every model, and at this sample size say
-						very little. Read them as a floor, not as a result.
+						No category separates the two finalists by more than a point in
+						either medium, and most sit within a few tenths — consistent with
+						the reading below: a neutral judge does not distinguish them on
+						these keywords.
 					</p>
 				</div>
 			</section>
 
 			<div className="container flex flex-col gap-8 py-10 md:py-14">
+				<RevisionNotice>
+					<p>
+						These scores are new. The pilot's judge was itself one of the five
+						contestants; with the roster cut to two, the judge is now Gemini 3.1
+						Pro, which takes no part in the run and is neutral by construction
+						rather than by assurance.
+					</p>
+					<p>
+						<strong>
+							The numbers are about two points lower than the pilot's, and that
+							is the judge, not the work.
+						</strong>{' '}
+						Two things changed at once — the judge and the keywords being judged
+						— so we ran a third pass to separate them: the neutral judge scoring
+						the <em>pilot's</em> keywords. Holding the keywords fixed and
+						changing only the judge accounts for the entire fall. Changing only
+						the keywords moves every figure <em>up</em>.
+					</p>
+					<JudgeCheckTable rows={judgeCheck} models={models} />
+					<p>
+						Read across a row: the first gap is the judge's calibration, the
+						second is what the keyword revision was worth. Read down, the pilot's
+						ranking does not survive a neutral judge — on identical keywords the
+						order reverses. On the revised keywords the two models are level
+						within the noise of a 20-sheet sample, so we are not presenting an
+						order between them.
+					</p>
+				</RevisionNotice>
+
 				<SelectionConsole
 					medium={medium}
 					workId={work?.id ?? null}
 					modelId={modelId}
 					works={sheets}
-					models={models}
+					models={evaluableModels}
 					resetTo={`?medium=${medium}`}
 					summary={
 						work
-							? `${work.objectNumber} · all five models judged`
+							? `${work.objectNumber} · both finalists judged`
 							: `${sheets.length} sheets · ${selectedModel?.label ?? modelId}`
 					}
 				/>
@@ -401,7 +519,7 @@ function SheetTable({
 	)
 }
 
-/** Sheet: all five models ranked on this one work, each with its reasoning. */
+/** Sheet: both finalists ranked on this one work, each with its reasoning. */
 function SheetView({
 	work,
 	byModel,

@@ -6,23 +6,31 @@ import {
 	NoRecords,
 	UncertaintyNotice,
 } from '#app/components/institute/primitives.tsx'
+import { cn } from '#app/utils/misc.tsx'
 import {
+	markForModel,
 	MediumSwitch,
 	Plate,
 	PromptDisclosure,
+	RecordComparison,
+	RevisionMark,
+	RevisionNotice,
 	SelectionConsole,
 	SheetPager,
 	TagFieldBlock,
 	useHrefWith,
 	WorkMetadata,
+	type RevisionMarkKind,
 } from './+shared/components.tsx'
 import {
 	indexRows,
+	isRevised,
 	manifest,
 	promptFor,
 	resolveModel,
 	resolveSelection,
-	tagsForWork,
+	revision,
+	tagsWithPilotForWork,
 	worksInMedium,
 } from './+shared/pilot.server.ts'
 import {
@@ -92,7 +100,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 		})),
 		work,
 		rows: work ? null : indexRows(medium, modelId),
-		byModel: work ? tagsForWork(work.id) : null,
+		byModel: work ? tagsWithPilotForWork(work.id) : null,
+		revision,
+		modelIsRevised: isRevised(modelId),
 		position: work ? { index: position + 1, total: sheets.length } : null,
 		previous: work ? neighbour(position - 1) : null,
 		next: work ? neighbour(position + 1) : null,
@@ -233,18 +243,26 @@ function RecordColumn({
 	subheading,
 	record,
 	isMuseum = false,
+	mark,
 }: {
 	heading: string
 	subheading: React.ReactNode
 	record: TagRecord
 	isMuseum?: boolean
+	mark?: RevisionMarkKind
 }) {
+	const muted = mark === 'retired' || mark === 'judge'
 	return (
 		<div className="flex flex-col gap-8">
-			<header className="border-rule-strong border-b pb-3">
-				<Display as="h3" size="title" className="text-[1.0625rem]">
-					{heading}
-				</Display>
+			<header
+				className={cn('border-rule-strong border-b pb-3', muted && 'opacity-70')}
+			>
+				<div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+					<Display as="h3" size="title" className="text-[1.0625rem]">
+						{heading}
+					</Display>
+					{mark ? <RevisionMark kind={mark} /> : null}
+				</div>
 				<Data className="text-ground-muted mt-1 block normal-case">
 					{subheading}
 				</Data>
@@ -262,6 +280,7 @@ function RecordColumn({
 							key={field}
 							field={field}
 							value={record[field]}
+							muted={muted}
 							absent={
 								isMuseum && FIELDS_ABSENT_FROM_MUSEUM_RECORDS.includes(field)
 									? 'Not collected by the museum. This is one of the four categories the project was commissioned to add, so there is nothing here to compare against.'
@@ -276,7 +295,17 @@ function RecordColumn({
 }
 
 export default function StadelTags({ loaderData }: Route.ComponentProps) {
-	const { medium, modelId, models, prompt, sheets, work, rows } = loaderData
+	const {
+		medium,
+		modelId,
+		models,
+		prompt,
+		sheets,
+		work,
+		rows,
+		revision: rev,
+		modelIsRevised,
+	} = loaderData
 	const hrefWith = useHrefWith()
 	const selectedModel = models.find((m) => m.id === modelId)
 
@@ -289,6 +318,43 @@ export default function StadelTags({ loaderData }: Route.ComponentProps) {
 			/>
 
 			<div className="container flex flex-col gap-8 pb-16">
+				<RevisionNotice>
+					<p>
+						The keywords were re-run on {rev.date}, under a narrower version of
+						the rule applied to the descriptions. Checking your instruction
+						against your own records showed it could not be carried over whole:
+						across the 4,583 <code>Ikon.Thema</code> values in the export you
+						name a process or a period <strong>zero</strong> times, but record{' '}
+						<code>Schraffur</code> 43 times on the two formal axes the briefing
+						asks for.
+					</p>
+					<p>
+						So the prompt now refuses the process, the material and the period
+						(<code>Radierung</code>, <code>Papier</code>, <code>Barock</code>)
+						and keeps the visible-mark vocabulary you use.{' '}
+						{rev.tags[0] && rev.tags[1] ? (
+							<>
+								Across both media that took banned values from{' '}
+								{rev.tags[0].before.banned + rev.tags[1].before.banned} to{' '}
+								{rev.tags[0].after.banned + rev.tags[1].after.banned}, while
+								the kept vocabulary went from{' '}
+								{rev.tags[0].before.kept + rev.tags[1].before.kept} to{' '}
+								{rev.tags[0].after.kept + rev.tags[1].after.kept}: the second
+								figure matters as much as the first, since a fall there would
+								mean the rule had cut into what you actually catalogue.
+							</>
+						) : null}{' '}
+						Each sheet can be opened against the keywords it replaced.
+					</p>
+					<p className="text-ground-muted">
+						The <Link to="/staedel-research/evaluation">scores</Link> now judge
+						these revised keywords, with a model that took no part in the run.
+						They sit about two points below the pilot's because that judge marks
+						harder, not because the keywords got worse: the evaluation page
+						separates the two effects.
+					</p>
+				</RevisionNotice>
+
 				<PromptDisclosure
 					prompt={prompt}
 					label={`The tagging prompt for ${mediumGerman(medium)}, in full`}
@@ -304,7 +370,8 @@ export default function StadelTags({ loaderData }: Route.ComponentProps) {
 					summary={
 						work
 							? `${work.objectNumber} · all five models`
-							: `${sheets.length} sheets · ${selectedModel?.label ?? modelId}`
+							: `${sheets.length} sheets · ${selectedModel?.label ?? modelId}` +
+								(modelIsRevised ? ' · revised' : ' · pilot output')
 					}
 				/>
 
@@ -497,7 +564,11 @@ function SheetView({
 				hrefWith={hrefWith}
 			/>
 
-			<div className="grid gap-x-10 gap-y-12 lg:grid-cols-2">
+			{/* Below lg the two records read as full columns, one after the other;
+			    at lg+, where they sit side by side, RecordComparison lines up every
+			    field in its own row so a long list on one side can't push that
+			    side's later fields out of step with the other's. */}
+			<div className="grid gap-y-12 lg:hidden">
 				<RecordColumn
 					heading="Städel record"
 					subheading={`As catalogued · ${museumTotal} values`}
@@ -510,8 +581,57 @@ function SheetView({
 						modelTotal - museumTotal >= 0 ? '+' : ''
 					}${modelTotal - museumTotal} against the record`}
 					record={selected?.tags.fields ?? {}}
+					mark={markForModel(
+						selected?.model.status ?? 'retired',
+						Boolean(selected?.superseded),
+					)}
 				/>
 			</div>
+			<RecordComparison
+				className="hidden lg:grid"
+				left={{
+					heading: 'Städel record',
+					subheading: `As catalogued · ${museumTotal} values`,
+					record: work.museum,
+					isMuseum: true,
+				}}
+				right={{
+					heading: selectedModelLabel,
+					subheading: `${selectedModelProvider} · ${modelTotal} values · ${
+						modelTotal - museumTotal >= 0 ? '+' : ''
+					}${modelTotal - museumTotal} against the record`,
+					record: selected?.tags.fields ?? {},
+					mark: markForModel(
+						selected?.model.status ?? 'retired',
+						Boolean(selected?.superseded),
+					),
+				}}
+			/>
+
+			{selected?.superseded ? (
+				<details className="border-rule group border">
+					<summary className="hover:text-link font-data text-data-sm text-ground-muted cursor-pointer list-none px-4 py-3 tracking-[0.12em] uppercase select-none">
+						<span className="mr-2 inline-block group-open:hidden" aria-hidden>
+							+
+						</span>
+						<span
+							className="mr-2 hidden group-open:inline-block"
+							aria-hidden
+						>
+							−
+						</span>
+						The keywords this replaced, 1 August ·{' '}
+						{selected.superseded.total} values
+					</summary>
+					<div className="border-rule border-t p-4 opacity-70">
+						<RecordColumn
+							heading={selectedModelLabel}
+							subheading={`Pilot run · ${selected.superseded.total} values`}
+							record={selected.superseded.fields}
+						/>
+					</div>
+				</details>
+			) : null}
 		</div>
 	)
 }

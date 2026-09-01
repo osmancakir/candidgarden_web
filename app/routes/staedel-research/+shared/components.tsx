@@ -1,5 +1,6 @@
 import { Img } from 'openimg/react'
-import { Link, NavLink, useSearchParams } from 'react-router'
+import { Fragment } from 'react'
+import { Form, Link, NavLink, useSearchParams } from 'react-router'
 import {
 	ConsoleField,
 	ConsoleSelect,
@@ -9,11 +10,15 @@ import { cn, getWorkImgSrc } from '#app/utils/misc.tsx'
 import {
 	countTagValue,
 	displayDating,
+	FIELDS_ABSENT_FROM_MUSEUM_RECORDS,
 	MEDIA,
 	TAG_FIELDS,
+	TAG_SECTIONS,
 	type MediumId,
 	type ModelInfo,
+	type ModelStatus,
 	type TagField,
+	type TagRecord,
 	type TagValue,
 	type Work,
 } from './schema.ts'
@@ -34,6 +39,105 @@ const SECTIONS = [
 	{ to: '/staedel-research/descriptions', label: 'Descriptions', end: false },
 	{ to: '/staedel-research/evaluation', label: 'Evaluation', end: false },
 ]
+
+/* --------------------------------------------------------------------------
+   Marking the revision.
+
+   These pages carry two generations of output at once: descriptions re-run on
+   25 August after the museum's reply, and keywords and scores still as the
+   pilot left them on 1 August. A reader who cannot tell which is which will
+   either dismiss the new work or credit the old, so the distinction is marked
+   wherever output appears rather than explained once at the top.
+   -------------------------------------------------------------------------- */
+
+const REVISION_MARKS = {
+	revised: {
+		// Must match REVISION.date in scripts/stadel-research/prepare-data.mjs.
+		label: 'Revised 25 Aug',
+		title: 'Re-run after the museum\u2019s reply: no technique, style or period, and the house voice from its own published texts.',
+		className: 'border-link text-link',
+	},
+	finalist: {
+		label: 'On the roster',
+		title:
+			'Still being run. The briefing asks for a best performer plus one comparison model; these are the two.',
+		className: 'border-link text-link',
+	},
+	pilot: {
+		label: 'Pilot 1 Aug',
+		title: 'Unchanged since the pilot run of 1 August 2026.',
+		className: 'border-rule text-ground-muted',
+	},
+	retired: {
+		label: 'Retired',
+		title: 'Lost on the pilot scores and is no longer being run. Kept as the evidence for cutting the roster.',
+		className: 'border-rule text-ground-muted',
+	},
+	judge: {
+		label: 'Judge',
+		title: 'No longer a contestant. Scores the other two, which is what makes the judge neutral.',
+		className: 'border-rule text-ground-muted',
+	},
+} as const
+
+export type RevisionMarkKind = keyof typeof REVISION_MARKS
+
+/** The mark itself: mono, bordered, sized to sit beside a heading. */
+export function RevisionMark({
+	kind,
+	className,
+}: {
+	kind: RevisionMarkKind
+	className?: string
+}) {
+	const mark = REVISION_MARKS[kind]
+	return (
+		<span
+			title={mark.title}
+			className={cn(
+				'font-data text-data-sm inline-flex items-baseline border px-2 py-0.5 tracking-[0.12em] whitespace-nowrap uppercase',
+				mark.className,
+				className,
+			)}
+		>
+			{mark.label}
+		</span>
+	)
+}
+
+/** Which mark a model carries on the descriptions pages. */
+export function markForModel(
+	status: ModelStatus,
+	revisedHere: boolean,
+): RevisionMarkKind {
+	if (revisedHere) return 'revised'
+	if (status === 'retired') return 'retired'
+	if (status === 'judge') return 'judge'
+	return 'pilot'
+}
+
+/**
+ * The page-level notice: what changed on this surface, in numbers the reader
+ * can check against the texts below it.
+ */
+export function RevisionNotice({ children }: { children?: React.ReactNode }) {
+	return (
+		<aside
+			role="note"
+			className="border-link flex flex-col gap-3 border-l-2 py-2 pl-4"
+		>
+			<div className="flex flex-wrap items-baseline gap-3">
+				<RevisionMark kind="revised" />
+				<Data className="text-ground-muted normal-case">
+					superseding the run of 1 August 2026
+				</Data>
+			</div>
+			<div className="font-body text-prose measure flex flex-col gap-3">
+				{children}
+			</div>
+		</aside>
+	)
+}
 
 /** The rail across the four surfaces of the pilot. Segmented, mono, no chrome. */
 export function PilotNav({ className }: { className?: string }) {
@@ -237,16 +341,19 @@ export function TagFieldBlock({
 	field,
 	value,
 	absent,
+	muted,
 }: {
 	field: TagField
 	value: TagValue | undefined
 	/** Rendered when the source structurally cannot hold this field. */
 	absent?: React.ReactNode
+	/** Retired or judge output: set back a shade rather than read as current. */
+	muted?: boolean
 }) {
 	const meta = TAG_FIELDS[field]
 	const count = countTagValue(value)
 	return (
-		<section className="border-rule border-t pt-3">
+		<section className={cn('border-rule border-t pt-3', muted && 'opacity-70')}>
 			<div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
 				<h4 className="font-data text-data text-ground-fg tracking-[0.06em]">
 					{field}
@@ -286,6 +393,91 @@ export function TagFieldBlock({
 				</div>
 			)}
 		</section>
+	)
+}
+
+/** One side of a {@link RecordComparison}: what heading it carries and where
+ *  its values come from. */
+export type ComparisonSide = {
+	heading: string
+	subheading: React.ReactNode
+	record: TagRecord
+	mark?: RevisionMarkKind
+	isMuseum?: boolean
+}
+
+/**
+ * Two records, field by field, in a single grid rather than two independent
+ * columns. Stacking full columns lets a long list on one side — Ikon.Thema
+ * routinely runs past a hundred values — push every field below it out of
+ * step with the other side, so "Motif" lands a full section apart between
+ * the two. A shared grid makes each field its own row, sized to whichever
+ * side is taller; both sides pick back up level on the next row regardless
+ * of how the row above filled out.
+ */
+export function RecordComparison({
+	left,
+	right,
+	className,
+}: {
+	left: ComparisonSide
+	right: ComparisonSide
+	className?: string
+}) {
+	const sides = [left, right]
+	return (
+		<div className={cn('grid gap-x-10 gap-y-8 lg:grid-cols-2', className)}>
+			{sides.map((side, i) => {
+				const muted = side.mark === 'retired' || side.mark === 'judge'
+				return (
+					<header
+						key={`head-${i}`}
+						className={cn(
+							'border-rule-strong border-b pb-3',
+							muted && 'opacity-70',
+						)}
+					>
+						<div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+							<Display as="h3" size="title" className="text-[1.0625rem]">
+								{side.heading}
+							</Display>
+							{side.mark ? <RevisionMark kind={side.mark} /> : null}
+						</div>
+						<Data className="text-ground-muted mt-1 block normal-case">
+							{side.subheading}
+						</Data>
+					</header>
+				)
+			})}
+			{TAG_SECTIONS.map((section) => (
+				<Fragment key={section.title}>
+					{sides.map((side, i) => (
+						<div key={`section-${section.title}-${i}`}>
+							<Data className="tracking-[0.2em]">{section.title}</Data>
+							<p className="font-body text-prose-sm text-ground-muted mt-1">
+								{section.blurb}
+							</p>
+						</div>
+					))}
+					{section.fields.flatMap((field) =>
+						sides.map((side, i) => (
+							<TagFieldBlock
+								key={`${field}-${i}`}
+								field={field}
+								value={side.record[field]}
+								muted={side.mark === 'retired' || side.mark === 'judge'}
+								absent={
+									side.isMuseum &&
+									FIELDS_ABSENT_FROM_MUSEUM_RECORDS.includes(field)
+										? 'Not collected by the museum. This is one of the four categories the project was commissioned to add, so there is nothing here to compare against.'
+										: undefined
+								}
+							/>
+						)),
+					)}
+				</Fragment>
+			))}
+		</div>
 	)
 }
 
@@ -403,7 +595,12 @@ export function SelectionConsole({
 	modelAllLabel?: string
 }) {
 	return (
-		<form method="get" role="search" className="border-rule border">
+		<Form
+			method="get"
+			role="search"
+			preventScrollReset
+			className="border-rule border"
+		>
 			<div className="border-rule bg-tint flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b px-4 py-2">
 				<Data className="tracking-[0.2em]">Selection console</Data>
 				{summary ? (
@@ -466,7 +663,7 @@ export function SelectionConsole({
 					Reset selection
 				</Link>
 			</div>
-		</form>
+		</Form>
 	)
 }
 

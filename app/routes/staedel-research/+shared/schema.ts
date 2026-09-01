@@ -77,7 +77,96 @@ export type ScoreRow = {
 	overall: number | null
 } & Record<ScoreCategory, number | null>
 
-export type ModelInfo = { id: ModelId; provider: string; label: string }
+/**
+ * What became of a model after the pilot. `retired` models lost on the pilot's
+ * own scores and are no longer run, but they stay on the page as the evidence
+ * for cutting the roster; `judge` is the one role a non-contestant can hold.
+ */
+export type ModelStatus = 'finalist' | 'judge' | 'retired'
+
+export type ModelInfo = {
+	id: ModelId
+	provider: string
+	label: string
+	status: ModelStatus
+}
+
+/** Retired models and the judge are no longer generating results for the
+ *  roster; their output stays on the page but is set back a shade so a
+ *  reader can tell at a glance which record is still live. */
+export function isModelMuted(status: ModelStatus): boolean {
+	return status === 'retired' || status === 'judge'
+}
+
+/** Counted off the texts themselves by the prep script, never asserted. */
+export type TextMeasure = {
+	texts: number
+	technique: number
+	avgLong: number
+	inBand: number
+}
+
+/**
+ * The revision of 25 August 2026: what the museum's reply to the pilot changed,
+ * and what it did not. Scoped deliberately — one task, two models — so a reader
+ * can tell revised output from pilot output anywhere on these pages.
+ */
+/**
+ * The keyword rule is narrower than the description rule, so it needs two
+ * numbers rather than one: `banned` is what it removes — process, material,
+ * period — and `kept` is the visible-mark vocabulary it deliberately leaves,
+ * because the museum's own records use it. A fall in `kept` would mean the rule
+ * cut too deep, so it is reported beside the figure it flatters.
+ */
+export type TagMeasure = {
+	sheets: number
+	values: number
+	banned: number
+	sheetsWithBanned: number
+	kept: number
+}
+
+/**
+ * One model's score under three readings. The gap between the first two is the
+ * judge alone (same keywords); the gap between the last two is the revision
+ * alone (same judge). Without the middle column the fall from `pilotJudge` to
+ * `neutralOnRevised` is unreadable — it could be either.
+ */
+export type JudgeCheckRow = {
+	id: ModelId
+	pilotJudge: number | null
+	neutralOnPilot: number | null
+	neutralOnRevised: number | null
+	judgeEffect: number | null
+	revisionEffect: number | null
+}
+
+export type Revision = {
+	date: string
+	tasks: Array<string>
+	models: Array<ModelId>
+	descriptions: Array<{
+		id: ModelId
+		before: TextMeasure
+		after: TextMeasure
+	}>
+	tags: Array<{ id: ModelId; before: TagMeasure; after: TagMeasure }>
+	judgeCheck: Array<{ medium: MediumId; models: Array<JudgeCheckRow> }>
+	baselineRef: string
+	unchanged: Array<string>
+	band: { min: number; max: number }
+	houseReference: {
+		texts: number
+		withImageInExport: number
+		usedAsExamples: number
+		minLong: number
+		maxLong: number
+		avgLong: number
+		technique: number
+	}
+	examples: Record<MediumId, Array<string>>
+	excluded: Array<string>
+}
 
 export type UsageTotals = {
 	tags: { calls: number; input: number; output: number; thinking: number }
@@ -100,6 +189,7 @@ export type Manifest = {
 	tagFields: Array<TagField>
 	scoreCategories: Array<ScoreCategory>
 	usage: Record<string, UsageTotals>
+	revision: Revision
 	generatedAt: string
 }
 

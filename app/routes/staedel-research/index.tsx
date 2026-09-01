@@ -6,9 +6,15 @@ import {
 	ProvenanceStamp,
 	UncertaintyNotice,
 } from '#app/components/institute/primitives.tsx'
-import { PilotHeader } from './+shared/components.tsx'
+import {
+	PilotHeader,
+	RevisionMark,
+	RevisionNotice,
+} from './+shared/components.tsx'
 import {
 	manifest,
+	pilotScoreboardFor,
+	revision,
 	scoreboardFor,
 	usageForMedium,
 } from './+shared/pilot.server.ts'
@@ -44,9 +50,13 @@ export const meta: Route.MetaFunction = () => [
 export async function loader() {
 	return {
 		manifest,
+		revision,
 		scoreboards: Object.fromEntries(
 			MEDIA.map((m) => [m.id, scoreboardFor(m.id)]),
 		) as Record<MediumId, ReturnType<typeof scoreboardFor>>,
+		pilotScoreboards: Object.fromEntries(
+			MEDIA.map((m) => [m.id, pilotScoreboardFor(m.id)]),
+		) as Record<MediumId, ReturnType<typeof pilotScoreboardFor>>,
 		usage: Object.fromEntries(
 			MEDIA.map((m) => [m.id, usageForMedium(m.id)]),
 		) as Record<MediumId, ReturnType<typeof usageForMedium>>,
@@ -167,21 +177,25 @@ function ScoreTable({
 export default function StadelPilotOverview({
 	loaderData,
 }: Route.ComponentProps) {
-	const { manifest: run, scoreboards, usage } = loaderData
-	const printsTop = scoreboards.prints[0]
-	const printsRunnerUp = scoreboards.prints[1]
+	const {
+		manifest: run,
+		revision: rev,
+		scoreboards,
+		pilotScoreboards,
+		usage,
+	} = loaderData
 
 	return (
 		<>
 			<PilotHeader
-				kind={`Pilot report · ${run.experiment}`}
+				kind={`Pilot report · updated ${rev.date}`}
 				title="Five models on the graphic collection"
 				lead={
 					<>
-						I froze an evaluation sample of {run.sample.works} sheets —{' '}
+						I froze an evaluation sample of {run.sample.works} sheets:{' '}
 						{run.sample.perMedium} prints and {run.sample.perMedium} drawings,
 						capped at {run.sample.maxPerArtist} works per artist so that no
-						single artist dominates it — and ran five current vision models
+						single artist dominates it, and ran five current vision models
 						across both tasks and both media. {run.calls} model calls in total.
 					</>
 				}
@@ -195,6 +209,47 @@ export default function StadelPilotOverview({
 			/>
 
 			<div className="container flex flex-col gap-14 py-12 md:py-16">
+				<RevisionNotice>
+					<p>
+						<strong>What is new on these pages, and where to look.</strong> After
+						your reply of 13 August we rewrote both prompts and re-ran the whole
+						sample for the two leading models: the{' '}
+						<Link to="/staedel-research/descriptions">descriptions</Link>, the{' '}
+						<Link to="/staedel-research/tags">keywords</Link>, and the{' '}
+						<Link to="/staedel-research/evaluation">scores</Link>, the last of
+						these with a judge that takes no part in the run. Every sheet can be
+						opened against the version it replaced, and anything still showing
+						pilot output is marked <em>Pilot 1 Aug</em>.
+					</p>
+					<p>
+						The descriptions no longer name a material, a printmaking or drawing
+						process, or a period style: the removal you asked for. Measured
+						over {rev.descriptions[0]!.before.texts} texts per model: technique
+						appeared in every text before the change and in none after. The
+						average German long text fell from{' '}
+						{rev.descriptions.map((m) => m.before.avgLong).join(' and ')} characters to{' '}
+						{rev.descriptions.map((m) => m.after.avgLong).join(' and ')}, against the{' '}
+						{rev.houseReference.avgLong} your own published texts average. Every
+						revised text can be opened against the version it replaced.
+					</p>
+					<p>
+						The keywords changed under a narrower rule: no process, no material,
+						no period, but keeping the mark vocabulary your own records use. That
+						took banned values to zero on both models while the vocabulary you do
+						catalogue nearly doubled, and the total keyword count held steady.
+					</p>
+					<p>
+						The {rev.houseReference.texts} texts you sent are the source of that
+						voice. {rev.houseReference.withImageInExport} of them are works in
+						this export, so we hold their images;{' '}
+						{rev.houseReference.usedAsExamples} of those are shown to the model
+						as examples, three per medium. All{' '}
+						{rev.houseReference.withImageInExport} are held out of the full run.
+						You have already written those texts, so there is nothing for us to
+						add there.
+					</p>
+				</RevisionNotice>
+
 				<Section n={1} heading="The roster">
 					<p className="font-body text-prose measure">
 						The roster was taken from each provider's live model list. The
@@ -209,6 +264,7 @@ export default function StadelPilotOverview({
 									{[
 										'Provider',
 										'Model',
+										'Status',
 										'Calls',
 										'Tokens in',
 										'Tokens out',
@@ -218,7 +274,7 @@ export default function StadelPilotOverview({
 											scope="col"
 											className={
 												'font-data text-data-sm text-ground-muted py-2 pr-4 tracking-[0.12em] uppercase ' +
-												(h === 'Provider' || h === 'Model'
+												(h === 'Provider' || h === 'Model' || h === 'Status'
 													? 'text-left'
 													: 'text-right')
 											}
@@ -247,6 +303,9 @@ export default function StadelPilotOverview({
 											<td className="font-data text-data py-2 pr-4 tracking-normal">
 												{model.id.replace(/^[a-z]+-/, '')}
 											</td>
+											<td className="py-2 pr-4">
+												<RevisionMark kind={model.status} />
+											</td>
 											<td className="font-data text-data py-2 pr-4 text-right tabular-nums">
 												{calls}
 											</td>
@@ -263,7 +322,7 @@ export default function StadelPilotOverview({
 						</table>
 					</div>
 					<p className="font-body text-prose-sm text-ground-muted measure">
-						Token counts are the sample only — {run.sample.works} sheets across
+						Token counts are the sample only: {run.sample.works} sheets across
 						both tasks. The full export is{' '}
 						{run.corpus.works.toLocaleString('en-US')} works (
 						{run.corpus.prints.toLocaleString('en-US')} prints,{' '}
@@ -276,50 +335,101 @@ export default function StadelPilotOverview({
 
 				<Section n={2} heading="What the comparison shows">
 					<p className="font-body text-prose measure">
-						Each model's keyword output was scored against the image itself by
-						an independent judge model, with the model names hidden so the judge
-						could not recognise whose output it was reading.
+						Each model's keyword output was scored against the image itself by an
+						independent judge, with the model names hidden. There are two
+						scoreboards below because there were two judges, and their numbers do
+						not sit on one scale.
 					</p>
-					<ScoreTable
-						medium="prints"
-						rows={scoreboards.prints}
-						models={run.models}
-					/>
-					<ScoreTable
-						medium="drawings"
-						rows={scoreboards.drawings}
-						models={run.models}
-					/>
+
+					<div className="flex flex-col gap-3">
+						<div className="flex flex-wrap items-baseline gap-3">
+							<RevisionMark kind="pilot" />
+							<Data className="text-ground-muted normal-case">
+								five models, judged by one of the contestants
+							</Data>
+						</div>
+						<ScoreTable
+							medium="prints"
+							rows={pilotScoreboards.prints}
+							models={run.models}
+						/>
+						<ScoreTable
+							medium="drawings"
+							rows={pilotScoreboards.drawings}
+							models={run.models}
+						/>
+					</div>
+
 					<div className="prose-editorial measure">
 						<p>
-							Mistral scores lowest on both media — well over a point behind the
-							next model, and two and a half points behind the leader on print
-							iconography. The margin is wide enough that the sample size is
-							unlikely to account for it.
+							This is the run that decided the roster, and for that it is
+							sufficient. Mistral scores lowest on both media, well over a point
+							behind the next model. Google and xAI score level with each other
+							and behind both leaders. Iconography is the category that
+							separates them, spanning 5.2 to 9.2; atmosphere and emotion sit
+							between 8.0 and 9.0 for everyone and say very little.
 						</p>
 						<p>
-							Google and xAI score level with each other. They swap places
-							between the two media, and this sample does not separate them.
-						</p>
-						<p>
-							OpenAI and Anthropic lead, in that order, though that order should
-							be read as provisional. The judge in this run was itself one of
-							the contestants, and its margin over the runner-up (
-							{printsTop && printsRunnerUp
-								? (printsTop.overall! - printsRunnerUp.overall!).toFixed(2)
-								: '—'}{' '}
-							on prints) is smaller than the self-preference that could
-							plausibly explain it. Re-scoring those two with a judge that is
-							neither of them would settle the question.
-						</p>
-						<p>
-							Iconography is the category that separates the models: it spans
-							5.2 to 9.2 across the roster. Atmosphere and emotion sit between
-							8.0 and 9.0 for every model and, at this sample size, say very
-							little.
+							What it could <em>not</em> decide is the order at the top, because
+							the judge was itself the model it placed first.
 						</p>
 					</div>
-					<UncertaintyNotice notice="Ranking provisional · judge was a contestant · re-score pending" />
+
+					<div className="flex flex-col gap-3">
+						<div className="flex flex-wrap items-baseline gap-3">
+							<RevisionMark kind="revised" />
+							<Data className="text-ground-muted normal-case">
+								two models, judged by a model outside the run
+							</Data>
+						</div>
+						<ScoreTable
+							medium="prints"
+							rows={scoreboards.prints}
+							models={run.models}
+						/>
+						<ScoreTable
+							medium="drawings"
+							rows={scoreboards.drawings}
+							models={run.models}
+						/>
+					</div>
+
+					<div className="prose-editorial measure">
+						<p>
+							The suspicion was right. On identical keywords, swapping the judge
+							reverses the order: the pilot's leader falls behind by 0.25 on
+							prints and 0.23 on drawings, and on a paired test across the
+							twenty sheets that reversal is statistically significant. The lead
+							we reported on 1 August was the judge preferring its own output.
+						</p>
+						<p>
+							<strong>
+								That does not make the other model the winner, and we are not
+								presenting an order.
+							</strong>{' '}
+							The keyword revision improved both, and improved the pilot's
+							leader more, which closed the gap again. On the current keywords
+							the two are 0.05 and 0.13 apart on a 20-sheet sample, well inside
+							the noise. The honest statement is that a neutral judge does not
+							separate them on keywords.
+						</p>
+						<p>
+							Where they do separate is the descriptions. Against the length
+							your own published texts occupy, one model lands inside the range
+							on {rev.descriptions[0]!.after.inBand} of{' '}
+							{rev.descriptions[0]!.after.texts} sheets and the other on{' '}
+							{rev.descriptions[1]!.after.inBand}. That is a clearer difference
+							than anything in the tables above, and it is on the task you gave
+							us the most direct instruction about.
+						</p>
+						<p>
+							The two scoreboards are roughly two points apart throughout. That
+							gap is the judge's calibration, not a change in quality; the{' '}
+							<Link to="/staedel-research/evaluation">evaluation page</Link>{' '}
+							separates the two with a third scoring pass and shows the working.
+						</p>
+					</div>
+					<UncertaintyNotice notice="No order presented between the two finalists · difference within noise at n=20" />
 				</Section>
 
 				<Section n={3} heading="Why the catalogue comparison was set aside">
@@ -336,7 +446,7 @@ export default function StadelPilotOverview({
 							drawings carry five or more thematic keywords. On a record where
 							you hold four keywords and the model finds all four and then adds
 							sixty-five more, an overlap score reads as 6% precision. The model
-							has not performed worse there — there is simply less catalogue to
+							has not performed worse there; there is simply less catalogue to
 							match against. Averaged across the sample, precision on the thinly
 							catalogued records comes out twelve times lower than on the deeply
 							catalogued ones, while recall comes out twice as high. Neither
@@ -349,9 +459,9 @@ export default function StadelPilotOverview({
 						</p>
 						<p>
 							There is also a structural limit. Four of the nine fields the
-							briefing asks for — <code>Assoziation.Person</code>,{' '}
+							briefing asks for (<code>Assoziation.Person</code>,{' '}
 							<code>Assoziation.Thema</code>, <code>Atmosphäre</code> and{' '}
-							<code>Emotion</code> — are empty across all {run.sample.works}{' '}
+							<code>Emotion</code>) are empty across all {run.sample.works}{' '}
 							sample records. That is by design: they are the categories the
 							project exists to add. A comparison against the catalogue is
 							therefore blind to nearly half the output.
@@ -359,13 +469,13 @@ export default function StadelPilotOverview({
 						<p>
 							The evaluation therefore scores the models against the artwork
 							itself, which needs no catalogue and covers all four categories.
-							Your records remain the backbone of every run — they supply the
+							Your records remain the backbone of every run: they supply the
 							work list, the metadata in each prompt, and the images. They are
 							simply not being used as a scoreboard.
 						</p>
 						<p>
-							The underlying question — what would this actually add to the
-							catalogue? — is still answerable, and directly. The{' '}
+							The underlying question (what would this actually add to the
+							catalogue?) is still answerable, and directly. The{' '}
 							<Link to="/staedel-research/tags">keyword comparison</Link> puts
 							your record beside all five models on every sheet in the sample,
 							so the answer can be read off the roughly 85 deeply annotated
@@ -374,72 +484,86 @@ export default function StadelPilotOverview({
 					</div>
 				</Section>
 
-				<Section n={4} heading="What would strengthen the results">
+				<Section n={4} heading="What was asked for, and what came back">
+					<p className="font-body text-prose measure">
+						The pilot report closed with three requests. All three have been
+						answered, and the answers changed the work rather than merely
+						confirming it.
+					</p>
 					<ol className="prose-editorial measure list-decimal pl-5">
 						<li>
-							<strong>A technique column, if one exists.</strong> The export has
-							nothing distinguishing Radierung from Kupferstich from
-							Holzschnitt. At present the model infers technique from the image;
-							if the field exists somewhere, it could be stated instead.
+							<strong>The technique column: withdrawn, and inverted.</strong>{' '}
+							We asked whether a field existed distinguishing Radierung from
+							Kupferstich from Holzschnitt. Rather than supply one you asked
+							that the descriptions stop making claims of this kind at all,
+							since each has to be checked by hand. That is now the firmest rule
+							in the prompt, and it removes the need for the column: a text that
+							never names a technique cannot get one wrong.
 						</li>
 						<li>
 							<strong>
-								Published texts on works in the graphic collection.
+								The example texts: {rev.houseReference.texts} received, and
+								they set the voice.
 							</strong>{' '}
-							The briefing asks for example texts to guide description style.
-							The three published Städel texts available to me describe a
-							Tischbein painting, a Vidal photograph and a Piazzetta drawing —
-							none of those artists appears in this export, and two are a
-							different medium. Examples built on a painting and a photograph
-							would teach the model to write about colour and surface, which
-							does not transfer to pre-1800 works on paper. A handful of prints
-							and a handful of drawings would be enough.
+							{rev.houseReference.withImageInExport} of them are works in this
+							export, so we hold their images and can pair each text with what
+							the curator was looking at.{' '}
+							{rev.houseReference.usedAsExamples} of those go into the prompt as
+							examples, three per medium, chosen to span distinct kinds of text
+							rather than to repeat one. They also settled the length: your
+							texts run {rev.houseReference.minLong}–{rev.houseReference.maxLong}{' '}
+							characters and average {rev.houseReference.avgLong}, where the
+							pilot's averaged {rev.descriptions[0]!.before.avgLong} and{' '}
+							{rev.descriptions[1]!.before.avgLong}. The briefing's 800 was a cap the
+							models were treating as a target.
 						</li>
 						<li>
-							<strong>Confirmation of one vocabulary deviation.</strong> The
-							briefing's list for <code>Ikon.Hauptmotiv.allgemein</code> does
-							not match what your database contains.{' '}
-							<code>Religiöse Darstellung</code> and <code>Mythologie</code>{' '}
-							appear zero times in the export; you use{' '}
-							<code>Biblische Darstellung</code> (340),{' '}
-							<code>Heiligendarstellung</code> (206) and{' '}
-							<code>Mythologische Darstellung</code> (139). And{' '}
-							<code>Personendarstellung</code> — the most common value in the
-							collection, 560 records — is absent from the briefing list
-							altogether. Six briefing terms are never used at all. The prompt
-							is therefore built around the vocabulary in your export, with the
-							briefing's unused terms kept as fallbacks. Since this departs from
-							the agreed text, I would like it confirmed before the full run.
+							<strong>The vocabulary deviation: confirmed.</strong> The prompt
+							keeps the vocabulary your export actually uses, with the
+							briefing's unused terms as fallbacks.
 						</li>
 					</ol>
+					<p className="font-body text-prose measure">
+						Checking the instruction about technique against the keyword fields
+						turned up something worth putting back to you. Across the 4,583{' '}
+						<code>Ikon.Thema</code> values in the export, your records name a
+						process (<code>Radierung</code>, <code>Kupferstich</code>,{' '}
+						<code>Holzschnitt</code>) zero times and a period style zero times,
+						but they do record <code>Schraffur</code> 43 times, alongside{' '}
+						<code>Licht</code>, <code>Schatten</code> and{' '}
+						<code>Hell-Dunkel-Kontrast</code>, on the two formal axes the
+						briefing asks for.
+					</p>
+					<p className="font-body text-prose measure">
+						So the keyword prompt now bans the process and the period (the
+						error-prone half, and the half you never catalogue) while keeping
+						the visible mark vocabulary, which you do. A blanket ban would have
+						put the output at odds with your own records.{' '}
+						<strong>
+							If you intended the instruction to reach the keywords as
+							completely as it reaches the texts, and we will drop that
+							vocabulary too.
+						</strong>
+					</p>
+					<UncertaintyNotice notice="Keywords re-run under the narrowed rule · zero process or period terms across both finalists at n=40" />
 				</Section>
 
 				<Section n={5} heading="What happens next">
 					<p className="font-body text-prose measure">
-						I am working on a more robust evaluation — the two leading models
-						re-scored with a judge that took no part in the run. It is unlikely
-						to change the headline result: the OpenAI and Anthropic models lead
-						on both media, and their margin over the rest is wide enough that a
-						different judge should not disturb it. What the re-score settles is
-						the order between those two.
+						The re-score is done, and it did not produce a winner. It established
+						two things instead: the pilot's ranking was an artefact of the judge,
+						and a neutral judge does not separate the two remaining models on
+						keywords. We would rather tell you that than manufacture an order out
+						of a 0.05 difference.
 					</p>
 					<p className="font-body text-prose measure">
-						In the meantime, everything is readable. The{' '}
-						<Link to="/staedel-research/tags">keywords</Link> and the{' '}
-						<Link to="/staedel-research/descriptions">descriptions</Link> are
-						there sheet by sheet, and the full prompt behind each task is
-						printed on its own page. If you can look through them and mark
-						anything that reads wrong to you — a keyword that would not pass
-						review, a description in the wrong voice — that is the most useful
-						thing at this stage.
-					</p>
-					<p className="font-body text-prose measure">
-						I would then like to schedule our next meeting to go through your
-						notes together. After that, all{' '}
-						{run.corpus.works.toLocaleString('en-US')} works go through the
-						chosen model — the briefing's “best performer plus one comparison
-						model” — and I deliver the UTF-8 CSV with semicolon delimiter plus
-						the separate keyword-and-type list, as specified.
+						I will be waiting now for your reading of the revised output. The{' '}
+						<Link to="/staedel-research/descriptions">descriptions</Link> and{' '}
+						<Link to="/staedel-research/tags">keywords</Link> are there sheet by
+						sheet, each openable against what it replaced, and the full prompt
+						behind each task is printed on its page. If the voice is still not
+						yours, or a keyword would not pass review, marking one or two is
+						enough. The pattern is usually visible from a small number.
 					</p>
 				</Section>
 
@@ -459,7 +583,7 @@ export default function StadelPilotOverview({
 								to: '/staedel-research/descriptions',
 								title: 'Descriptions',
 								blurb:
-									'The bilingual texts — long and short, German and English — as each model wrote them.',
+									'The bilingual texts (long and short, German and English) as each model wrote them.',
 							},
 							{
 								to: '/staedel-research/evaluation',
