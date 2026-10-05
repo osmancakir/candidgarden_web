@@ -6,19 +6,32 @@ import {
 	ProvenanceStamp,
 	UncertaintyNotice,
 } from '#app/components/institute/primitives.tsx'
+import { cn } from '#app/utils/misc.tsx'
 import {
 	PilotHeader,
 	RevisionMark,
 	RevisionNotice,
 } from './+shared/components.tsx'
 import {
+	currentRound,
+	lines,
 	manifest,
 	pilotScoreboardFor,
 	revision,
+	round3,
+	runInfo,
 	scoreboardFor,
 	usageForMedium,
 } from './+shared/pilot.server.ts'
-import { MEDIA, SCORE_CATEGORIES, type MediumId } from './+shared/schema.ts'
+import {
+	APPROACHES,
+	MEDIA,
+	SCORE_CATEGORIES,
+	type KeywordMeasure,
+	type MediumId,
+	type Note,
+	type TextRuleMeasure,
+} from './+shared/schema.ts'
 import { type Route } from './+types/index.ts'
 
 // Gated by the layout's role check, so it must not be advertised in
@@ -28,29 +41,196 @@ export const handle: SEOHandle = {
 }
 
 /**
- * The pilot report. Everything the status note of 01 August 2026 says, laid out
- * so a reader can check each claim against the run behind it — every figure on
- * this page links through to the sheets it was computed from.
+ * The report. Round 3 leads, because it is what the museum is being asked to
+ * read now, and it is laid out in the order of the museum's own notes: each
+ * note, what changed in response, the count that shows it, and a link straight
+ * to the sheets that show it. Every figure is computed from the run by the prep
+ * script, so a claim here can be checked against the sheet it links to.
  *
- * The order is the order of the argument, not of the pipeline: what was run,
- * what it showed, why the catalogue comparison was set aside, what would
- * strengthen the results, what happens next.
+ * The pilot and round-2 report sits folded beneath, unchanged in substance: it
+ * is the record of how the roster and the rules got here.
  */
 
 export const meta: Route.MetaFunction = () => [
-	{ title: 'Städel pilot · Candid Garden' },
+	{ title: 'Städel research · Candid Garden' },
 	{ name: 'robots', content: 'noindex, nofollow' },
 	{
 		name: 'description',
 		content:
-			'Model comparison on the Städel graphic collection: five vision models, two tasks, 40 annotated sheets.',
+			'Vision models on the Städel graphic collection: round 3, answering the museum’s notes on keywords and texts.',
 	},
 ]
 
+const FLAG_UNITS = {
+	geo: 'Geografie values that are not a named place, of all Geografie values',
+	compound: 'Open compounds in the subject fields',
+	artist: 'The work’s own artist under Assoziation.Person',
+	role: 'Unnamed roles filed as persons',
+} as const
+
+type MeasureRow = {
+	from: string
+	to: string
+	before: string
+	after: string
+	improved: boolean
+}
+
+/** What a note's count looks like, round 2 against round 3, for each line. */
+function measureFor(
+	note: Note,
+): { unit: string; rows: Array<MeasureRow> } | null {
+	if (!note.measure) return null
+	const rows = lines.map((line) => {
+		const before = runInfo(line.id, 'revision')!
+		const after = runInfo(line.id, currentRound.id)!
+		const kb = round3.keywordMeasures.all[before.key] as KeywordMeasure
+		const ka = round3.keywordMeasures.all[after.key] as KeywordMeasure
+		const tb = round3.textMeasures.all[before.key]?.direct as TextRuleMeasure
+		const ta = round3.textMeasures.all[after.key]?.direct as TextRuleMeasure
+		const base = { from: before.model.label, to: after.model.label }
+		switch (note.measure) {
+			case 'geo':
+				return {
+					...base,
+					before: `${kb.geo} / ${kb.geoTotal}`,
+					after: `${ka.geo} / ${ka.geoTotal}`,
+					improved: ka.geo < kb.geo,
+				}
+			case 'quoted':
+				return {
+					...base,
+					before: `${tb.quoted} / ${tb.texts}`,
+					after: `${ta.quoted} / ${ta.texts}`,
+					improved: ta.quoted > tb.quoted,
+				}
+			case 'hedges':
+				return {
+					...base,
+					before: `${tb.hedgesDe} · ${tb.hedgesEn}`,
+					after: `${ta.hedgesDe} · ${ta.hedgesEn}`,
+					improved: ta.hedgesDe < tb.hedgesDe,
+				}
+			case 'places':
+				return {
+					...base,
+					before: `${tb.placesNamed} / ${tb.placesTotal}`,
+					after: `${ta.placesNamed} / ${ta.placesTotal}`,
+					improved:
+						ta.placesNamed / (ta.placesTotal || 1) >
+						tb.placesNamed / (tb.placesTotal || 1),
+				}
+			default:
+				return {
+					...base,
+					before: String(kb[note.measure!]),
+					after: String(ka[note.measure!]),
+					improved: ka[note.measure!] < kb[note.measure!],
+				}
+		}
+	})
+	const unit =
+		note.measure === 'quoted'
+			? 'Texts with a title in „…“, of all texts'
+			: note.measure === 'hedges'
+				? 'Hedges in the German · English texts'
+				: note.measure === 'places'
+					? 'Named places from the model’s keywords that its German text names'
+					: FLAG_UNITS[note.measure as keyof typeof FLAG_UNITS]
+	return { unit, rows }
+}
+
+/** The per-sheet check a note names, for the current round only. */
+function spotFor(note: Note) {
+	if (!note.check) return null
+	const check = round3.spotChecks.find((c) => c.id === note.check)
+	if (!check) return null
+	return {
+		want: check.want,
+		sheet: check.sheet,
+		runs: check.runs
+			.filter((r) => r.run.startsWith(`${currentRound.id}/`))
+			.map((r) => ({
+				model:
+					manifest.models.find((m) => r.run.endsWith(`/${m.id}`))?.label ??
+					r.run,
+				inPlace: r.hits
+					.filter((h) => h.field === check.want)
+					.map((h) => h.value),
+				missing: r.missing,
+				alsoElsewhere: r.alsoElsewhere.map(
+					(h) => `${h.field}${h.type ? ` · ${h.type}` : ''} (${h.value})`,
+				),
+				forbidden: r.forbidden.map((h) => h.value),
+			})),
+	}
+}
+
+function hrefForNote(note: Note, workId: string) {
+	if (note.view === 'keywords') return `/staedel-research/tags?work=${workId}`
+	if (note.view === 'rounds') {
+		return `/staedel-research/descriptions?work=${workId}&view=rounds`
+	}
+	return `/staedel-research/descriptions?work=${workId}`
+}
+
+/** Each way of writing, per model: the counts, for the choice. */
+function approachRows() {
+	return lines.flatMap((line) => {
+		const run = runInfo(line.id, currentRound.id)!
+		return APPROACHES.map((approach) => {
+			const m = round3.textMeasures.all[run.key]?.[approach.id] as
+				| TextRuleMeasure
+				| undefined
+			return {
+				key: `${line.id}-${approach.id}`,
+				line: line.id,
+				model: run.model.label,
+				approach: approach.id,
+				label: approach.short,
+				avgLong: m?.avgLong ?? null,
+				rich: m?.rich ?? null,
+				hedgesDe: m?.hedgesDe ?? null,
+				quoted: m?.quoted ?? null,
+				places: m ? `${m.placesNamed} / ${m.placesTotal}` : '—',
+				texts: m?.texts ?? 0,
+			}
+		})
+	})
+}
+
 export async function loader() {
+	const notes = round3.notes.map((note) => ({
+		...note,
+		measure: measureFor(note),
+		spot: spotFor(note),
+		links: note.sheets.map((sheet) => ({
+			...sheet,
+			href: hrefForNote(note, sheet.id),
+		})),
+	}))
+	const runs = lines.map((line) => ({
+		before: runInfo(line.id, 'revision')!.model,
+		after: runInfo(line.id, currentRound.id)!.model,
+	}))
+	/** Keyword values per model, round 2 → round 3: what the rules cost. */
+	const valueTotals = lines.map((line) => {
+		const measure = (key: string) =>
+			(round3.keywordMeasures.all as Record<string, KeywordMeasure>)[key]!
+				.values
+		return {
+			before: measure(runInfo(line.id, 'revision')!.key),
+			after: measure(runInfo(line.id, currentRound.id)!.key),
+		}
+	})
 	return {
 		manifest,
 		revision,
+		round: currentRound,
+		runs,
+		valueTotals,
+		notes,
+		approaches: approachRows(),
 		scoreboards: Object.fromEntries(
 			MEDIA.map((m) => [m.id, scoreboardFor(m.id)]),
 		) as Record<MediumId, ReturnType<typeof scoreboardFor>>,
@@ -62,6 +242,8 @@ export async function loader() {
 		) as Record<MediumId, ReturnType<typeof usageForMedium>>,
 	}
 }
+
+type LoaderData = Awaited<ReturnType<typeof loader>>
 
 /** A numbered section, mirroring the document layout used across the site. */
 function Section({
@@ -87,10 +269,455 @@ function Section({
 					<span className="font-display text-title uppercase">{heading}</span>
 				</h2>
 			</div>
-			<div className="flex flex-col gap-6 md:col-span-9">{children}</div>
+			<div className="flex min-w-0 flex-col gap-6 md:col-span-9">
+				{children}
+			</div>
 		</section>
 	)
 }
+
+export default function StadelOverview({ loaderData }: Route.ComponentProps) {
+	const { manifest: run, notes, runs } = loaderData
+	const keywordNotes = notes.filter((n) => n.area === 'keywords')
+	const textNotes = notes.filter((n) => n.area === 'texts')
+
+	return (
+		<>
+			<PilotHeader
+				kind="Round 3 · 5 October 2026"
+				title="Your notes, taken one by one"
+				lead={
+					<>
+						Every note from your reply on round 2 went into the prompts, and the
+						{` ${run.sample.works}`}-sheet sample was run again with each
+						provider’s newer model:{' '}
+						{runs.map((r) => r.after.label).join(' and ')}, replacing{' '}
+						{runs.map((r) => r.before.label).join(' and ')}. Below, each note
+						sits beside what changed, the count that shows it, and the sheets
+						where you can check it yourself.
+					</>
+				}
+				aside={
+					<ProvenanceStamp
+						dataset="Städel · Graphische Sammlung"
+						run={run.experiment}
+						verification="PENDING"
+					/>
+				}
+			/>
+
+			<div className="container flex flex-col gap-14 py-12 md:py-16">
+				<RevisionNotice caption="where to look">
+					<p>
+						<strong>Keywords:</strong> open any sheet on the{' '}
+						<Link to="/staedel-research/tags">keywords page</Link> and you see
+						one model’s round-3 keywords against its round-2 keywords, every
+						value marked as new, dropped or moved, and every value an automatic
+						check still doubts marked with a ⚑.
+					</p>
+					<p>
+						<strong>Texts:</strong> on the{' '}
+						<Link to="/staedel-research/descriptions">descriptions page</Link> a
+						sheet shows both models’ texts in a grid. The columns are either the
+						three ways round 3 wrote them, or the three rounds side by side. In
+						the text itself, hedges, quoted titles and named places are marked.
+					</p>
+					<p className="text-ground-muted">
+						The figures count with word lists and patterns, so they show a rule
+						moving rather than prove it. That is why each one links to sheets
+						you can read.
+					</p>
+				</RevisionNotice>
+
+				<Section n={1} heading="Your notes on the keywords">
+					<NoteList notes={keywordNotes} />
+					<p className="font-body text-prose measure">
+						One consequence to weigh: the stricter rules make the records
+						shorter. Across both media the keyword values fell from{' '}
+						{loaderData.valueTotals
+							.map(
+								(t) =>
+									`${t.before.toLocaleString('en-US')} to ${t.after.toLocaleString('en-US')}`,
+							)
+							.join(' and ')}{' '}
+						per model. Most of that is phrases split or dropped and roles moved
+						out of the person fields. Whether anything you would want to keep
+						went with them is best judged on a sheet: the{' '}
+						<Link to="/staedel-research/tags?work=5738-z&show=changes">
+							changes on 5738 Z
+						</Link>{' '}
+						are a good place to start.
+					</p>
+				</Section>
+
+				<Section n={2} heading="Your notes on the texts">
+					<NoteList notes={textNotes} />
+				</Section>
+
+				<Section n={3} heading="Three ways of writing the text">
+					<p className="font-body text-prose measure">
+						You asked whether the texts could be synthesised from the different
+						models, and whether the keywords should be their basis. Round 3
+						tried both beside the usual text, on the same 40 sheets:
+					</p>
+					<ul className="font-body text-prose measure flex flex-col gap-2">
+						{APPROACHES.map((a) => (
+							<li key={a.id}>
+								<strong>{a.label}.</strong> {a.gloss}
+							</li>
+						))}
+					</ul>
+					<ApproachTable rows={loaderData.approaches} />
+					<div className="prose-editorial measure">
+						<p>
+							<strong>Our reading.</strong> Claude Opus 5.5’s direct texts
+							already carry most of what you asked for. The keyword version adds
+							the most visible gain for almost no extra cost: more of the places
+							named, more titles in quotation marks, and otherwise much the same
+							text.
+						</p>
+						<p>
+							The synthesis helps the weaker draft more than the stronger one.
+							As synthesiser, GPT-6.1 Sol writes longer and picks up what its
+							own draft missed: Goltzius’s injured hand on{' '}
+							<Link to="/staedel-research/descriptions?work=805-z">805 Z</Link>{' '}
+							comes over from Claude’s draft. The two syntheses come out close
+							to each other and close to Claude’s draft, and Claude as
+							synthesiser brings back some of the hedges. Since a synthesis
+							needs both models’ texts first, it roughly doubles the cost. It is
+							worth it if GPT stays in the line-up, and much less so if it does
+							not.
+						</p>
+						<p>
+							Which text reads best is your call, not a count’s. Two sheets that
+							show the difference well:{' '}
+							<Link to="/staedel-research/descriptions?work=5738-z">
+								5738 Z
+							</Link>{' '}
+							and{' '}
+							<Link to="/staedel-research/descriptions?work=4060-z">
+								4060 Z
+							</Link>
+							.
+						</p>
+					</div>
+				</Section>
+
+				<Section n={4} heading="4060 Z, 805 Z and 5950 D">
+					<div className="prose-editorial measure">
+						<p>
+							You found the pilot texts on these three better than round 2’s,
+							apart from technique and style, and asked whether the texts you
+							sent were the cause. Partly, yes, though not through the technique
+							ban. Round 2 modelled itself on your published texts: one
+							paragraph, 350–550 characters, the scene and its story. That cut
+							content no rule forbade. On 4060 Z it cut what the sheet is for
+							(Carracci trying out a pose); on 805 Z, that the hand is
+							Goltzius’s own, injured since childhood; on 5950 D, the small
+							figures that people the landscape.
+						</p>
+						<p>
+							Round 3 gives a rich sheet up to 650 characters, keeps a
+							documented fact the image bears out, and has the drawings prompt
+							name the kind of sheet when the evidence is there. Claude’s
+							round-3 texts bring all three back. GPT’s names the study and the
+							sheet’s purpose but still leaves out the injured hand on 805 Z.
+						</p>
+					</div>
+					<div className="grid gap-4 sm:grid-cols-3">
+						{[
+							{ id: '4060-z', no: '4060 Z', title: 'Ruhende Venus' },
+							{
+								id: '805-z',
+								no: '805 Z',
+								title: 'Vier Studien einer rechten Hand',
+							},
+							{ id: '5950-d', no: '5950 D', title: 'Die drei Bäume' },
+						].map((sheet) => (
+							<Link
+								key={sheet.id}
+								to={`/staedel-research/descriptions?work=${sheet.id}&view=rounds`}
+								className="border-rule hover:border-link group flex flex-col gap-1 border p-4 no-underline transition-colors"
+							>
+								<Data className="text-ground-muted">{sheet.no}</Data>
+								<span className="font-body text-prose group-hover:text-link">
+									{sheet.title}
+								</span>
+								<Data className="text-link mt-2 normal-case">
+									Pilot · Round 2 · Round 3, side by side →
+								</Data>
+							</Link>
+						))}
+					</div>
+				</Section>
+
+				<EarlierRounds data={loaderData} />
+
+				<section className="border-rule border-t pt-10">
+					<Display as="h2" size="title" className="mb-6">
+						The run, sheet by sheet
+					</Display>
+					<div className="grid gap-6 md:grid-cols-3">
+						{[
+							{
+								to: '/staedel-research/tags',
+								title: 'Keywords',
+								blurb:
+									'Round 3 against round 2, value by value, or against your own record. Every flagged value marked.',
+							},
+							{
+								to: '/staedel-research/descriptions',
+								title: 'Descriptions',
+								blurb:
+									'Three ways of writing, or three rounds, side by side for both models, German and English.',
+							},
+							{
+								to: '/staedel-research/evaluation',
+								title: 'Evaluation',
+								blurb:
+									'The neutral judge’s scores on the round-2 keywords, with every justification.',
+							},
+						].map((card) => (
+							<Link
+								key={card.to}
+								to={card.to}
+								className="border-rule hover:border-link group flex flex-col gap-3 border p-5 no-underline transition-colors"
+							>
+								<Display
+									as="h3"
+									size="title"
+									className="group-hover:text-link text-[1.0625rem]"
+								>
+									{card.title}
+								</Display>
+								<p className="font-body text-prose-sm">{card.blurb}</p>
+							</Link>
+						))}
+					</div>
+				</section>
+			</div>
+		</>
+	)
+}
+
+/**
+ * The notes, one row each: what you wrote, what changed, and the evidence —
+ * a count where a rule can be counted, the placement of the named terms where
+ * the note names a sheet, and the sheets to open either way.
+ */
+function NoteList({ notes }: { notes: LoaderData['notes'] }) {
+	return (
+		<ol className="border-rule-strong flex flex-col border-t">
+			{notes.map((note) => (
+				<li
+					key={note.id}
+					className="border-rule grid gap-x-8 gap-y-4 border-b py-6 lg:grid-cols-12"
+				>
+					<div className="flex flex-col gap-1 lg:col-span-4">
+						<Data className="text-ground-muted">You wrote</Data>
+						<p className="font-body text-prose italic">{note.said}</p>
+					</div>
+					<div className="flex flex-col gap-1 lg:col-span-4">
+						<Data className="text-ground-muted">Round 3</Data>
+						<p className="font-body text-prose-sm">{note.changed}</p>
+					</div>
+					<div className="flex flex-col gap-3 lg:col-span-4">
+						{note.measure ? <MeasureBlock measure={note.measure} /> : null}
+						{note.spot ? <SpotBlock spot={note.spot} /> : null}
+						{note.links.length ? (
+							<div className="flex flex-wrap gap-2">
+								{note.links.map((link) => (
+									<Link
+										key={link.id}
+										to={link.href}
+										className="font-data text-data-sm border-link text-link hover:bg-link hover:text-ground border px-2 py-1 tracking-[0.08em] no-underline transition-colors"
+									>
+										{link.objectNumber} →
+									</Link>
+								))}
+							</div>
+						) : null}
+					</div>
+				</li>
+			))}
+		</ol>
+	)
+}
+
+function MeasureBlock({
+	measure,
+}: {
+	measure: NonNullable<LoaderData['notes'][number]['measure']>
+}) {
+	return (
+		<div className="flex flex-col gap-1">
+			<p className="font-body text-prose-sm text-ground-muted">
+				{measure.unit}
+			</p>
+			<table className="font-data text-data">
+				<tbody>
+					{measure.rows.map((row) => (
+						<tr key={row.to} className="align-baseline">
+							<th
+								scope="row"
+								className="font-body text-prose-sm py-0.5 pr-3 text-left font-normal"
+							>
+								{row.to}
+							</th>
+							<td className="text-ground-muted py-0.5 pr-2 text-right whitespace-nowrap tabular-nums">
+								{row.before}
+							</td>
+							<td className="text-ground-muted py-0.5 pr-2" aria-hidden>
+								→
+							</td>
+							<td
+								className={cn(
+									'py-0.5 text-right whitespace-nowrap tabular-nums',
+									row.improved ? 'text-link' : 'text-ground-fg',
+								)}
+							>
+								{row.after}
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+			<p className="font-body text-prose-sm text-ground-muted">
+				Round 2 → round 3, 40 sheets
+			</p>
+		</div>
+	)
+}
+
+function SpotBlock({
+	spot,
+}: {
+	spot: NonNullable<LoaderData['notes'][number]['spot']>
+}) {
+	return (
+		<div className="flex flex-col gap-1.5">
+			<p className="font-body text-prose-sm text-ground-muted break-words">
+				On {spot.sheet.objectNumber}, under{' '}
+				<code className="break-all">{spot.want}</code>
+			</p>
+			{spot.runs.map((run) => {
+				const open =
+					run.missing.length + run.alsoElsewhere.length + run.forbidden.length
+				return (
+					<div key={run.model} className="font-body text-prose-sm">
+						<span className="mr-2">{run.model}:</span>
+						{run.inPlace.length ? (
+							<span className="text-link">{run.inPlace.join(', ')}</span>
+						) : (
+							<span className="text-ground-muted italic">none</span>
+						)}
+						{open ? (
+							<span className="text-stamp-fg block text-[0.8125rem]">
+								{[
+									run.missing.length
+										? `missing: ${run.missing.join(', ')}`
+										: null,
+									run.alsoElsewhere.length
+										? `also under ${run.alsoElsewhere.join(', ')}`
+										: null,
+									run.forbidden.length
+										? `still lists ${run.forbidden.join(', ')}`
+										: null,
+								]
+									.filter(Boolean)
+									.join(' · ')}
+							</span>
+						) : null}
+					</div>
+				)
+			})}
+		</div>
+	)
+}
+
+function ApproachTable({ rows }: { rows: LoaderData['approaches'] }) {
+	const head = [
+		'Model',
+		'Written',
+		'Ø DE long',
+		'551–650',
+		'Hedges DE',
+		'„Titles“',
+		'Places named',
+	]
+	return (
+		<div className="overflow-x-auto">
+			<table className="min-w-full">
+				<caption className="mb-3 text-left">
+					<Data className="text-ground-muted normal-case">
+						Round 3, both media, {rows[0]?.texts ?? 40} sheets per row
+					</Data>
+				</caption>
+				<thead>
+					<tr className="border-rule-strong border-b">
+						{head.map((h, i) => (
+							<th
+								key={h}
+								scope="col"
+								className={cn(
+									'font-data text-data-sm text-ground-muted py-2 pr-4 tracking-[0.08em] whitespace-nowrap uppercase',
+									i < 2 ? 'text-left' : 'text-right',
+								)}
+							>
+								{h}
+							</th>
+						))}
+					</tr>
+				</thead>
+				<tbody className="font-data text-data">
+					{rows.map((row, i) => (
+						<tr
+							key={row.key}
+							className={cn(
+								'border-rule border-b',
+								i > 0 &&
+									rows[i - 1]!.line !== row.line &&
+									'border-t-rule-strong border-t',
+							)}
+						>
+							<th
+								scope="row"
+								className="font-body text-prose-sm py-2 pr-4 text-left font-normal whitespace-nowrap"
+							>
+								{row.model}
+							</th>
+							<td className="py-2 pr-4 whitespace-nowrap">
+								<Link
+									to={`/staedel-research/descriptions?line=${row.line}&approach=${row.approach}`}
+									className="hover:text-link no-underline hover:underline"
+								>
+									{row.label}
+								</Link>
+							</td>
+							<td className="py-2 pr-4 text-right tabular-nums">
+								{row.avgLong ?? '—'}
+							</td>
+							<td className="py-2 pr-4 text-right tabular-nums">
+								{row.rich ?? '—'}
+							</td>
+							<td className="py-2 pr-4 text-right tabular-nums">
+								{row.hedgesDe ?? '—'}
+							</td>
+							<td className="py-2 pr-4 text-right tabular-nums">
+								{row.quoted ?? '—'}
+							</td>
+							<td className="py-2 text-right tabular-nums">{row.places}</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
+	)
+}
+
+/* ==========================================================================
+   The pilot and round 2, as reported on 25 August.
+   ========================================================================== */
 
 function ScoreTable({
 	medium,
@@ -174,88 +801,76 @@ function ScoreTable({
 	)
 }
 
-export default function StadelPilotOverview({
-	loaderData,
-}: Route.ComponentProps) {
+/**
+ * The report as it stood after round 2, folded. Kept whole rather than
+ * summarised: it is the evidence for the roster, the neutral judge and the
+ * keyword rule round 3 builds on, and a reader who wants to know why things
+ * are as they are should find the argument as it was made.
+ */
+function EarlierRounds({ data }: { data: LoaderData }) {
 	const {
 		manifest: run,
 		revision: rev,
 		scoreboards,
 		pilotScoreboards,
 		usage,
-	} = loaderData
-
+	} = data
+	const pilotModels = usage.prints.map((u) => u.model)
 	return (
-		<>
-			<PilotHeader
-				kind={`Pilot report · updated ${rev.date}`}
-				title="Five models on the graphic collection"
-				lead={
-					<>
-						I froze an evaluation sample of {run.sample.works} sheets:{' '}
-						{run.sample.perMedium} prints and {run.sample.perMedium} drawings,
-						capped at {run.sample.maxPerArtist} works per artist so that no
-						single artist dominates it, and ran five current vision models
-						across both tasks and both media. {run.calls} model calls in total.
-					</>
-				}
-				aside={
-					<ProvenanceStamp
-						dataset="Städel · Graphische Sammlung"
-						run={run.experiment}
-						verification="PENDING"
-					/>
-				}
-			/>
+		<details className="border-rule group border">
+			<summary className="hover:text-link cursor-pointer list-none px-5 py-4 select-none">
+				<div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+					<span className="font-display text-title uppercase">
+						<span className="mr-3 inline-block group-open:hidden" aria-hidden>
+							+
+						</span>
+						<span className="mr-3 hidden group-open:inline-block" aria-hidden>
+							−
+						</span>
+						Earlier rounds
+					</span>
+					<span className="flex flex-wrap gap-2">
+						<RevisionMark kind="pilot" />
+						<RevisionMark kind="revised" />
+					</span>
+				</div>
+				<p className="font-body text-prose-sm text-ground-muted mt-2">
+					The pilot of 1 August and round 2 of 25 August: how the roster was cut
+					to two, why the scores use a neutral judge, and why the catalogue is
+					not a scoreboard.
+				</p>
+			</summary>
 
-			<div className="container flex flex-col gap-14 py-12 md:py-16">
-				<RevisionNotice>
+			<div className="border-rule flex flex-col gap-14 border-t px-5 py-10">
+				<RevisionNotice kind="revised" caption="as reported on 25 August">
 					<p>
-						<strong>What is new on these pages, and where to look.</strong> After
-						your reply of 13 August we rewrote both prompts and re-ran the whole
-						sample for the two leading models: the{' '}
-						<Link to="/staedel-research/descriptions">descriptions</Link>, the{' '}
-						<Link to="/staedel-research/tags">keywords</Link>, and the{' '}
-						<Link to="/staedel-research/evaluation">scores</Link>, the last of
-						these with a judge that takes no part in the run. Every sheet can be
-						opened against the version it replaced, and anything still showing
-						pilot output is marked <em>Pilot 1 Aug</em>.
-					</p>
-					<p>
-						The descriptions no longer name a material, a printmaking or drawing
-						process, or a period style: the removal you asked for. Measured
-						over {rev.descriptions[0]!.before.texts} texts per model: technique
-						appeared in every text before the change and in none after. The
-						average German long text fell from{' '}
-						{rev.descriptions.map((m) => m.before.avgLong).join(' and ')} characters to{' '}
-						{rev.descriptions.map((m) => m.after.avgLong).join(' and ')}, against the{' '}
-						{rev.houseReference.avgLong} your own published texts average. Every
-						revised text can be opened against the version it replaced.
+						After your reply of 13 August we rewrote both prompts and re-ran the
+						sample for the two leading models. The descriptions stopped naming a
+						material, a process or a period: measured over{' '}
+						{rev.descriptions[0]!.before.texts} texts per model, technique
+						appeared in every text before and in none after. The average German
+						long text fell from{' '}
+						{rev.descriptions.map((m) => m.before.avgLong).join(' and ')}{' '}
+						characters to{' '}
+						{rev.descriptions.map((m) => m.after.avgLong).join(' and ')},
+						against the {rev.houseReference.avgLong} your own published texts
+						average.
 					</p>
 					<p>
 						The keywords changed under a narrower rule: no process, no material,
-						no period, but keeping the mark vocabulary your own records use. That
-						took banned values to zero on both models while the vocabulary you do
-						catalogue nearly doubled, and the total keyword count held steady.
-					</p>
-					<p>
-						The {rev.houseReference.texts} texts you sent are the source of that
-						voice. {rev.houseReference.withImageInExport} of them are works in
-						this export, so we hold their images;{' '}
-						{rev.houseReference.usedAsExamples} of those are shown to the model
-						as examples, three per medium. All{' '}
-						{rev.houseReference.withImageInExport} are held out of the full run.
-						You have already written those texts, so there is nothing for us to
-						add there.
+						no period, but keeping the mark vocabulary your own records use,
+						such as <code>Schraffur</code>. The {rev.houseReference.texts} texts
+						you sent set the voice; {rev.houseReference.usedAsExamples} of them
+						are shown to the model as examples, and all{' '}
+						{rev.houseReference.withImageInExport} that are in this export are
+						held out of the full run.
 					</p>
 				</RevisionNotice>
 
-				<Section n={1} heading="The roster">
+				<Section n={1} heading="The pilot roster">
 					<p className="font-body text-prose measure">
-						The roster was taken from each provider's live model list. The
-						models named in the briefing are more than a year old, and the field
-						has moved since it was written. One model per provider, each the
-						provider's current flagship for vision.
+						The roster was taken from each provider’s live model list: one model
+						per provider, each the provider’s flagship for vision at the time.
 					</p>
 					<div className="overflow-x-auto">
 						<table className="min-w-full">
@@ -264,20 +879,18 @@ export default function StadelPilotOverview({
 									{[
 										'Provider',
 										'Model',
-										'Status',
+										'Since',
 										'Calls',
 										'Tokens in',
 										'Tokens out',
-									].map((h) => (
+									].map((h, i) => (
 										<th
 											key={h}
 											scope="col"
-											className={
-												'font-data text-data-sm text-ground-muted py-2 pr-4 tracking-[0.12em] uppercase ' +
-												(h === 'Provider' || h === 'Model' || h === 'Status'
-													? 'text-left'
-													: 'text-right')
-											}
+											className={cn(
+												'font-data text-data-sm text-ground-muted py-2 pr-4 tracking-[0.12em] uppercase',
+												i < 3 ? 'text-left' : 'text-right',
+											)}
 										>
 											{h}
 										</th>
@@ -285,16 +898,9 @@ export default function StadelPilotOverview({
 								</tr>
 							</thead>
 							<tbody>
-								{run.models.map((model) => {
-									const prints = usage.prints.find(
-										(u) => u.model.id === model.id,
-									)
-									const drawings = usage.drawings.find(
-										(u) => u.model.id === model.id,
-									)
-									const calls = (prints?.calls ?? 0) + (drawings?.calls ?? 0)
-									const input = (prints?.input ?? 0) + (drawings?.input ?? 0)
-									const output = (prints?.output ?? 0) + (drawings?.output ?? 0)
+								{pilotModels.map((model) => {
+									const p = usage.prints.find((u) => u.model.id === model.id)
+									const d = usage.drawings.find((u) => u.model.id === model.id)
 									return (
 										<tr key={model.id} className="border-rule border-b">
 											<td className="font-body text-prose py-2 pr-4">
@@ -307,13 +913,17 @@ export default function StadelPilotOverview({
 												<RevisionMark kind={model.status} />
 											</td>
 											<td className="font-data text-data py-2 pr-4 text-right tabular-nums">
-												{calls}
+												{(p?.calls ?? 0) + (d?.calls ?? 0)}
 											</td>
 											<td className="font-data text-data py-2 pr-4 text-right tabular-nums">
-												{input.toLocaleString('en-US')}
+												{((p?.input ?? 0) + (d?.input ?? 0)).toLocaleString(
+													'en-US',
+												)}
 											</td>
 											<td className="font-data text-data py-2 text-right tabular-nums">
-												{output.toLocaleString('en-US')}
+												{((p?.output ?? 0) + (d?.output ?? 0)).toLocaleString(
+													'en-US',
+												)}
 											</td>
 										</tr>
 									)
@@ -322,25 +932,12 @@ export default function StadelPilotOverview({
 						</table>
 					</div>
 					<p className="font-body text-prose-sm text-ground-muted measure">
-						Token counts are the sample only: {run.sample.works} sheets across
-						both tasks. The full export is{' '}
-						{run.corpus.works.toLocaleString('en-US')} works (
-						{run.corpus.prints.toLocaleString('en-US')} prints,{' '}
-						{run.corpus.drawings.toLocaleString('en-US')} drawings), so a
-						complete run is roughly{' '}
-						{Math.round(run.corpus.works / run.sample.works)}× these figures per
-						model.
+						Token counts are the pilot sample only: {run.sample.works} sheets
+						across both tasks.
 					</p>
 				</Section>
 
-				<Section n={2} heading="What the comparison shows">
-					<p className="font-body text-prose measure">
-						Each model's keyword output was scored against the image itself by an
-						independent judge, with the model names hidden. There are two
-						scoreboards below because there were two judges, and their numbers do
-						not sit on one scale.
-					</p>
-
+				<Section n={2} heading="What the comparison showed">
 					<div className="flex flex-col gap-3">
 						<div className="flex flex-wrap items-baseline gap-3">
 							<RevisionMark kind="pilot" />
@@ -359,22 +956,15 @@ export default function StadelPilotOverview({
 							models={run.models}
 						/>
 					</div>
-
 					<div className="prose-editorial measure">
 						<p>
-							This is the run that decided the roster, and for that it is
-							sufficient. Mistral scores lowest on both media, well over a point
-							behind the next model. Google and xAI score level with each other
-							and behind both leaders. Iconography is the category that
-							separates them, spanning 5.2 to 9.2; atmosphere and emotion sit
-							between 8.0 and 9.0 for everyone and say very little.
-						</p>
-						<p>
-							What it could <em>not</em> decide is the order at the top, because
-							the judge was itself the model it placed first.
+							This is the run that decided the roster. Mistral scores lowest on
+							both media, well over a point behind the next model; Google and
+							xAI score level with each other and behind both leaders. What it
+							could <em>not</em> decide is the order at the top, because the
+							judge was itself the model it placed first.
 						</p>
 					</div>
-
 					<div className="flex flex-col gap-3">
 						<div className="flex flex-wrap items-baseline gap-3">
 							<RevisionMark kind="revised" />
@@ -393,223 +983,71 @@ export default function StadelPilotOverview({
 							models={run.models}
 						/>
 					</div>
-
 					<div className="prose-editorial measure">
 						<p>
-							The suspicion was right. On identical keywords, swapping the judge
-							reverses the order: the pilot's leader falls behind by 0.25 on
-							prints and 0.23 on drawings, and on a paired test across the
-							twenty sheets that reversal is statistically significant. The lead
-							we reported on 1 August was the judge preferring its own output.
-						</p>
-						<p>
-							<strong>
-								That does not make the other model the winner, and we are not
-								presenting an order.
-							</strong>{' '}
-							The keyword revision improved both, and improved the pilot's
-							leader more, which closed the gap again. On the current keywords
-							the two are 0.05 and 0.13 apart on a 20-sheet sample, well inside
-							the noise. The honest statement is that a neutral judge does not
-							separate them on keywords.
-						</p>
-						<p>
-							Where they do separate is the descriptions. Against the length
-							your own published texts occupy, one model lands inside the range
-							on {rev.descriptions[0]!.after.inBand} of{' '}
-							{rev.descriptions[0]!.after.texts} sheets and the other on{' '}
-							{rev.descriptions[1]!.after.inBand}. That is a clearer difference
-							than anything in the tables above, and it is on the task you gave
-							us the most direct instruction about.
-						</p>
-						<p>
-							The two scoreboards are roughly two points apart throughout. That
-							gap is the judge's calibration, not a change in quality; the{' '}
+							On identical keywords, swapping the judge reversed the order: the
+							pilot’s lead was the judge preferring its own output. On the
+							revised keywords the two are 0.05 and 0.13 apart on a 20-sheet
+							sample, well inside the noise, so a neutral judge does not
+							separate them. The{' '}
 							<Link to="/staedel-research/evaluation">evaluation page</Link>{' '}
-							separates the two with a third scoring pass and shows the working.
+							shows the working.
 						</p>
 					</div>
 					<UncertaintyNotice notice="No order presented between the two finalists · difference within noise at n=20" />
 				</Section>
 
-				<Section n={3} heading="Why the catalogue comparison was set aside">
-					<p className="font-body text-prose measure">
-						The briefing asked for the models to be scored against the
-						annotations already in your records. I built that, ran it on the
-						pilot output, and then took it out of the evaluation. The reason is
-						a finding about the data, so it is worth setting out.
-					</p>
+				<Section n={3} heading="Why the catalogue is not a scoreboard">
 					<div className="prose-editorial measure">
 						<p>
 							The catalogue is unevenly filled: only{' '}
 							<strong>66 of 2,041</strong> prints and <strong>18 of 706</strong>{' '}
 							drawings carry five or more thematic keywords. On a record where
-							you hold four keywords and the model finds all four and then adds
-							sixty-five more, an overlap score reads as 6% precision. The model
-							has not performed worse there; there is simply less catalogue to
-							match against. Averaged across the sample, precision on the thinly
-							catalogued records comes out twelve times lower than on the deeply
-							catalogued ones, while recall comes out twice as high. Neither
-							figure describes the model.
+							you hold four keywords and the model finds all four and adds
+							sixty-five more, an overlap score reads as 6% precision. Run
+							across the roster, that metric ranked the models almost exactly
+							inversely to how much they write.
 						</p>
 						<p>
-							Run across the whole roster, that metric ranks the models almost
-							exactly inversely to how much they write: the tersest model comes
-							first.
-						</p>
-						<p>
-							There is also a structural limit. Four of the nine fields the
-							briefing asks for (<code>Assoziation.Person</code>,{' '}
+							Four of the nine fields (<code>Assoziation.Person</code>,{' '}
 							<code>Assoziation.Thema</code>, <code>Atmosphäre</code> and{' '}
 							<code>Emotion</code>) are empty across all {run.sample.works}{' '}
-							sample records. That is by design: they are the categories the
-							project exists to add. A comparison against the catalogue is
-							therefore blind to nearly half the output.
-						</p>
-						<p>
-							The evaluation therefore scores the models against the artwork
-							itself, which needs no catalogue and covers all four categories.
-							Your records remain the backbone of every run: they supply the
-							work list, the metadata in each prompt, and the images. They are
-							simply not being used as a scoreboard.
-						</p>
-						<p>
-							The underlying question (what would this actually add to the
-							catalogue?) is still answerable, and directly. The{' '}
-							<Link to="/staedel-research/tags">keyword comparison</Link> puts
-							your record beside all five models on every sheet in the sample,
-							so the answer can be read off the roughly 85 deeply annotated
-							records rather than taken on trust as a percentage.
+							sample records, by design: they are what the project adds. So the
+							models are scored against the artwork itself, and your records
+							stay the backbone of every run (the work list, the metadata, the
+							images) without being the scoreboard. The{' '}
+							<Link to="/staedel-research/tags?compare=museum">
+								keyword comparison
+							</Link>{' '}
+							still sets your record beside the models on every sheet.
 						</p>
 					</div>
 				</Section>
 
-				<Section n={4} heading="What was asked for, and what came back">
-					<p className="font-body text-prose measure">
-						The pilot report closed with three requests. All three have been
-						answered, and the answers changed the work rather than merely
-						confirming it.
-					</p>
+				<Section n={4} heading="What you asked in August">
 					<ol className="prose-editorial measure list-decimal pl-5">
 						<li>
-							<strong>The technique column: withdrawn, and inverted.</strong>{' '}
-							We asked whether a field existed distinguishing Radierung from
-							Kupferstich from Holzschnitt. Rather than supply one you asked
-							that the descriptions stop making claims of this kind at all,
-							since each has to be checked by hand. That is now the firmest rule
-							in the prompt, and it removes the need for the column: a text that
+							<strong>Technique: withdrawn from the texts.</strong> A text that
 							never names a technique cannot get one wrong.
 						</li>
 						<li>
 							<strong>
-								The example texts: {rev.houseReference.texts} received, and
-								they set the voice.
+								The example texts: {rev.houseReference.texts} received, and they
+								set the voice.
 							</strong>{' '}
-							{rev.houseReference.withImageInExport} of them are works in this
-							export, so we hold their images and can pair each text with what
-							the curator was looking at.{' '}
-							{rev.houseReference.usedAsExamples} of those go into the prompt as
-							examples, three per medium, chosen to span distinct kinds of text
-							rather than to repeat one. They also settled the length: your
-							texts run {rev.houseReference.minLong}–{rev.houseReference.maxLong}{' '}
-							characters and average {rev.houseReference.avgLong}, where the
-							pilot's averaged {rev.descriptions[0]!.before.avgLong} and{' '}
-							{rev.descriptions[1]!.before.avgLong}. The briefing's 800 was a cap the
-							models were treating as a target.
+							Your texts run {rev.houseReference.minLong}–
+							{rev.houseReference.maxLong} characters and average{' '}
+							{rev.houseReference.avgLong}, where the pilot’s averaged{' '}
+							{rev.descriptions[0]!.before.avgLong} and{' '}
+							{rev.descriptions[1]!.before.avgLong}.
 						</li>
 						<li>
 							<strong>The vocabulary deviation: confirmed.</strong> The prompt
-							keeps the vocabulary your export actually uses, with the
-							briefing's unused terms as fallbacks.
+							keeps the vocabulary your export actually uses.
 						</li>
 					</ol>
-					<p className="font-body text-prose measure">
-						Checking the instruction about technique against the keyword fields
-						turned up something worth putting back to you. Across the 4,583{' '}
-						<code>Ikon.Thema</code> values in the export, your records name a
-						process (<code>Radierung</code>, <code>Kupferstich</code>,{' '}
-						<code>Holzschnitt</code>) zero times and a period style zero times,
-						but they do record <code>Schraffur</code> 43 times, alongside{' '}
-						<code>Licht</code>, <code>Schatten</code> and{' '}
-						<code>Hell-Dunkel-Kontrast</code>, on the two formal axes the
-						briefing asks for.
-					</p>
-					<p className="font-body text-prose measure">
-						So the keyword prompt now bans the process and the period (the
-						error-prone half, and the half you never catalogue) while keeping
-						the visible mark vocabulary, which you do. A blanket ban would have
-						put the output at odds with your own records.{' '}
-						<strong>
-							If you intended the instruction to reach the keywords as
-							completely as it reaches the texts, and we will drop that
-							vocabulary too.
-						</strong>
-					</p>
-					<UncertaintyNotice notice="Keywords re-run under the narrowed rule · zero process or period terms across both finalists at n=40" />
 				</Section>
-
-				<Section n={5} heading="What happens next">
-					<p className="font-body text-prose measure">
-						The re-score is done, and it did not produce a winner. It established
-						two things instead: the pilot's ranking was an artefact of the judge,
-						and a neutral judge does not separate the two remaining models on
-						keywords. We would rather tell you that than manufacture an order out
-						of a 0.05 difference.
-					</p>
-					<p className="font-body text-prose measure">
-						I will be waiting now for your reading of the revised output. The{' '}
-						<Link to="/staedel-research/descriptions">descriptions</Link> and{' '}
-						<Link to="/staedel-research/tags">keywords</Link> are there sheet by
-						sheet, each openable against what it replaced, and the full prompt
-						behind each task is printed on its page. If the voice is still not
-						yours, or a keyword would not pass review, marking one or two is
-						enough. The pattern is usually visible from a small number.
-					</p>
-				</Section>
-
-				<section className="border-rule border-t pt-10">
-					<Display as="h2" size="title" className="mb-6">
-						The run, sheet by sheet
-					</Display>
-					<div className="grid gap-6 md:grid-cols-3">
-						{[
-							{
-								to: '/staedel-research/tags',
-								title: 'Keywords',
-								blurb:
-									'All nine schema fields, five models against your own record, on any sheet in the sample.',
-							},
-							{
-								to: '/staedel-research/descriptions',
-								title: 'Descriptions',
-								blurb:
-									'The bilingual texts (long and short, German and English) as each model wrote them.',
-							},
-							{
-								to: '/staedel-research/evaluation',
-								title: 'Evaluation',
-								blurb:
-									"The judge's score and its written justification for every model on every sheet.",
-							},
-						].map((card) => (
-							<Link
-								key={card.to}
-								to={card.to}
-								className="border-rule hover:border-link group flex flex-col gap-3 border p-5 no-underline transition-colors"
-							>
-								<Display
-									as="h3"
-									size="title"
-									className="group-hover:text-link text-[1.0625rem]"
-								>
-									{card.title}
-								</Display>
-								<p className="font-body text-prose-sm">{card.blurb}</p>
-							</Link>
-						))}
-					</div>
-				</section>
 			</div>
-		</>
+		</details>
 	)
 }

@@ -7,16 +7,19 @@ import {
 } from '#app/components/institute/console.tsx'
 import { Data, Display } from '#app/components/institute/primitives.tsx'
 import { cn, getWorkImgSrc } from '#app/utils/misc.tsx'
+import { type DiffStatus, type DiffValue } from './keyword-diff.ts'
 import {
 	countTagValue,
 	displayDating,
+	FLAG_LABELS,
 	FIELDS_ABSENT_FROM_MUSEUM_RECORDS,
 	MEDIA,
 	TAG_FIELDS,
 	TAG_SECTIONS,
+	type FlagCheck,
+	type KeywordFlag,
 	type MediumId,
-	type ModelInfo,
-	type ModelStatus,
+	type Note,
 	type TagField,
 	type TagRecord,
 	type TagValue,
@@ -41,46 +44,65 @@ const SECTIONS = [
 ]
 
 /* --------------------------------------------------------------------------
-   Marking the revision.
+   Marking the rounds.
 
-   These pages carry two generations of output at once: descriptions re-run on
-   25 August after the museum's reply, and keywords and scores still as the
-   pilot left them on 1 August. A reader who cannot tell which is which will
-   either dismiss the new work or credit the old, so the distinction is marked
-   wherever output appears rather than explained once at the top.
+   These pages carry three generations of output at once: the pilot of
+   1 August, the revision of 25 August, and round 3 of 5 October. A reader who
+   cannot tell which is which will either dismiss the new work or credit the
+   old, so the round is marked wherever output appears rather than explained
+   once at the top.
    -------------------------------------------------------------------------- */
 
 const REVISION_MARKS = {
-	revised: {
-		// Must match REVISION.date in scripts/stadel-research/prepare-data.mjs.
-		label: 'Revised 25 Aug',
-		title: 'Re-run after the museum\u2019s reply: no technique, style or period, and the house voice from its own published texts.',
+	round3: {
+		label: 'Round 3 · 5 Oct',
+		title:
+			'Run on 5 October 2026 with GPT-6.1 Sol and Claude Opus 5.5, after the museum’s notes on round 2.',
 		className: 'border-link text-link',
+	},
+	revised: {
+		// Must match the revision round's date in scripts/stadel-research/prepare-data.mjs.
+		label: 'Round 2 · 25 Aug',
+		title:
+			'Re-run after the museum’s reply to the pilot: no technique, style or period, and the house voice from its own published texts.',
+		className: 'border-rule-strong text-ground-fg',
 	},
 	finalist: {
-		label: 'On the roster',
-		title:
-			'Still being run. The briefing asks for a best performer plus one comparison model; these are the two.',
+		label: 'Round 3',
+		title: 'One of the two models the current round runs.',
 		className: 'border-link text-link',
 	},
+	previous: {
+		label: 'Round 2',
+		title:
+			'A finalist of 25 August, replaced in round 3 by its provider’s successor model.',
+		className: 'border-rule-strong text-ground-fg',
+	},
 	pilot: {
-		label: 'Pilot 1 Aug',
-		title: 'Unchanged since the pilot run of 1 August 2026.',
+		label: 'Pilot · 1 Aug',
+		title: 'Output of the pilot run of 1 August 2026.',
 		className: 'border-rule text-ground-muted',
 	},
 	retired: {
 		label: 'Retired',
-		title: 'Lost on the pilot scores and is no longer being run. Kept as the evidence for cutting the roster.',
+		title:
+			'Lost on the pilot scores and is no longer being run. Kept as the evidence for cutting the roster.',
 		className: 'border-rule text-ground-muted',
 	},
 	judge: {
 		label: 'Judge',
-		title: 'No longer a contestant. Scores the other two, which is what makes the judge neutral.',
+		title:
+			'No longer a contestant. Scores the other two, which is what makes the judge neutral.',
 		className: 'border-rule text-ground-muted',
 	},
 } as const
 
 export type RevisionMarkKind = keyof typeof REVISION_MARKS
+
+/** The mark for output of a given round. */
+export function markForRound(round: 'pilot' | 'revision' | 'round3') {
+	return round === 'round3' ? 'round3' : round === 'revision' ? 'revised' : 'pilot'
+}
 
 /** The mark itself: mono, bordered, sized to sit beside a heading. */
 export function RevisionMark({
@@ -105,32 +127,29 @@ export function RevisionMark({
 	)
 }
 
-/** Which mark a model carries on the descriptions pages. */
-export function markForModel(
-	status: ModelStatus,
-	revisedHere: boolean,
-): RevisionMarkKind {
-	if (revisedHere) return 'revised'
-	if (status === 'retired') return 'retired'
-	if (status === 'judge') return 'judge'
-	return 'pilot'
-}
-
 /**
  * The page-level notice: what changed on this surface, in numbers the reader
- * can check against the texts below it.
+ * can check against the output below it.
  */
-export function RevisionNotice({ children }: { children?: React.ReactNode }) {
+export function RevisionNotice({
+	kind = 'round3',
+	caption,
+	children,
+}: {
+	kind?: RevisionMarkKind
+	caption?: React.ReactNode
+	children?: React.ReactNode
+}) {
 	return (
 		<aside
 			role="note"
 			className="border-link flex flex-col gap-3 border-l-2 py-2 pl-4"
 		>
 			<div className="flex flex-wrap items-baseline gap-3">
-				<RevisionMark kind="revised" />
-				<Data className="text-ground-muted normal-case">
-					superseding the run of 1 August 2026
-				</Data>
+				<RevisionMark kind={kind} />
+				{caption ? (
+					<Data className="text-ground-muted normal-case">{caption}</Data>
+				) : null}
 			</div>
 			<div className="font-body text-prose measure flex flex-col gap-3">
 				{children}
@@ -328,11 +347,128 @@ export function WorkMetadata({
 
 /** A single keyword. No confidence superscript: the models return none, and
  *  inventing one would be exactly the kind of claim §6 forbids. */
-export function Keyword({ children }: { children: React.ReactNode }) {
+export function Keyword({
+	children,
+	flags,
+}: {
+	children: React.ReactNode
+	/** Rule checks that flag the value, shown as a question beside it. */
+	flags?: Array<FlagCheck>
+}) {
 	return (
 		<span className="border-rule font-data text-data-sm text-ground-fg inline-block max-w-full border px-2 py-1 leading-relaxed tracking-[0.06em] break-words">
 			{children}
+			<FlagTags flags={flags} />
 		</span>
+	)
+}
+
+/**
+ * The rule checks a value trips, in the stamp colour and in the reader's own
+ * terms. A pattern is not a judgement, so the label is phrased as what the
+ * check saw, and its gloss sits in the title for anyone who wants the rule.
+ */
+export function FlagTags({ flags }: { flags?: Array<FlagCheck> }) {
+	if (!flags?.length) return null
+	return (
+		<>
+			{[...new Set(flags)].map((check) => (
+				<span
+					key={check}
+					title={`Automatic check: ${FLAG_LABELS[check].gloss}`}
+					className="text-stamp-fg ml-2 inline-block text-[0.6875rem] tracking-[0.08em] whitespace-nowrap uppercase"
+				>
+					⚑ {FLAG_LABELS[check].label}
+				</span>
+			))}
+		</>
+	)
+}
+
+const DIFF_STYLES: Record<DiffStatus, { className: string; sign: string; label: string }> = {
+	kept: { className: 'border-rule text-ground-fg', sign: '', label: 'kept' },
+	added: {
+		className: 'border-link text-link bg-tint',
+		sign: '+',
+		label: 'new',
+	},
+	movedIn: {
+		className: 'border-link text-link bg-tint',
+		sign: '→',
+		label: 'moved here',
+	},
+	removed: {
+		className: 'border-rule border-dashed text-ground-muted line-through decoration-1',
+		sign: '−',
+		label: 'dropped',
+	},
+	movedOut: {
+		className: 'border-rule border-dashed text-ground-muted',
+		sign: '',
+		label: 'moved away',
+	},
+}
+
+/** One value of a {@link KeywordDiff}: kept, new, dropped, or moved. */
+export function DiffKeyword({ value }: { value: DiffValue }) {
+	const style = DIFF_STYLES[value.status]
+	const title =
+		value.status === 'movedIn'
+			? `Moved here from ${value.elsewhere}`
+			: value.status === 'movedOut'
+				? `Moved to ${value.elsewhere}`
+				: style.label === 'kept'
+					? undefined
+					: style.label[0]!.toUpperCase() + style.label.slice(1)
+	return (
+		<span
+			title={title}
+			className={cn(
+				'font-data text-data-sm inline-block max-w-full border px-2 py-1 leading-relaxed tracking-[0.06em] break-words',
+				style.className,
+			)}
+		>
+			{style.sign ? (
+				<span aria-hidden className="mr-1.5 inline-block opacity-80">
+					{style.sign}
+				</span>
+			) : null}
+			<span className="sr-only">{style.label}: </span>
+			{value.value}
+			{value.status === 'movedIn' ? (
+				<span className="text-ground-muted ml-2 text-[0.6875rem] tracking-normal normal-case">
+					from {value.elsewhere}
+				</span>
+			) : value.status === 'movedOut' ? (
+				<span className="ml-2 text-[0.6875rem] tracking-normal normal-case">
+					→ {value.elsewhere}
+				</span>
+			) : null}
+			<FlagTags flags={value.flags} />
+		</span>
+	)
+}
+
+/** The legend for {@link DiffKeyword}, so no mark needs explaining twice. */
+export function DiffLegend({ className }: { className?: string }) {
+	const sample = (status: DiffStatus, text: string, elsewhere?: string) => (
+		<DiffKeyword value={{ value: text, status, flags: [], elsewhere }} />
+	)
+	return (
+		<div
+			className={cn(
+				'flex flex-wrap items-center gap-x-4 gap-y-2',
+				className,
+			)}
+		>
+			{sample('kept', 'kept')}
+			{sample('added', 'new in round 3')}
+			{sample('removed', 'dropped since round 2')}
+			{sample('movedIn', 'moved', 'Ikon.Thema')}
+			<span className="font-data text-data-sm text-stamp-fg tracking-[0.08em] uppercase">
+				⚑ flagged by an automatic check
+			</span>
+		</div>
 	)
 }
 
@@ -342,6 +478,7 @@ export function TagFieldBlock({
 	value,
 	absent,
 	muted,
+	flags,
 }: {
 	field: TagField
 	value: TagValue | undefined
@@ -349,8 +486,19 @@ export function TagFieldBlock({
 	absent?: React.ReactNode
 	/** Retired or judge output: set back a shade rather than read as current. */
 	muted?: boolean
+	/** Rule-check flags for this record, matched to values by field and text. */
+	flags?: Array<KeywordFlag>
 }) {
 	const meta = TAG_FIELDS[field]
+	const flagsFor = (v: string, type: string | null) =>
+		flags
+			?.filter(
+				(f) =>
+					f.field === field &&
+					f.value === v &&
+					(type === null || f.type === null || f.type === type),
+			)
+			.map((f) => f.check)
 	const count = countTagValue(value)
 	return (
 		<section className={cn('border-rule border-t pt-3', muted && 'opacity-70')}>
@@ -385,7 +533,9 @@ export function TagFieldBlock({
 							</div>
 							<div className="flex flex-wrap gap-1.5">
 								{group.values.map((v, j) => (
-									<Keyword key={`${v}-${j}`}>{v}</Keyword>
+									<Keyword key={`${v}-${j}`} flags={flagsFor(v, group.type)}>
+										{v}
+									</Keyword>
 								))}
 							</div>
 						</div>
@@ -404,6 +554,7 @@ export type ComparisonSide = {
 	record: TagRecord
 	mark?: RevisionMarkKind
 	isMuseum?: boolean
+	flags?: Array<KeywordFlag>
 }
 
 /**
@@ -465,6 +616,7 @@ export function RecordComparison({
 								key={`${field}-${i}`}
 								field={field}
 								value={side.record[field]}
+								flags={side.flags}
 								muted={side.mark === 'retired' || side.mark === 'judge'}
 								absent={
 									side.isMuseum &&
@@ -581,18 +733,21 @@ export function SelectionConsole({
 	extra,
 	modelLabelText = 'Model',
 	modelAllLabel,
+	modelParam = 'model',
 }: {
 	medium: MediumId
 	workId: string | null
 	modelId: string | null
 	works: Array<{ id: string; objectNumber: string; title: string | null }>
-	models: Array<ModelInfo>
+	models: Array<{ id: string; label: string; provider: string }>
 	summary?: React.ReactNode
 	resetTo: string
 	extra?: React.ReactNode
 	modelLabelText?: string
 	/** When given, the model select gains an "all models" option with this label. */
 	modelAllLabel?: string
+	/** The search parameter the model select writes: `model`, or `line`. */
+	modelParam?: string
 }) {
 	return (
 		<Form
@@ -636,7 +791,11 @@ export function SelectionConsole({
 				</ConsoleField>
 
 				<ConsoleField label={modelLabelText} htmlFor="s-model">
-					<ConsoleSelect id="s-model" name="model" defaultValue={modelId ?? ''}>
+					<ConsoleSelect
+							id="s-model"
+							name={modelParam}
+							defaultValue={modelId ?? ''}
+						>
 						{modelAllLabel ? <option value="">{modelAllLabel}</option> : null}
 						{models.map((m) => (
 							<option key={m.id} value={m.id}>
@@ -704,5 +863,222 @@ export function SheetPager({
 				<span className={disabled}>Next sheet →</span>
 			)}
 		</nav>
+	)
+}
+
+/**
+ * A row of mutually exclusive options, each a link. Used for every two- or
+ * three-way choice on these pages — view, language, length, model — because a
+ * link leaves the choice in the URL, where it survives a reload and can be
+ * pasted into an email, and a segmented row shows every option at once rather
+ * than hiding them in a select.
+ */
+export function Segmented<T extends string>({
+	label,
+	options,
+	current,
+	hrefFor,
+	className,
+}: {
+	label: string
+	options: Array<{ id: T; label: React.ReactNode; title?: string }>
+	current: T
+	hrefFor: (id: T) => string
+	className?: string
+}) {
+	return (
+		<div className={cn('flex flex-col gap-1.5', className)}>
+			<Data className="text-ground-muted">{label}</Data>
+			<nav aria-label={label} className="flex flex-wrap">
+				{options.map((option) => {
+					const isCurrent = option.id === current
+					return (
+						<Link
+							key={option.id}
+							to={hrefFor(option.id)}
+							title={option.title}
+							aria-current={isCurrent ? 'true' : undefined}
+							preventScrollReset
+							prefetch="intent"
+							className={cn(
+								'font-data text-data-sm -ml-px border px-3 py-1.5 tracking-[0.12em] uppercase no-underline transition-colors first:ml-0',
+								isCurrent
+									? 'border-ground-fg bg-ground-fg text-ground'
+									: 'border-rule text-ground-muted hover:border-link hover:text-link',
+							)}
+						>
+							{option.label}
+						</Link>
+					)
+				})}
+			</nav>
+		</div>
+	)
+}
+
+/**
+ * The museum's own notes that name this sheet, each with what changed in
+ * response. Shown on the sheet itself because that is where a curator checks
+ * whether a note was taken: reading the note and the output in one place.
+ */
+export function SheetNotes({
+	notes,
+	className,
+}: {
+	notes: Array<Note>
+	className?: string
+}) {
+	if (!notes.length) return null
+	return (
+		<section
+			aria-label="Your notes on this sheet"
+			className={cn('border-link flex flex-col gap-4 border-l-2 pl-4', className)}
+		>
+			<Data className="text-link tracking-[0.2em]">
+				Your notes on this sheet
+			</Data>
+			{notes.map((note) => (
+				<div key={note.id} className="flex flex-col gap-1">
+					<p className="font-body text-prose-sm italic">{note.said}</p>
+					<p className="font-body text-prose-sm text-ground-muted">
+						<span className="font-data text-data-sm text-ground-fg mr-2 tracking-[0.12em] uppercase not-italic">
+							Round 3
+						</span>
+						{note.changed}
+					</p>
+				</div>
+			))}
+		</section>
+	)
+}
+
+/* --------------------------------------------------------------------------
+   Text marks.
+
+   Four of the museum's notes on the texts are about words a reader can point
+   at: hedges („wohl“), titles in quotation marks, named places, and technique.
+   Marking them in the text itself lets a curator see a rule followed or broken
+   while reading for tone, rather than trusting a count in a table. The
+   patterns come from the research repo's rule checks via the manifest, so a
+   word marked here is a word counted there.
+   -------------------------------------------------------------------------- */
+
+export type MarkKind = 'hedge' | 'quote' | 'place' | 'technique'
+
+const MARK_STYLES: Record<MarkKind, { className: string; title: string }> = {
+	quote: {
+		className: 'bg-tint text-link',
+		title: 'A title or name in quotation marks',
+	},
+	place: {
+		className: 'underline decoration-link decoration-dotted decoration-2 underline-offset-4',
+		title: 'A named place from the keywords',
+	},
+	hedge: {
+		className: 'underline decoration-stamp-fg decoration-wavy underline-offset-4',
+		title: 'A hedge',
+	},
+	technique: {
+		className: 'text-stamp-fg underline decoration-stamp-fg underline-offset-4',
+		title: 'A word the technique check matches',
+	},
+}
+
+export type MarkPatterns = { hedge: string; technique: string }
+
+const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/** Character ranges to mark, earliest first, overlaps resolved by priority. */
+function markRanges(text: string, patterns: MarkPatterns, places: Array<string>) {
+	const found: Array<{ start: number; end: number; kind: MarkKind }> = []
+	const collect = (regex: RegExp, kind: MarkKind) => {
+		for (const match of text.matchAll(regex)) {
+			if (match.index === undefined || !match[0]) continue
+			found.push({ start: match.index, end: match.index + match[0].length, kind })
+		}
+	}
+	// Priority is the order of collection: a place inside a quoted title belongs
+	// to the title, and a hedge cannot be a place.
+	collect(/„[^“]+“|“[^”]+”/g, 'quote')
+	for (const place of places) {
+		collect(new RegExp(`(?<![\\p{L}])${escapeRegex(place)}(?![\\p{L}])`, 'gu'), 'place')
+	}
+	collect(new RegExp(patterns.hedge, 'gi'), 'hedge')
+	collect(new RegExp(patterns.technique, 'gi'), 'technique')
+
+	const taken: typeof found = []
+	for (const range of found) {
+		if (taken.some((t) => range.start < t.end && t.start < range.end)) continue
+		taken.push(range)
+	}
+	return taken.sort((a, b) => a.start - b.start)
+}
+
+/** A text with the museum's rule words marked, or plain when marks are off. */
+export function MarkedText({
+	text,
+	patterns,
+	places,
+	enabled,
+}: {
+	text: string
+	patterns: MarkPatterns
+	places: Array<string>
+	enabled: boolean
+}) {
+	if (!enabled) return <>{text}</>
+	const parts: Array<React.ReactNode> = []
+	let cursor = 0
+	for (const range of markRanges(text, patterns, places)) {
+		if (range.start > cursor) parts.push(text.slice(cursor, range.start))
+		const style = MARK_STYLES[range.kind]
+		parts.push(
+			<span key={range.start} title={style.title} className={style.className}>
+				{text.slice(range.start, range.end)}
+			</span>,
+		)
+		cursor = range.end
+	}
+	if (cursor < text.length) parts.push(text.slice(cursor))
+	return <>{parts}</>
+}
+
+/** How many of each mark a text carries, for the counts above it. */
+export function countMarks(
+	text: string,
+	patterns: MarkPatterns,
+	places: Array<string>,
+) {
+	const counts: Record<MarkKind, number> = {
+		hedge: 0,
+		quote: 0,
+		place: 0,
+		technique: 0,
+	}
+	for (const range of markRanges(text, patterns, places)) counts[range.kind] += 1
+	return counts
+}
+
+export function MarkLegend({ className }: { className?: string }) {
+	const items: Array<[MarkKind, string, string]> = [
+		['hedge', 'wohl', 'hedge'],
+		['quote', '„Apokalypse“', 'title in quotation marks'],
+		['place', 'Frankfurt am Main', 'named place'],
+		['technique', 'Radierung', 'technique'],
+	]
+	return (
+		<div
+			className={cn(
+				'font-body text-prose-sm flex flex-wrap gap-x-5 gap-y-1',
+				className,
+			)}
+		>
+			{items.map(([kind, sample, label]) => (
+				<span key={kind} className="whitespace-nowrap">
+					<span className={MARK_STYLES[kind].className}>{sample}</span>
+					<span className="text-ground-muted ml-1.5">{label}</span>
+				</span>
+			))}
+		</div>
 	)
 }

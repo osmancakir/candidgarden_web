@@ -11,33 +11,50 @@ import {
 } from '#app/components/institute/primitives.tsx'
 import { cn } from '#app/utils/misc.tsx'
 import {
-	markForModel,
+	countMarks,
+	MarkedText,
+	MarkLegend,
+	markForRound,
 	MediumSwitch,
 	Plate,
 	PromptDisclosure,
 	RevisionMark,
 	RevisionNotice,
+	Segmented,
 	SelectionConsole,
+	SheetNotes,
 	SheetPager,
 	useHrefWith,
 	WorkMetadata,
+	type MarkPatterns,
+	type RevisionMarkKind,
 } from './+shared/components.tsx'
 import {
-	descriptionsForWorkAndModel,
-	descriptionsWithPilotForWork,
-	isRevised,
+	currentRound,
+	currentRun,
+	lineModel,
+	lines,
 	manifest,
+	modelInfo,
+	notesForWork,
+	pagerFor,
 	promptFor,
-	resolveModel,
 	resolveSelection,
-	revision,
+	round3,
+	runInfo,
+	textFor,
 	worksInMedium,
 } from './+shared/pilot.server.ts'
 import {
+	APPROACHES,
 	displayDating,
-	isModelMuted,
 	mediumGerman,
+	parseApproach,
+	parseLine,
+	type ApproachId,
 	type DescriptionSet,
+	type MediumId,
+	type RoundId,
 } from './+shared/schema.ts'
 import { type Route } from './+types/descriptions.ts'
 
@@ -50,20 +67,21 @@ export const handle: SEOHandle = {
 /**
  * Task 2: the bilingual visitor texts.
  *
- * Two axes matter to a reader checking these — language and length — and they
- * are orthogonal, so both stay in the URL rather than in a tab that resets on
- * navigation. The house rule from the prompt is disclosed above the texts: the
- * short version is not a truncation of the long one, and German and English are
- * not translations of each other. Anyone reviewing them for the museum needs to
- * know that before they start marking discrepancies as errors.
+ * A sheet now has up to nine texts per language and length worth reading: two
+ * models, three ways of writing in round 3, and each model's text from the two
+ * earlier rounds. Shown all at once they are unreadable, so the sheet view is
+ * one grid with a fixed shape — a row per model, three columns — and the reader
+ * chooses what the columns are: the three ways of writing, or the three rounds.
+ * Language and length pick which of the four texts fills the cells. All of it
+ * is in the URL, so any comparison can be sent as a link.
  *
- * The texts are shown as written, character counts included, because the
- * briefing sets hard limits (800 / 500) and whether a model respects them is
- * part of what is being assessed.
+ * The words the museum's notes are about — hedges, quoted titles, named places,
+ * technique — are marked in the text itself, with the marks on by default and
+ * one click to read without them.
  */
 
 export const meta: Route.MetaFunction = () => [
-	{ title: 'Descriptions · Städel pilot · Candid Garden' },
+	{ title: 'Descriptions · Städel research · Candid Garden' },
 	{ name: 'robots', content: 'noindex, nofollow' },
 ]
 
@@ -73,41 +91,131 @@ const LANGUAGES = [
 ] as const
 
 type LanguageId = (typeof LANGUAGES)[number]['id']
+type Length = 'long' | 'short'
+type View = 'approaches' | 'rounds'
 
-const LIMITS = { long: 800, short: 500 } as const
+const parseLanguage = (value: string | null): LanguageId =>
+	value === 'english' ? 'english' : 'german'
+const parseLength = (value: string | null): Length =>
+	value === 'short' ? 'short' : 'long'
+const parseView = (value: string | null): View =>
+	value === 'rounds' ? 'rounds' : 'approaches'
 
-function parseLanguage(value: string | null): LanguageId {
-	return value === 'english' ? 'english' : 'german'
+const ROUND_ORDER: Array<RoundId> = ['pilot', 'revision', 'round3']
+
+type Cell = {
+	key: string
+	heading: string
+	subheading: string
+	/** Only where cells in a row differ in round: the rounds view. */
+	mark: RevisionMarkKind | null
+	text: DescriptionSet | null
+}
+
+/** One row of the grid: a model line, and its three cells in the chosen view. */
+function gridFor(workId: string, view: View) {
+	return lines.map((line) => {
+		const current = runInfo(line.id, currentRound.id)!
+		const cells: Array<Cell> =
+			view === 'approaches'
+				? APPROACHES.map((approach) => ({
+						key: approach.id,
+						heading: approach.short,
+						subheading:
+							approach.id === 'synthesis'
+								? 'Rewritten from both models’ direct texts'
+								: '',
+						mark: null,
+						text: textFor(workId, current.key, approach.id),
+					}))
+				: ROUND_ORDER.map((roundId) => {
+						const run = runInfo(line.id, roundId)
+						return {
+							key: roundId,
+							// The badge carries the round, so the heading names the model.
+							heading: run?.model.label ?? '—',
+							subheading: '',
+							mark: markForRound(roundId),
+							text: run ? textFor(workId, run.key, 'direct') : null,
+						}
+					})
+		return {
+			line: line.id,
+			label: view === 'approaches' ? current.model.label : line.provider,
+			/** Beside the label only where the label is not the provider already. */
+			provider: view === 'approaches' ? line.provider : '',
+			cells,
+		}
+	})
+}
+
+/** The rule counts for the medium: round 2, then round 3's three ways. */
+function measureRows(medium: MediumId) {
+	const measures = round3.textMeasures[medium]
+	return lines.flatMap((line) => {
+		const before = runInfo(line.id, 'revision')!
+		const after = runInfo(line.id, currentRound.id)!
+		return [
+			{
+				key: `${line.id}-revision`,
+				line: line.id,
+				model: before.model.label,
+				mark: 'revised' as const,
+				approach: 'Direct',
+				m: measures[before.key]?.direct ?? null,
+			},
+			...APPROACHES.map((approach) => ({
+				key: `${line.id}-${approach.id}`,
+				line: line.id,
+				model: after.model.label,
+				mark: 'round3' as const,
+				approach: approach.short,
+				m: measures[after.key]?.[approach.id] ?? null,
+			})),
+		]
+	})
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url)
 	const { medium, work } = resolveSelection(url)
-	const modelId = resolveModel(url)
+	const line = parseLine(url.searchParams.get('line'))
+	const approach = parseApproach(url.searchParams.get('approach'))
 	const language = parseLanguage(url.searchParams.get('lang'))
+	const length = parseLength(url.searchParams.get('length'))
+	const view = parseView(url.searchParams.get('view'))
+	const marks = url.searchParams.get('marks') !== 'off'
 	const sheets = worksInMedium(medium)
-
-	const position = work ? sheets.findIndex((w) => w.id === work.id) : -1
-	const neighbour = (index: number) => {
-		const sheet = index < 0 ? undefined : sheets[index]
-		return sheet ? { id: sheet.id, objectNumber: sheet.objectNumber } : null
-	}
+	const run = currentRun(line)
 
 	return {
 		medium,
-		modelId,
+		line,
+		approach,
 		language,
-		models: manifest.models,
-		revision,
-		modelIsRevised: isRevised(modelId),
-		prompt: promptFor(medium, 'descriptions'),
+		length,
+		view,
+		marks,
+		patterns: {
+			hedge:
+				language === 'german' ? manifest.marks.hedgeDe : manifest.marks.hedgeEn,
+			technique: manifest.marks.technique,
+		} satisfies MarkPatterns,
+		lineOptions: lines.map((l) => {
+			const model = modelInfo(lineModel(l.id, currentRound.id)!)!
+			return { id: l.id, label: model.label, provider: model.provider }
+		}),
+		measures: measureRows(medium),
+		prompts: Object.fromEntries(
+			APPROACHES.map((a) => [a.id, promptFor(medium, a.id)]),
+		) as Record<ApproachId, string>,
 		sheets: sheets.map((w) => ({
 			id: w.id,
 			objectNumber: w.objectNumber,
 			title: w.title,
 		})),
 		work,
-		/** Browse mode: every sheet with the selected model's short text. */
+		/** Browse mode: every sheet with one model's round-3 short text. */
 		rows: work
 			? null
 			: sheets.map((w) => ({
@@ -118,82 +226,29 @@ export async function loader({ request }: Route.LoaderArgs) {
 					artist: w.artist,
 					notBefore: w.notBefore,
 					notAfter: w.notAfter,
-					text:
-						descriptionsForWorkAndModel(w.id, modelId)?.[language].short ??
-						null,
+					inNotes: w.notes.length > 0,
+					text: textFor(w.id, run, approach)?.[language].short ?? null,
 				})),
-		/** Sheet mode: every model's four texts, each with what it replaced. */
-		byModel: work ? descriptionsWithPilotForWork(work.id) : null,
-		position: work ? { index: position + 1, total: sheets.length } : null,
-		previous: work ? neighbour(position - 1) : null,
-		next: work ? neighbour(position + 1) : null,
+		sheet: work
+			? {
+					...pagerFor(medium, work.id),
+					notes: notesForWork(work),
+					grid: gridFor(work.id, view),
+				}
+			: null,
 	}
 }
 
-/** One text, with the count the briefing's limit is measured against. */
-function TextBlock({
-	kind,
-	text,
-	lang,
-}: {
-	kind: 'long' | 'short'
-	text: string
-	lang?: string
-}) {
-	const limit = LIMITS[kind]
-	const over = text.length > limit
-	return (
-		<div className="flex flex-col gap-2" lang={lang}>
-			<div className="border-rule flex flex-wrap items-baseline justify-between gap-x-4 border-b pb-1">
-				<Data className="text-ground-muted">
-					{kind === 'long' ? 'Long' : 'Short'}
-				</Data>
-				<Data
-					className={
-						over
-							? 'text-stamp-fg tabular-nums'
-							: 'text-ground-muted tabular-nums'
-					}
-					title={
-						over
-							? `Over the briefing's ${limit}-character limit`
-							: `Within the briefing's ${limit}-character limit`
-					}
-				>
-					{text.length} / {limit}
-					{over ? ' · over' : null}
-				</Data>
-			</div>
-			{text ? (
-				<p className="font-body text-prose measure whitespace-pre-line">
-					{text}
-				</p>
-			) : (
-				<p className="font-body text-prose-sm text-ground-muted italic">
-					No text returned.
-				</p>
-			)}
-		</div>
-	)
-}
+type LoaderData = Awaited<ReturnType<typeof loader>>
 
 export default function StadelDescriptions({
 	loaderData,
 }: Route.ComponentProps) {
-	const {
-		medium,
-		modelId,
-		language,
-		models,
-		prompt,
-		sheets,
-		work,
-		rows,
-		revision: rev,
-		modelIsRevised,
-	} = loaderData
+	const { medium, line, approach, language, work, rows, sheets, lineOptions } =
+		loaderData
 	const hrefWith = useHrefWith()
-	const selectedModel = models.find((m) => m.id === modelId)
+	const selected = lineOptions.find((l) => l.id === line)
+	const approachLabel = APPROACHES.find((a) => a.id === approach)!.short
 
 	return (
 		<>
@@ -204,15 +259,14 @@ export default function StadelDescriptions({
 							Task 2 · Visitor descriptions
 						</Data>
 						<Display as="h1" size="chapter" className="measure-wide">
-							Four texts per sheet, per model
+							Three ways of writing, three rounds
 						</Display>
 						<p className="font-body text-prose-lg measure mt-6">
-							German and English, long and short, written from the image and the
-							catalogue record together. Two things follow from the prompt and
-							are worth knowing before you mark anything as a discrepancy: the
-							short version is not a truncation of the long one, and the German
-							and English are not translations of each other. Each carries the
-							same substance, idiomatic in its own language.
+							Round 3 wrote every text three ways: directly from the image and
+							the record, as before; with the model’s own keywords in hand; and
+							as a synthesis of both models’ direct texts. Open a sheet to read
+							the three side by side, or switch the columns to the pilot, round
+							2 and round 3, to see how one model’s text changed.
 						</p>
 					</div>
 					<div className="flex flex-col justify-end gap-3 lg:col-span-4">
@@ -222,88 +276,88 @@ export default function StadelDescriptions({
 							hrefFor={(next) => hrefWith({ medium: next, work: null })}
 						/>
 						<p className="font-body text-prose-sm text-ground-muted">
-							Character limits are the briefing's: 800 for the long text, 500
-							for the short. Your own published texts run{' '}
-							{rev.houseReference.minLong}–{rev.houseReference.maxLong}{' '}
-							characters, averaging {rev.houseReference.avgLong}, so the prompt
-							now aims at {rev.band.min}–{rev.band.max} rather than at the cap.
+							The German and English are not translations of each other, and the
+							short text is not a cut of the long one: each is written for its
+							own reader, with the same substance.
 						</p>
 					</div>
 				</div>
 			</header>
 
 			<div className="container flex flex-col gap-8 pb-16">
-				<RevisionNotice>
+				<RevisionNotice
+					caption={`the text rules of your notes, counted on the ${mediumGerman(medium)} sample`}
+				>
 					<p>
-						These descriptions were re-run on {rev.date} after your reply to the
-						pilot. They no longer name a material, a printmaking or drawing
-						process, or a period style, and they are written against{' '}
-						{rev.houseReference.texts} of your own published texts — six of
-						which, the ones we hold images for, are shown to the model as
-						examples.
+						German long texts within 550 characters, in the 551–650 a rich sheet
+						may now take, and over; the hedges in each language; texts with a
+						title in quotation marks; and how many of the named places in the
+						model’s own keywords the German text names. Technique stays at zero
+						throughout.
 					</p>
-					<p>
-						Across both media the change is measurable. Of{' '}
-						{rev.descriptions[0]!.before.texts} texts per model, technique was named
-						in every one before and in none after; the average German long text
-						fell from{' '}
-						{rev.descriptions.map((m) => m.before.avgLong).join(' and ')} characters
-						to {rev.descriptions.map((m) => m.after.avgLong).join(' and ')}, against
-						the {rev.houseReference.avgLong} your own texts average. Each text
-						below can be opened against the version it replaced.
-					</p>
-					<p className="text-ground-muted">
-						The <Link to="/staedel-research/tags">keywords</Link> were re-run in
-						the same round, and the{' '}
-						<Link to="/staedel-research/evaluation">scores</Link> re-done with a
-						judge from outside the line-up. Those scores cover the keywords only
-						— nothing here has been scored, which is why your reading of these
-						texts is what we are asking for.
-					</p>
+					<MeasureTable rows={loaderData.measures} />
 				</RevisionNotice>
 
-				<PromptDisclosure
-					prompt={prompt}
-					label={`The description prompt for ${mediumGerman(medium)}, in full`}
-				/>
+				<div className="flex flex-col gap-2">
+					{APPROACHES.map((a) => (
+						<PromptDisclosure
+							key={a.id}
+							prompt={loaderData.prompts[a.id]}
+							label={`${a.label}: the round-3 prompt for ${mediumGerman(medium)}`}
+						/>
+					))}
+				</div>
 
 				<SelectionConsole
 					medium={medium}
 					workId={work?.id ?? null}
-					modelId={modelId}
+					modelId={line}
+					modelParam="line"
 					works={sheets}
-					models={models}
+					models={lineOptions}
 					resetTo={`?medium=${medium}`}
 					summary={
 						work
-							? `${work.objectNumber} · all five models`
-							: `${sheets.length} sheets · ${selectedModel?.label ?? modelId}` +
-								(modelIsRevised ? ' · revised' : ' · pilot output')
+							? `${work.objectNumber} · both models`
+							: `${sheets.length} sheets · ${selected?.label} · ${approachLabel}`
 					}
 					extra={
-						<ConsoleField
-							label="Language"
-							htmlFor="s-lang"
-							hint="browse view only"
-						>
-							<ConsoleSelect id="s-lang" name="lang" defaultValue={language}>
-								{LANGUAGES.map((l) => (
-									<option key={l.id} value={l.id}>
-										{l.label}
-									</option>
-								))}
-							</ConsoleSelect>
-						</ConsoleField>
+						<>
+							<ConsoleField
+								label="Written"
+								htmlFor="s-approach"
+								hint="browse view only"
+							>
+								<ConsoleSelect
+									id="s-approach"
+									name="approach"
+									defaultValue={approach}
+								>
+									{APPROACHES.map((a) => (
+										<option key={a.id} value={a.id}>
+											{a.label}
+										</option>
+									))}
+								</ConsoleSelect>
+							</ConsoleField>
+							<ConsoleField label="Language" htmlFor="s-lang">
+								<ConsoleSelect id="s-lang" name="lang" defaultValue={language}>
+									{LANGUAGES.map((l) => (
+										<option key={l.id} value={l.id}>
+											{l.label}
+										</option>
+									))}
+								</ConsoleSelect>
+							</ConsoleField>
+						</>
 					}
 				/>
 
-				{work && loaderData.byModel && loaderData.position ? (
+				{work && loaderData.sheet ? (
 					<SheetView
 						work={work}
-						byModel={loaderData.byModel}
-						position={loaderData.position}
-						previous={loaderData.previous}
-						next={loaderData.next}
+						sheet={loaderData.sheet}
+						data={loaderData}
 						hrefWith={hrefWith}
 					/>
 				) : rows ? (
@@ -316,13 +370,100 @@ export default function StadelDescriptions({
 	)
 }
 
+function MeasureTable({ rows }: { rows: LoaderData['measures'] }) {
+	const head = [
+		'Model',
+		'Written',
+		'Ø DE long',
+		'≤550 / ≤650 / over',
+		'Hedges DE',
+		'Hedges EN',
+		'„Titles“',
+		'Places named',
+	]
+	return (
+		<div className="overflow-x-auto">
+			<table className="min-w-full">
+				<thead>
+					<tr className="border-rule-strong border-b">
+						{head.map((h, i) => (
+							<th
+								key={h}
+								scope="col"
+								className={cn(
+									'font-data text-data-sm text-ground-muted py-2 pr-4 tracking-[0.08em] whitespace-nowrap uppercase',
+									i < 2 ? 'text-left' : 'text-right',
+								)}
+							>
+								{h}
+							</th>
+						))}
+					</tr>
+				</thead>
+				<tbody className="font-data text-data">
+					{rows.map((row, i) => (
+						<tr
+							key={row.key}
+							className={cn(
+								'border-rule border-b',
+								i > 0 &&
+									rows[i - 1]!.line !== row.line &&
+									'border-t-rule-strong border-t',
+							)}
+						>
+							<th
+								scope="row"
+								className="py-2 pr-4 text-left font-normal whitespace-nowrap"
+							>
+								<span className="font-body text-prose-sm mr-2">
+									{row.model}
+								</span>
+								<RevisionMark kind={row.mark} />
+							</th>
+							<td className="py-2 pr-4 whitespace-nowrap">{row.approach}</td>
+							{row.m ? (
+								<>
+									<td className="py-2 pr-4 text-right tabular-nums">
+										{row.m.avgLong}
+									</td>
+									<td className="py-2 pr-4 text-right tabular-nums">
+										{row.m.target} / {row.m.rich} / {row.m.longer}
+									</td>
+									<td className="py-2 pr-4 text-right tabular-nums">
+										{row.m.hedgesDe}
+									</td>
+									<td className="py-2 pr-4 text-right tabular-nums">
+										{row.m.hedgesEn}
+									</td>
+									<td className="py-2 pr-4 text-right tabular-nums">
+										{row.m.quoted} / {row.m.texts}
+									</td>
+									<td className="py-2 text-right tabular-nums">
+										{row.m.placesTotal
+											? `${row.m.placesNamed} / ${row.m.placesTotal}`
+											: '—'}
+									</td>
+								</>
+							) : (
+								<td colSpan={6} className="text-ground-muted py-2">
+									—
+								</td>
+							)}
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
+	)
+}
+
 /** Browse: twenty sheets with one model's short text under each plate. */
 function SheetGrid({
 	rows,
 	language,
 	hrefWith,
 }: {
-	rows: NonNullable<Awaited<ReturnType<typeof loader>>['rows']>
+	rows: NonNullable<LoaderData['rows']>
 	language: LanguageId
 	hrefWith: (changes: Record<string, string | number | null>) => string
 }) {
@@ -363,7 +504,13 @@ function SheetGrid({
 						<span className="not-italic">
 							{displayDating(row.notBefore, row.notAfter)}
 						</span>
+						<Data className="text-ground-muted ml-2 not-italic">
+							{row.objectNumber}
+						</Data>
 					</p>
+					{row.inNotes ? (
+						<Data className="text-link normal-case">Named in your notes</Data>
+					) : null}
 					{row.text ? (
 						<p
 							className="font-body text-prose-sm border-rule border-t pt-3"
@@ -382,25 +529,23 @@ function SheetGrid({
 	)
 }
 
-/** Sheet: the plate once, then every model's four texts, each marked with
- *  whether it is revised output or still the pilot's. */
+/** Sheet: plate and notes, the controls, then the grid of texts. */
 function SheetView({
 	work,
-	byModel,
-	position,
-	previous,
-	next,
+	sheet,
+	data,
 	hrefWith,
 }: {
-	work: NonNullable<Awaited<ReturnType<typeof loader>>['work']>
-	byModel: NonNullable<Awaited<ReturnType<typeof loader>>['byModel']>
-	position: { index: number; total: number }
-	previous: { id: string; objectNumber: string } | null
-	next: { id: string; objectNumber: string } | null
+	work: NonNullable<LoaderData['work']>
+	sheet: NonNullable<LoaderData['sheet']>
+	data: LoaderData
 	hrefWith: (changes: Record<string, string | number | null>) => string
 }) {
+	const { view, language, length, marks, patterns } = data
+	const lang = LANGUAGES.find((l) => l.id === language)!
+
 	return (
-		<div className="flex flex-col gap-12">
+		<div className="flex flex-col gap-10">
 			<div className="grid gap-8 lg:grid-cols-12">
 				<div className="lg:col-span-5">
 					<Plate work={work} sizes="(min-width: 1024px) 40vw, 90vw" />
@@ -410,128 +555,201 @@ function SheetView({
 						{work.title ?? 'Untitled'}
 					</Display>
 					<WorkMetadata work={work} />
+					<SheetNotes notes={sheet.notes} />
 					<SheetPager
-						previous={previous}
-						next={next}
-						position={`${position.index} / ${position.total}`}
+						previous={sheet.previous}
+						next={sheet.next}
+						position={`${sheet.position.index} / ${sheet.position.total}`}
 						hrefFor={(id) => hrefWith({ work: id })}
 					/>
 				</div>
 			</div>
 
-			<div className="flex flex-col gap-12">
-				{byModel.map(({ model, descriptions, superseded }) => {
-					const muted = isModelMuted(model.status)
-					return (
-						<section
-							key={model.id}
-							className={cn('flex flex-col gap-6', muted && 'opacity-70')}
-						>
-							<header className="border-rule-strong border-b pb-3">
-								<div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-									<Display as="h3" size="title" className="text-[1.0625rem]">
-										{model.label}
-									</Display>
-									<RevisionMark
-										kind={markForModel(model.status, Boolean(superseded))}
-									/>
-								</div>
-								<Data className="text-ground-muted mt-1 block normal-case">
-									{model.provider} · {model.id}
-								</Data>
-							</header>
-							{descriptions ? (
-								<TextPair descriptions={descriptions} />
-							) : (
-								<p className="font-body text-prose-sm text-ground-muted italic">
-									This model returned no description for this sheet.
-								</p>
-							)}
-							{superseded ? (
-								<SupersededTexts descriptions={superseded} />
-							) : null}
-						</section>
-					)
-				})}
+			<div className="border-rule bg-ground sticky top-0 z-10 flex flex-col gap-3 border-t border-b py-4">
+				<div className="flex flex-wrap items-end gap-x-8 gap-y-4">
+					<Segmented
+						label="Columns"
+						current={view}
+						options={[
+							{
+								id: 'approaches',
+								label: 'Three ways of writing',
+								title: 'Round 3: direct, from the keywords, synthesis',
+							},
+							{
+								id: 'rounds',
+								label: 'Three rounds',
+								title: 'The direct text: pilot, round 2, round 3',
+							},
+						]}
+						hrefFor={(id) =>
+							hrefWith({ view: id === 'approaches' ? null : id })
+						}
+					/>
+					<Segmented
+						label="Language"
+						current={language}
+						options={LANGUAGES.map((l) => ({ id: l.id, label: l.label }))}
+						hrefFor={(id) => hrefWith({ lang: id === 'german' ? null : id })}
+					/>
+					<Segmented
+						label="Length"
+						current={length}
+						options={[
+							{ id: 'long', label: 'Long' },
+							{ id: 'short', label: 'Short' },
+						]}
+						hrefFor={(id) => hrefWith({ length: id === 'long' ? null : id })}
+					/>
+					<Segmented
+						label="Marks"
+						current={marks ? 'on' : 'off'}
+						options={[
+							{ id: 'on', label: 'On' },
+							{ id: 'off', label: 'Off' },
+						]}
+						hrefFor={(id) => hrefWith({ marks: id === 'on' ? null : 'off' })}
+					/>
+				</div>
+				{marks ? <MarkLegend /> : null}
 			</div>
+
+			<div className="flex flex-col gap-12">
+				{sheet.grid.map((row) => (
+					<section key={row.line} className="flex flex-col gap-4">
+						<header className="border-rule-strong flex flex-wrap items-baseline justify-between gap-x-4 border-b pb-2">
+							<Display as="h3" size="title" className="text-[1.0625rem]">
+								{row.label}
+							</Display>
+							<Data className="text-ground-muted normal-case">
+								{row.provider}
+							</Data>
+						</header>
+						<div className="grid gap-x-8 gap-y-10 lg:grid-cols-3">
+							{row.cells.map((cell) => (
+								<TextCell
+									key={cell.key}
+									cell={cell}
+									text={cell.text?.[language][length] ?? null}
+									length={length}
+									lang={lang.tag}
+									marks={marks}
+									patterns={patterns}
+									places={work.places}
+								/>
+							))}
+						</div>
+					</section>
+				))}
+			</div>
+
+			{view === 'approaches' ? (
+				<p className="font-body text-prose-sm text-ground-muted measure">
+					{APPROACHES.map((a) => (
+						<span key={a.id} className="mb-1 block">
+							<strong className="text-ground-fg">{a.short}.</strong> {a.gloss}
+						</span>
+					))}
+				</p>
+			) : (
+				<p className="font-body text-prose-sm text-ground-muted measure">
+					Each column is the direct text, the only way all three rounds wrote.
+					The pilot still names technique and runs long; round 2 brought both
+					into line, and round 3 answers your notes on that.
+				</p>
+			)}
 		</div>
 	)
 }
 
 /**
- * The version this sheet's text replaced, folded away.
- *
- * Closed by default: the revised text is the deliverable and the old one is
- * evidence that it changed. It is worth keeping visible at all because the
- * museum asked for a specific removal, and the fastest way to confirm a removal
- * is to read the sentence that used to be there.
+ * The length band a text falls in. The long text aims at 350–550 characters
+ * and may take up to 650 on a rich sheet; the short one aims at 200–300 under
+ * a cap of 500.
  */
-function SupersededTexts({ descriptions }: { descriptions: DescriptionSet }) {
-	return (
-		<details className="border-rule group border">
-			<summary className="hover:text-link font-data text-data-sm text-ground-muted cursor-pointer list-none px-4 py-3 tracking-[0.12em] uppercase select-none">
-				<span className="mr-2 inline-block group-open:hidden" aria-hidden>
-					+
-				</span>
-				<span className="mr-2 hidden group-open:inline-block" aria-hidden>
-					−
-				</span>
-				The version this replaced, 1 August
-			</summary>
-			<div className="border-rule border-t p-4 opacity-70">
-				<TextPair descriptions={descriptions} />
-			</div>
-		</details>
-	)
+function band(length: Length, n: number) {
+	if (length === 'short') {
+		return n > 500
+			? { label: 'over 500', warn: true }
+			: { label: 'within 500', warn: false }
+	}
+	if (n <= 550) return { label: 'within 550', warn: false }
+	if (n <= 650) return { label: 'rich-sheet room', warn: false }
+	return { label: 'over 650', warn: true }
 }
 
-/**
- * German and English, long and short. Below lg each language reads as one
- * uninterrupted column; at lg+, where they sit side by side, the two are
- * interleaved row by row (both labels, then both Long texts, then both
- * Short texts) so Short starts level across the pair — a stray flex column
- * per language would let German's longer sentences push its own Short below
- * where English's already sits, exactly the drift the tags page had.
- */
-function TextPair({ descriptions }: { descriptions: DescriptionSet }) {
+function TextCell({
+	cell,
+	text,
+	length,
+	lang,
+	marks,
+	patterns,
+	places,
+}: {
+	cell: NonNullable<LoaderData['sheet']>['grid'][number]['cells'][number]
+	text: string | null
+	length: Length
+	lang: string
+	marks: boolean
+	patterns: MarkPatterns
+	places: Array<string>
+}) {
+	const counts = text ? countMarks(text, patterns, places) : null
+	const b = text ? band(length, text.length) : null
 	return (
-		<>
-			<div className="grid gap-y-8 lg:hidden">
-				{LANGUAGES.map((lang) => (
-					<div key={lang.id} className="flex flex-col gap-6" lang={lang.tag}>
-						<Data className="tracking-[0.2em]">{lang.label}</Data>
-						<TextBlock kind="long" text={descriptions[lang.id].long} />
-						<TextBlock kind="short" text={descriptions[lang.id].short} />
-					</div>
-				))}
-			</div>
-			<div className="hidden gap-x-10 gap-y-6 lg:grid lg:grid-cols-2">
-				{LANGUAGES.map((lang) => (
-					<Data
-						key={`label-${lang.id}`}
-						className="tracking-[0.2em]"
-						lang={lang.tag}
-					>
-						{lang.label}
+		<article className="flex flex-col gap-3" lang={lang}>
+			<header className="border-rule flex flex-col gap-1 border-b pb-2">
+				<div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+					<Data className="tracking-[0.16em]">{cell.heading}</Data>
+					{cell.mark ? <RevisionMark kind={cell.mark} /> : null}
+				</div>
+				{cell.subheading ? (
+					<Data className="text-ground-muted normal-case">
+						{cell.subheading}
 					</Data>
-				))}
-				{LANGUAGES.map((lang) => (
-					<TextBlock
-						key={`long-${lang.id}`}
-						kind="long"
-						text={descriptions[lang.id].long}
-						lang={lang.tag}
+				) : null}
+				{text && b && counts ? (
+					<Data className="text-ground-muted flex flex-wrap gap-x-3 tracking-normal normal-case tabular-nums">
+						<span className={b.warn ? 'text-stamp-fg' : undefined}>
+							{text.length} chars · {b.label}
+						</span>
+						{counts.hedge ? (
+							<span className="text-stamp-fg">
+								{counts.hedge} hedge{counts.hedge > 1 ? 's' : ''}
+							</span>
+						) : null}
+						{counts.quote ? <span>{counts.quote} quoted</span> : null}
+						{counts.place ? (
+							<span>
+								{counts.place} place{counts.place > 1 ? 's' : ''}
+							</span>
+						) : null}
+						{counts.technique ? (
+							<span
+								className="text-stamp-fg"
+								title="Check the word: a depicted quill matches too"
+							>
+								{counts.technique} technique?
+							</span>
+						) : null}
+					</Data>
+				) : null}
+			</header>
+			{text ? (
+				<p className="font-body text-prose whitespace-pre-line">
+					<MarkedText
+						text={text}
+						patterns={patterns}
+						places={places}
+						enabled={marks}
 					/>
-				))}
-				{LANGUAGES.map((lang) => (
-					<TextBlock
-						key={`short-${lang.id}`}
-						kind="short"
-						text={descriptions[lang.id].short}
-						lang={lang.tag}
-					/>
-				))}
-			</div>
-		</>
+				</p>
+			) : (
+				<p className="font-body text-prose-sm text-ground-muted italic">
+					No text in this round.
+				</p>
+			)}
+		</article>
 	)
 }

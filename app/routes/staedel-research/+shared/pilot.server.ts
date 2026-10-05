@@ -1,52 +1,50 @@
-import descriptionsPilotData from '#app/data/stadel-research/descriptions-pilot.json'
-import descriptionsData from '#app/data/stadel-research/descriptions.json'
 import evaluationPilotData from '#app/data/stadel-research/evaluation-pilot.json'
 import evaluationData from '#app/data/stadel-research/evaluation.json'
+import keywordsData from '#app/data/stadel-research/keywords.json'
 import manifestData from '#app/data/stadel-research/manifest.json'
 import promptsData from '#app/data/stadel-research/prompts.json'
 import scoreboardControlData from '#app/data/stadel-research/scoreboard-control.json'
 import scoreboardPilotData from '#app/data/stadel-research/scoreboard-pilot.json'
 import scoreboardData from '#app/data/stadel-research/scoreboard.json'
-import tagsPilotData from '#app/data/stadel-research/tags-pilot.json'
-import tagsData from '#app/data/stadel-research/tags.json'
+import textsData from '#app/data/stadel-research/texts.json'
 import worksData from '#app/data/stadel-research/works.json'
 import {
-	countTagRecord,
 	parseMedium,
+	runKey,
+	type ApproachId,
 	type DescriptionSet,
+	type LineId,
 	type Manifest,
 	type MediumId,
 	type ModelId,
 	type ModelTags,
+	type RoundId,
+	type RunKey,
 	type ScoreRow,
+	type TextSets,
 	type Work,
 	type WorkEvaluation,
 } from './schema.ts'
 
 /**
- * Server-side access to the pilot run.
+ * Server-side access to the experiment's three rounds.
  *
- * The compacted experiment is 1.2 MB of JSON. It is imported here, in a
+ * The compacted experiment is a few MB of JSON. It is imported here, in a
  * `.server` module, so it stays in the worker and never reaches a browser —
  * loaders hand the client one work's worth at a time. That is also why
  * selection lives in the URL rather than in component state: it is the query,
- * not a UI preference, and it makes every comparison in this pilot a citable
- * link the Städel team can paste into an email.
+ * not a UI preference, and it makes every comparison a citable link the Städel
+ * team can paste into an email.
  */
 
 export const manifest = manifestData as unknown as Manifest
 export const works = worksData as unknown as Array<Work>
 
-const tags = tagsData as unknown as Record<string, Record<ModelId, ModelTags>>
-const descriptions = descriptionsData as unknown as Record<
+const keywords = keywordsData as unknown as Record<
 	string,
-	Record<ModelId, DescriptionSet>
+	Record<RunKey, ModelTags>
 >
-/** The texts the revision superseded, for the two models it re-ran. */
-const descriptionsPilot = descriptionsPilotData as unknown as Record<
-	string,
-	Record<ModelId, DescriptionSet>
->
+const texts = textsData as unknown as Record<string, Record<RunKey, TextSets>>
 const evaluation = evaluationData as unknown as Record<
 	string,
 	Record<ModelId, WorkEvaluation>
@@ -57,17 +55,20 @@ const scoreboard = scoreboardData as unknown as Record<
 >
 const prompts = promptsData as unknown as Record<
 	MediumId,
-	{ tags: string; descriptions: string }
+	{ tags: string } & Record<ApproachId, string>
 >
 
 const worksById = new Map(works.map((w) => [w.id, w]))
 
-export const MODEL_IDS = manifest.models.map((m) => m.id)
+export const rounds = manifest.rounds
+export const lines = manifest.lines
+export const round3 = manifest.round3
+export const revision = manifest.revision
+export const currentRound = rounds.at(-1)!
 
-/** The two models still being scored; the rest are judge or retired. */
-export const FINALIST_MODEL_IDS = manifest.models
-	.filter((m) => m.status === 'finalist')
-	.map((m) => m.id)
+export function roundInfo(id: RoundId) {
+	return rounds.find((r) => r.id === id)!
+}
 
 export function modelInfo(id: ModelId) {
 	return manifest.models.find((m) => m.id === id) ?? null
@@ -77,8 +78,106 @@ export function modelLabel(id: ModelId) {
 	return modelInfo(id)?.label ?? id
 }
 
+/** The model a line ran in a round, or null if the line sat that round out. */
+export function lineModel(line: LineId, round: RoundId) {
+	return (
+		lines.find((l) => l.id === line)?.runs.find((r) => r.round === round)
+			?.model ?? null
+	)
+}
+
+/** The current round's run key for a line. */
+export function currentRun(line: LineId): RunKey {
+	return runKey(currentRound.id, lineModel(line, currentRound.id)!)
+}
+
+/** The run a line made in a round, with the model's label, for headers. */
+export function runInfo(line: LineId, round: RoundId) {
+	const model = lineModel(line, round)
+	if (!model) return null
+	return {
+		key: runKey(round, model),
+		round: roundInfo(round),
+		model: modelInfo(model)!,
+	}
+}
+
 export function worksInMedium(medium: MediumId) {
 	return works.filter((w) => w.medium === medium)
+}
+
+export function workById(id: string) {
+	return worksById.get(id) ?? null
+}
+
+export function keywordsFor(workId: string, key: RunKey): ModelTags | null {
+	return keywords[workId]?.[key] ?? null
+}
+
+export function textFor(
+	workId: string,
+	key: RunKey,
+	approach: ApproachId = 'direct',
+): DescriptionSet | null {
+	return texts[workId]?.[key]?.[approach] ?? null
+}
+
+export function promptFor(medium: MediumId, task: 'tags' | ApproachId): string {
+	return prompts[medium]?.[task] ?? ''
+}
+
+/**
+ * Resolve `?medium=` and `?work=` together. A work id wins over the medium
+ * parameter when the two disagree, so a link to a single sheet stays valid even
+ * if it is pasted without its medium — a bookmarked comparison should not
+ * silently show a different work.
+ */
+export function resolveSelection(url: URL) {
+	const requestedWorkId = url.searchParams.get('work')
+	const work = requestedWorkId ? (worksById.get(requestedWorkId) ?? null) : null
+	const medium = work?.medium ?? parseMedium(url.searchParams.get('medium'))
+	return { medium, work }
+}
+
+/** Previous / next within a medium, and the position, for the sheet pager. */
+export function pagerFor(medium: MediumId, workId: string) {
+	const sheets = worksInMedium(medium)
+	const index = sheets.findIndex((w) => w.id === workId)
+	const neighbour = (i: number) => {
+		const sheet = i < 0 ? undefined : sheets[i]
+		return sheet ? { id: sheet.id, objectNumber: sheet.objectNumber } : null
+	}
+	return {
+		position: { index: index + 1, total: sheets.length },
+		previous: neighbour(index - 1),
+		next: neighbour(index + 1),
+	}
+}
+
+/** The museum's notes that name a sheet, in the order they were written. */
+export function notesForWork(work: Pick<Work, 'notes'>) {
+	return round3.notes.filter((note) => work.notes.includes(note.id))
+}
+
+export function spotCheckForWork(workId: string) {
+	return round3.spotChecks.find((c) => c.sheet.id === workId) ?? null
+}
+
+// ---------------------------------------------------------------------------
+// Evaluation — round 2 and the pilot. Round 3 was not scored.
+
+/** The two models the 25 August round re-ran, and the re-score covers. */
+export const SCORED_MODEL_IDS = revision.models
+
+export function resolveModel(
+	url: URL,
+	param = 'model',
+	allowedIds: Array<ModelId> = SCORED_MODEL_IDS,
+): ModelId {
+	const requested = url.searchParams.get(param)
+	return requested && allowedIds.includes(requested)
+		? requested
+		: allowedIds[0]!
 }
 
 export function scoreboardFor(medium: MediumId) {
@@ -125,172 +224,32 @@ export function pilotEvaluationForWorkAndModel(
 	return evaluationPilot[workId]?.[modelId] ?? null
 }
 
-/** Every model scored on one sheet, each paired with its pilot score. */
-export function evaluationWithPilotForWork(workId: string) {
-	return evaluationForWork(workId).map((entry) => ({
-		...entry,
-		superseded: pilotEvaluationForWorkAndModel(workId, entry.model.id),
-	}))
-}
-
-export function promptFor(medium: MediumId, task: 'tags' | 'descriptions') {
-	return prompts[medium]?.[task] ?? ''
-}
-
-/**
- * Resolve `?medium=` and `?work=` together. A work id wins over the medium
- * parameter when the two disagree, so a link to a single sheet stays valid even
- * if it is pasted without its medium — a bookmarked comparison should not
- * silently show a different work.
- */
-export function resolveSelection(url: URL) {
-	const requestedWorkId = url.searchParams.get('work')
-	const work = requestedWorkId ? (worksById.get(requestedWorkId) ?? null) : null
-	const medium = work?.medium ?? parseMedium(url.searchParams.get('medium'))
-	return { medium, work }
-}
-
-export function resolveModel(
-	url: URL,
-	param = 'model',
-	allowedIds: Array<ModelId> = MODEL_IDS,
-): ModelId {
-	const requested = url.searchParams.get(param)
-	return requested && allowedIds.includes(requested)
-		? requested
-		: allowedIds[0]!
-}
-
-/** Every model's tagging of one sheet, in roster order, with counts. */
-export function tagsForWork(workId: string) {
-	const byModel = tags[workId] ?? {}
-	return manifest.models.map((model) => ({
-		model,
-		tags: byModel[model.id] ?? { fields: {}, total: 0 },
-	}))
-}
-
-export function tagsForWorkAndModel(workId: string, modelId: ModelId) {
-	return tags[workId]?.[modelId] ?? { fields: {}, total: 0 }
-}
-
-export function descriptionsForWork(workId: string) {
-	const byModel = descriptions[workId] ?? {}
-	return manifest.models.map((model) => ({
-		model,
-		descriptions: byModel[model.id] ?? null,
-	}))
-}
-
-export function descriptionsForWorkAndModel(
-	workId: string,
-	modelId: ModelId,
-): DescriptionSet | null {
-	return descriptions[workId]?.[modelId] ?? null
-}
-
-export const revision = manifest.revision
-
-/** The two models the revision re-ran, for both tasks. */
-const REVISED_MODELS = new Set<ModelId>(revision.models)
-
-export function isRevised(modelId: ModelId) {
-	return REVISED_MODELS.has(modelId)
-}
-
-export function revisionFor(
-	modelId: ModelId,
-	task: 'descriptions' | 'tags' = 'descriptions',
-) {
-	return revision[task].find((m) => m.id === modelId) ?? null
-}
-
-/**
- * The superseded text for one sheet, or null where there is none — either the
- * model was never re-run, or it returned nothing on 1 August.
- */
-export function pilotDescriptionsForWorkAndModel(
-	workId: string,
-	modelId: ModelId,
-): DescriptionSet | null {
-	return descriptionsPilot[workId]?.[modelId] ?? null
-}
-
-const tagsPilot = tagsPilotData as unknown as Record<
-	string,
-	Record<ModelId, ModelTags>
->
-
-export function pilotTagsForWorkAndModel(workId: string, modelId: ModelId) {
-	return tagsPilot[workId]?.[modelId] ?? null
-}
-
-/** Every model's keywords for one sheet, each paired with what it replaced. */
-export function tagsWithPilotForWork(workId: string) {
-	return tagsForWork(workId).map((entry) => ({
-		...entry,
-		superseded: pilotTagsForWorkAndModel(workId, entry.model.id),
-	}))
-}
-
-/** Every model's texts for one sheet, each paired with what it replaced. */
-export function descriptionsWithPilotForWork(workId: string) {
-	return descriptionsForWork(workId).map((entry) => ({
-		...entry,
-		superseded: pilotDescriptionsForWorkAndModel(workId, entry.model.id),
-	}))
-}
-
-/** Only the two finalists are scored — evaluation was never re-run for the
- *  judge or the retired models. */
+/** Both scored models on one sheet, best first. */
 export function evaluationForWork(workId: string) {
 	const byModel = evaluation[workId] ?? {}
-	return manifest.models
-		.filter((model) => model.status === 'finalist')
-		.map((model) => ({ model, result: byModel[model.id] ?? null }))
-		.sort((a, b) => (b.result?.overall ?? 0) - (a.result?.overall ?? 0))
+	return SCORED_MODEL_IDS.map((id) => ({
+		model: modelInfo(id)!,
+		result: byModel[id] ?? null,
+	})).sort((a, b) => (b.result?.overall ?? 0) - (a.result?.overall ?? 0))
+}
+
+/** The number of keywords a scored model gave a sheet in round 2. */
+export function scoredKeywordCount(workId: string, modelId: ModelId) {
+	return keywordsFor(workId, runKey('revision', modelId))?.total ?? 0
 }
 
 /**
- * The index rows a browse view needs: enough to render a plate and a caption,
- * and the two counts that make the list worth scanning — how much the museum
- * holds on this sheet, and how much the models added.
- */
-export function indexRows(medium: MediumId, modelId: ModelId) {
-	return worksInMedium(medium).map((work) => ({
-		id: work.id,
-		objectNumber: work.objectNumber,
-		objectKey: work.objectKey,
-		title: work.title,
-		artist: work.artist,
-		notBefore: work.notBefore,
-		notAfter: work.notAfter,
-		museumTagCount: work.museumTagCount,
-		modelTagCount: countTagRecord(tagsForWorkAndModel(work.id, modelId).fields),
-		overall: evaluation[work.id]?.[modelId]?.overall ?? null,
-	}))
-}
-
-export type IndexRow = ReturnType<typeof indexRows>[number]
-
-/**
- * Aggregate token usage per model for one medium, both tasks. Used on the
- * overview to show what a full run of 2,747 sheets would cost in tokens: the
- * sample is 20 sheets per medium, so the corpus figure is a straight multiple.
+ * Tokens per model for one medium, both tasks, as the pilot ran them. Used for
+ * the pilot's roster table.
  */
 export function usageForMedium(medium: MediumId) {
-	return manifest.models.map((model) => {
-		const totals = manifest.usage[`${medium}:${model.id}`]
+	return roundInfo('pilot').models.map((id) => {
+		const model = modelInfo(id)!
+		const totals = manifest.usage[`${medium}:${id}`]
 		const calls = (totals?.tags.calls ?? 0) + (totals?.descriptions.calls ?? 0)
 		const input = (totals?.tags.input ?? 0) + (totals?.descriptions.input ?? 0)
 		const output =
 			(totals?.tags.output ?? 0) + (totals?.descriptions.output ?? 0)
-		return {
-			model,
-			calls,
-			input,
-			output,
-			perWork: calls ? Math.round((input + output) / (calls / 2)) : 0,
-		}
+		return { model, calls, input, output }
 	})
 }

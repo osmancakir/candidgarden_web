@@ -56,9 +56,65 @@ export type Work = {
 	objectKey: string
 	museum: TagRecord
 	museumTagCount: number
+	/** Named places from the current round's keywords, longest first. */
+	places: Array<string>
+	/** The museum's notes that name this sheet. */
+	notes: Array<NoteId>
 }
 
-export type ModelTags = { fields: TagRecord; total: number }
+/**
+ * A value the research repo's rule checks flag (src/lib/rule-checks.js there).
+ * Crude by design — a pattern, not a judgement — so the pages show it as a
+ * question beside the value, never as a verdict on it.
+ */
+export type FlagCheck =
+	| 'artist'
+	| 'geo'
+	| 'role'
+	| 'title'
+	| 'compound'
+	| 'banned'
+
+export type KeywordFlag = {
+	check: FlagCheck
+	field: TagField
+	type: string | null
+	value: string
+}
+
+export const FLAG_LABELS: Record<FlagCheck, { label: string; gloss: string }> =
+	{
+		artist: {
+			label: 'artist',
+			gloss: 'The work’s own artist, listed as an associated person.',
+		},
+		geo: {
+			label: 'not a named place',
+			gloss: 'Filed under Geografie, but a kind of place rather than a named one.',
+		},
+		role: {
+			label: 'role, not a name',
+			gloss: 'An unnamed figure or group filed as a person.',
+		},
+		title: {
+			label: 'title as motif',
+			gloss: 'The catalogue title copied into the main motif.',
+		},
+		compound: {
+			label: 'open compound',
+			gloss: 'A phrase rather than a term an authority file would hold.',
+		},
+		banned: {
+			label: 'technique',
+			gloss: 'A process, material or period.',
+		},
+	}
+
+export type ModelTags = {
+	fields: TagRecord
+	total: number
+	flags: Array<KeywordFlag>
+}
 
 export type DescriptionSet = {
 	german: { long: string; short: string }
@@ -78,17 +134,20 @@ export type ScoreRow = {
 } & Record<ScoreCategory, number | null>
 
 /**
- * What became of a model after the pilot. `retired` models lost on the pilot's
- * own scores and are no longer run, but they stay on the page as the evidence
- * for cutting the roster; `judge` is the one role a non-contestant can hold.
+ * What became of a model. `finalist`: the current round's two. `previous`: the
+ * 25 August finalists, replaced by their successors but kept because the
+ * museum's notes were written against them. `retired` models lost on the
+ * pilot's own scores; `judge` is the one role a non-contestant can hold.
  */
-export type ModelStatus = 'finalist' | 'judge' | 'retired'
+export type ModelStatus = 'finalist' | 'previous' | 'judge' | 'retired'
 
 export type ModelInfo = {
 	id: ModelId
 	provider: string
 	label: string
 	status: ModelStatus
+	/** The provider succession this model belongs to, if it is still in one. */
+	line: LineId | null
 }
 
 /** Retired models and the judge are no longer generating results for the
@@ -96,6 +155,178 @@ export type ModelInfo = {
  *  reader can tell at a glance which record is still live. */
 export function isModelMuted(status: ModelStatus): boolean {
 	return status === 'retired' || status === 'judge'
+}
+
+/* --------------------------------------------------------------------------
+   Rounds, lines and approaches.
+
+   Every output on these pages belongs to a *run*: one round of the experiment,
+   one model. A run key is `round/model`. A *line* is a provider's succession of
+   runs — OpenAI's pilot, round-2 and round-3 models — which is the axis a
+   reader follows to see one sheet's text change over time. An *approach* is a
+   way of writing the text; only round 3 tried more than one.
+   -------------------------------------------------------------------------- */
+
+export type RoundId = 'pilot' | 'revision' | 'round3'
+export type LineId = 'openai' | 'anthropic'
+export type ApproachId = 'direct' | 'fromKeywords' | 'synthesis'
+export type RunKey = `${RoundId}/${string}`
+
+export const runKey = (round: RoundId, model: ModelId): RunKey =>
+	`${round}/${model}`
+
+export type Round = {
+	id: RoundId
+	date: string
+	label: string
+	short: string
+	models: Array<ModelId>
+	approaches: Array<ApproachId>
+}
+
+export type Line = {
+	id: LineId
+	provider: string
+	runs: Array<{ round: RoundId; model: ModelId }>
+}
+
+export const APPROACHES: Array<{
+	id: ApproachId
+	label: string
+	short: string
+	gloss: string
+}> = [
+	{
+		id: 'direct',
+		label: 'Written directly',
+		short: 'Direct',
+		gloss: 'From the image and the catalogue record, as in every round so far.',
+	},
+	{
+		id: 'fromKeywords',
+		label: 'Written from the keywords',
+		short: 'From keywords',
+		gloss:
+			'The same prompt, plus the keywords the same model catalogued for the sheet, given as a checklist rather than an outline.',
+	},
+	{
+		id: 'synthesis',
+		label: 'Synthesised from both',
+		short: 'Synthesis',
+		gloss:
+			'Both models’ direct texts, unlabelled as A and B, rewritten into one text by the model named.',
+	},
+]
+
+export function parseApproach(value: string | null): ApproachId {
+	return APPROACHES.some((a) => a.id === value)
+		? (value as ApproachId)
+		: 'direct'
+}
+
+export function parseLine(value: string | null): LineId {
+	return value === 'anthropic' ? 'anthropic' : 'openai'
+}
+
+/** One sheet's four texts from one run, one approach. */
+export type TextSets = Partial<Record<ApproachId, DescriptionSet>>
+
+/** The museum's rules for keywords, counted over one run. */
+export type KeywordMeasure = {
+	sheets: number
+	values: number
+	subjectValues: number
+	geoTotal: number
+} & Record<FlagCheck, number>
+
+/** The museum's rules for texts, counted over one run and approach. */
+export type TextRuleMeasure = {
+	texts: number
+	avgLong: number
+	/** German long text within 550 characters. */
+	target: number
+	/** 551–650: the room a rich sheet may take. */
+	rich: number
+	/** Over 650. */
+	longer: number
+	hedgesDe: number
+	hedgesEn: number
+	/** Texts with at least one title set in „…“. */
+	quoted: number
+	technique: number
+	placesNamed: number
+	placesTotal: number
+}
+
+export type NoteId =
+	| 'geo'
+	| 'compound'
+	| 'association'
+	| 'artist'
+	| 'persons'
+	| 'sitter'
+	| 'concept'
+	| 'schraffur'
+	| 'quotes'
+	| 'genre'
+	| 'hedges'
+	| 'places'
+	| 'three'
+
+/** One of the museum's notes on round 2, and what round 3 did about it. */
+export type Note = {
+	id: NoteId
+	area: 'keywords' | 'texts'
+	said: string
+	changed: string
+	measure?: FlagCheck | 'quoted' | 'hedges' | 'places'
+	check?: string
+	sheets: Array<{ id: string; objectNumber: string }>
+	view: 'keywords' | 'approaches' | 'rounds'
+}
+
+/** Where every matching term sits on one sheet, run by run. */
+export type SpotCheck = {
+	id: string
+	sheet: { id: string; objectNumber: string }
+	want: TagField
+	/** The terms the note names. */
+	expect: Array<string>
+	runs: Array<{
+		run: RunKey
+		hits: Array<SpotHit>
+		/** Named terms not filed under `want`. */
+		missing: Array<string>
+		/** Named terms filed under `want` and somewhere else too. */
+		alsoElsewhere: Array<SpotHit>
+		/** Terms the note rules out, found anyway. */
+		forbidden: Array<SpotHit>
+	}>
+}
+
+export type SpotHit = { field: TagField; type: string | null; value: string }
+
+export type MeasureScope = 'all' | MediumId
+
+export type Round3 = {
+	date: string
+	notes: Array<Note>
+	spotChecks: Array<SpotCheck>
+	keywordMeasures: Record<MeasureScope, Record<RunKey, KeywordMeasure>>
+	textMeasures: Record<
+		MeasureScope,
+		Record<RunKey, Partial<Record<ApproachId, TextRuleMeasure>>>
+	>
+	cost: {
+		/** USD, the whole round-3 sample. */
+		sample: number
+		projection: Array<{
+			run: RunKey
+			perSheet: Record<'keywords' | ApproachId, number>
+			full: Record<ApproachId, number>
+		}>
+		corpus: Record<MediumId, number>
+	}
 }
 
 /** Counted off the texts themselves by the prep script, never asserted. */
@@ -152,7 +383,6 @@ export type Revision = {
 	}>
 	tags: Array<{ id: ModelId; before: TagMeasure; after: TagMeasure }>
 	judgeCheck: Array<{ medium: MediumId; models: Array<JudgeCheckRow> }>
-	baselineRef: string
 	unchanged: Array<string>
 	band: { min: number; max: number }
 	houseReference: {
@@ -190,6 +420,11 @@ export type Manifest = {
 	scoreCategories: Array<ScoreCategory>
 	usage: Record<string, UsageTotals>
 	revision: Revision
+	rounds: Array<Round>
+	lines: Array<Line>
+	round3: Round3
+	/** Regex sources for the text marks, from the research repo's rule checks. */
+	marks: { hedgeDe: string; hedgeEn: string; technique: string }
 	generatedAt: string
 }
 

@@ -8,42 +8,52 @@ import {
 } from '#app/components/institute/primitives.tsx'
 import { cn } from '#app/utils/misc.tsx'
 import {
-	markForModel,
+	DiffKeyword,
+	DiffLegend,
 	MediumSwitch,
 	Plate,
 	PromptDisclosure,
 	RecordComparison,
 	RevisionMark,
 	RevisionNotice,
+	Segmented,
 	SelectionConsole,
+	SheetNotes,
 	SheetPager,
 	TagFieldBlock,
 	useHrefWith,
 	WorkMetadata,
-	type RevisionMarkKind,
+	type ComparisonSide,
 } from './+shared/components.tsx'
+import { diffKeywords, type KeywordDiff } from './+shared/keyword-diff.ts'
 import {
-	indexRows,
-	isRevised,
-	manifest,
+	currentRound,
+	keywordsFor,
+	lineModel,
+	lines,
+	modelInfo,
+	notesForWork,
+	pagerFor,
 	promptFor,
-	resolveModel,
 	resolveSelection,
-	revision,
-	tagsWithPilotForWork,
+	round3,
+	runInfo,
+	spotCheckForWork,
 	worksInMedium,
 } from './+shared/pilot.server.ts'
 import {
 	countTagRecord,
-	countTagValue,
 	displayDating,
 	FIELDS_ABSENT_FROM_MUSEUM_RECORDS,
+	FLAG_LABELS,
 	mediumGerman,
-	mediumLabel,
+	parseLine,
 	TAG_FIELDS,
 	TAG_SECTIONS,
+	type FlagCheck,
+	type LineId,
+	type MediumId,
 	type TagField,
-	type TagRecord,
 } from './+shared/schema.ts'
 import { type Route } from './+types/tags.ts'
 
@@ -56,42 +66,120 @@ export const handle: SEOHandle = {
 /**
  * Keyword generation, sheet by sheet.
  *
- * The question a curator actually has is not "which model is best" — the
- * evaluation page answers that — but "what would this add to *this* record".
- * So the sheet view is a two-column comparison: the Städel's own annotation on
- * the left, one model's output on the right, the same nine fields in the same
- * order down both. The count matrix above it holds the whole roster, so the
- * reader picks which model to open rather than scrolling six full records.
- *
- * Four of the nine fields are structurally empty on the museum side — they are
- * the categories this project exists to add. The left column says so in each of
- * them rather than showing an unexplained blank, because a silent gap reads as
- * a data error and this one is the point of the work.
+ * The museum's notes on round 2 were almost all about single values: a term
+ * that should not be in Geografie, a role filed as a person, a phrase that is
+ * not an authority term, a meaning filed as a visible thing. So the sheet view
+ * leads with a diff — round 3 against round 2, one model at a time — in which
+ * every value is marked kept, new, dropped or moved, and every value an
+ * automatic check flags carries the flag. The comparison against the Städel's
+ * own record, and against the other model, stays one click away.
  */
 
 export const meta: Route.MetaFunction = () => [
-	{ title: 'Keywords · Städel pilot · Candid Garden' },
+	{ title: 'Keywords · Städel research · Candid Garden' },
 	{ name: 'robots', content: 'noindex, nofollow' },
 ]
+
+const COMPARE = ['previous', 'museum', 'other'] as const
+type Compare = (typeof COMPARE)[number]
+const parseCompare = (value: string | null): Compare =>
+	COMPARE.includes(value as Compare) ? (value as Compare) : 'previous'
+
+/** The flags that answer one of the museum's notes, in the order of the notes. */
+const RULE_ROWS: Array<{ check: FlagCheck; note: string }> = [
+	{ check: 'artist', note: 'The work’s artist under Assoziation.Person' },
+	{ check: 'geo', note: 'Geografie values that are not a named place' },
+	{ check: 'role', note: 'Unnamed roles filed as persons' },
+	{ check: 'compound', note: 'Open compounds in the subject fields' },
+	{ check: 'title', note: 'The catalogue title copied into the main motif' },
+	{ check: 'banned', note: 'Technique, material or period' },
+]
+
+function ruleTable(medium: MediumId) {
+	const measures = round3.keywordMeasures[medium]
+	return {
+		lines: lines.map((line) => {
+			const before = runInfo(line.id, 'revision')!
+			const after = runInfo(line.id, currentRound.id)!
+			return {
+				id: line.id,
+				before: { label: before.model.label, ...measures[before.key]! },
+				after: { label: after.model.label, ...measures[after.key]! },
+			}
+		}),
+	}
+}
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url)
 	const { medium, work } = resolveSelection(url)
-	const modelId = resolveModel(url)
+	const line = parseLine(url.searchParams.get('line'))
+	const compare = parseCompare(url.searchParams.get('compare'))
+	const changesOnly = url.searchParams.get('show') === 'changes'
+	const otherLine: LineId = line === 'openai' ? 'anthropic' : 'openai'
 	const sheets = worksInMedium(medium)
 
-	const position = work ? sheets.findIndex((w) => w.id === work.id) : -1
-	const neighbour = (index: number) => {
-		const sheet = index < 0 ? undefined : sheets[index]
-		return sheet ? { id: sheet.id, objectNumber: sheet.objectNumber } : null
-	}
+	const current = runInfo(line, currentRound.id)!
+	const previous = runInfo(line, 'revision')!
+	const other = runInfo(otherLine, currentRound.id)!
 
-	// One shape either way: a union here would force every consumer to narrow
-	// before touching a field that is simply absent in browse mode.
+	const lineOptions = lines.map((l) => {
+		const model = modelInfo(lineModel(l.id, currentRound.id)!)!
+		return { id: l.id, label: model.label, provider: model.provider }
+	})
+
+	const sheet = work
+		? (() => {
+				const now = keywordsFor(work.id, current.key) ?? {
+					fields: {},
+					total: 0,
+					flags: [],
+				}
+				const before = keywordsFor(work.id, previous.key) ?? {
+					fields: {},
+					total: 0,
+					flags: [],
+				}
+				const theirs = keywordsFor(work.id, other.key) ?? {
+					fields: {},
+					total: 0,
+					flags: [],
+				}
+				const spot = spotCheckForWork(work.id)
+				return {
+					...pagerFor(medium, work.id),
+					notes: notesForWork(work),
+					spotCheck: spot
+						? {
+								...spot,
+								runs: spot.runs.map((r) => {
+									const [round, model] = r.run.split('/') as [string, string]
+									return {
+										...r,
+										round: round === 'round3' ? 'Round 3' : 'Round 2',
+										model: modelInfo(model)?.label ?? model,
+									}
+								}),
+							}
+						: null,
+					now,
+					before,
+					theirs,
+					diff: diffKeywords(before, now),
+				}
+			})()
+		: null
+
 	return {
 		medium,
-		modelId,
-		models: manifest.models,
+		line,
+		compare,
+		changesOnly,
+		lineOptions,
+		current: { label: current.model.label, provider: current.model.provider },
+		previous: { label: previous.model.label },
+		other: { label: other.model.label, provider: other.model.provider },
+		rules: ruleTable(medium),
 		prompt: promptFor(medium, 'tags'),
 		sheets: sheets.map((w) => ({
 			id: w.id,
@@ -99,296 +187,106 @@ export async function loader({ request }: Route.LoaderArgs) {
 			title: w.title,
 		})),
 		work,
-		rows: work ? null : indexRows(medium, modelId),
-		byModel: work ? tagsWithPilotForWork(work.id) : null,
-		revision,
-		modelIsRevised: isRevised(modelId),
-		position: work ? { index: position + 1, total: sheets.length } : null,
-		previous: work ? neighbour(position - 1) : null,
-		next: work ? neighbour(position + 1) : null,
+		sheet,
+		rows: work
+			? null
+			: sheets.map((w) => {
+					const now = keywordsFor(w.id, current.key)
+					const before = keywordsFor(w.id, previous.key)
+					return {
+						id: w.id,
+						objectNumber: w.objectNumber,
+						objectKey: w.objectKey,
+						title: w.title,
+						artist: w.artist,
+						notBefore: w.notBefore,
+						notAfter: w.notAfter,
+						inNotes: w.notes.length > 0,
+						now: now?.total ?? 0,
+						before: before?.total ?? 0,
+						flagsNow: now?.flags.length ?? 0,
+						flagsBefore: before?.flags.length ?? 0,
+					}
+				}),
 	}
 }
 
-/** Counts for every source against every field: the comparison, at a glance. */
-function CountMatrix({
-	museum,
-	byModel,
-	selectedModelId,
-	hrefWith,
-}: {
-	museum: TagRecord
-	byModel: Array<{
-		model: { id: string; label: string; provider: string }
-		tags: { fields: TagRecord; total: number }
-	}>
-	selectedModelId: string
-	hrefWith: (changes: Record<string, string | number | null>) => string
-}) {
-	const fields = Object.keys(TAG_FIELDS) as Array<TagField>
-	const sources = [
-		{ id: 'museum', label: 'Städel record', record: museum, href: null },
-		...byModel.map((entry) => ({
-			id: entry.model.id,
-			label: entry.model.label,
-			record: entry.tags.fields,
-			href: hrefWith({ model: entry.model.id }),
-		})),
-	]
-
-	return (
-		<div className="overflow-x-auto">
-			<table className="min-w-full">
-				<caption className="mb-3 text-left">
-					<Data className="tracking-[0.2em]">Values per field</Data>
-					<Data className="text-ground-muted ml-6 normal-case">
-						counts only — open a model to read them
-					</Data>
-				</caption>
-				<thead>
-					<tr className="border-rule-strong border-b">
-						<th
-							scope="col"
-							className="font-data text-data-sm text-ground-muted py-2 pr-4 text-left tracking-[0.12em] uppercase"
-						>
-							Source
-						</th>
-						{fields.map((field) => (
-							<th
-								key={field}
-								scope="col"
-								title={TAG_FIELDS[field].gloss}
-								className="font-data text-data-sm text-ground-muted py-2 pr-3 text-right tracking-normal"
-							>
-								{/* Ikon. is the default namespace and drops; Assoziation.
-								    abbreviates but stays, because Person and Thema exist in
-								    both and an unqualified header would collide. */}
-								{field
-									.replace(/^Ikon\./, '')
-									.replace(/^Assoziation\./, 'Assoz. ')}
-							</th>
-						))}
-						<th
-							scope="col"
-							className="font-data text-data-sm text-ground-fg py-2 text-right tracking-[0.12em] uppercase"
-						>
-							Total
-						</th>
-					</tr>
-				</thead>
-				<tbody>
-					{sources.map((source) => {
-						const isSelected = source.id === selectedModelId
-						const isMuseum = source.id === 'museum'
-						return (
-							<tr
-								key={source.id}
-								className={
-									'border-rule border-b ' +
-									(isSelected || isMuseum ? 'bg-tint' : '')
-								}
-							>
-								<th scope="row" className="py-2 pr-4 text-left font-normal">
-									{source.href ? (
-										<Link
-											to={source.href}
-											className="hover:text-link font-body text-prose-sm no-underline hover:underline"
-											aria-current={isSelected ? 'true' : undefined}
-										>
-											{source.label}
-										</Link>
-									) : (
-										<span className="font-body text-prose-sm">
-											{source.label}
-										</span>
-									)}
-								</th>
-								{fields.map((field) => {
-									const n = countTagValue(source.record[field])
-									const structurallyAbsent =
-										isMuseum &&
-										FIELDS_ABSENT_FROM_MUSEUM_RECORDS.includes(field)
-									return (
-										<td
-											key={field}
-											className={
-												'font-data text-data py-2 pr-3 text-right tabular-nums ' +
-												(n === 0 ? 'text-ground-muted' : '')
-											}
-										>
-											{structurallyAbsent ? (
-												<span title="Not collected by the museum — this is a field the project adds">
-													n/a
-												</span>
-											) : (
-												n || '·'
-											)}
-										</td>
-									)
-								})}
-								<td className="font-data text-data py-2 text-right font-bold tabular-nums">
-									{countTagRecord(source.record)}
-								</td>
-							</tr>
-						)
-					})}
-				</tbody>
-			</table>
-		</div>
-	)
-}
-
-/** One source's full record, in the four bands the prompt asks for. */
-function RecordColumn({
-	heading,
-	subheading,
-	record,
-	isMuseum = false,
-	mark,
-}: {
-	heading: string
-	subheading: React.ReactNode
-	record: TagRecord
-	isMuseum?: boolean
-	mark?: RevisionMarkKind
-}) {
-	const muted = mark === 'retired' || mark === 'judge'
-	return (
-		<div className="flex flex-col gap-8">
-			<header
-				className={cn('border-rule-strong border-b pb-3', muted && 'opacity-70')}
-			>
-				<div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-					<Display as="h3" size="title" className="text-[1.0625rem]">
-						{heading}
-					</Display>
-					{mark ? <RevisionMark kind={mark} /> : null}
-				</div>
-				<Data className="text-ground-muted mt-1 block normal-case">
-					{subheading}
-				</Data>
-			</header>
-			{TAG_SECTIONS.map((section) => (
-				<section key={section.title} className="flex flex-col gap-4">
-					<div>
-						<Data className="tracking-[0.2em]">{section.title}</Data>
-						<p className="font-body text-prose-sm text-ground-muted mt-1">
-							{section.blurb}
-						</p>
-					</div>
-					{section.fields.map((field) => (
-						<TagFieldBlock
-							key={field}
-							field={field}
-							value={record[field]}
-							muted={muted}
-							absent={
-								isMuseum && FIELDS_ABSENT_FROM_MUSEUM_RECORDS.includes(field)
-									? 'Not collected by the museum. This is one of the four categories the project was commissioned to add, so there is nothing here to compare against.'
-									: undefined
-							}
-						/>
-					))}
-				</section>
-			))}
-		</div>
-	)
-}
-
 export default function StadelTags({ loaderData }: Route.ComponentProps) {
-	const {
-		medium,
-		modelId,
-		models,
-		prompt,
-		sheets,
-		work,
-		rows,
-		revision: rev,
-		modelIsRevised,
-	} = loaderData
+	const { medium, line, lineOptions, prompt, sheets, work, rows, current } =
+		loaderData
 	const hrefWith = useHrefWith()
-	const selectedModel = models.find((m) => m.id === modelId)
 
 	return (
 		<>
-			<TagsHeader
-				medium={medium}
-				modelLabel={selectedModel?.label ?? modelId}
-				hrefWith={hrefWith}
-			/>
+			<header className="border-rule container border-b py-10 md:py-14">
+				<div className="grid gap-8 lg:grid-cols-12">
+					<div className="lg:col-span-8">
+						<Data className="text-ground-muted mb-4 block tracking-[0.2em]">
+							Task 1 · Iconographic keywords
+						</Data>
+						<Display as="h1" size="chapter" className="measure-wide">
+							What round 3 changed, value by value
+						</Display>
+						<p className="font-body text-prose-lg measure mt-6">
+							Open any sheet to see one model’s round-3 keywords against its
+							round-2 keywords: every value marked as kept, new, dropped or
+							moved to another field. The comparison with your own record, and
+							with the other model, is a switch on the same page.
+						</p>
+					</div>
+					<div className="flex flex-col justify-end gap-3 lg:col-span-4">
+						<Data className="text-ground-muted">Medium</Data>
+						<MediumSwitch
+							current={medium}
+							hrefFor={(next) => hrefWith({ medium: next, work: null })}
+						/>
+					</div>
+				</div>
+			</header>
 
 			<div className="container flex flex-col gap-8 pb-16">
-				<RevisionNotice>
+				<RevisionNotice
+					caption={`the rules of your notes, counted on the ${mediumGerman(medium)} sample`}
+				>
 					<p>
-						The keywords were re-run on {rev.date}, under a narrower version of
-						the rule applied to the descriptions. Checking your instruction
-						against your own records showed it could not be carried over whole:
-						across the 4,583 <code>Ikon.Thema</code> values in the export you
-						name a process or a period <strong>zero</strong> times, but record{' '}
-						<code>Schraffur</code> 43 times on the two formal axes the briefing
-						asks for.
+						Each row counts the values an automatic check flags, in round 2 and
+						in round 3, across the 20 sheets of this medium. The checks are word
+						lists and patterns, so a count is an indicator rather than a
+						verdict. Flagged values carry a ⚑ on every sheet, so you can judge
+						each one yourself.
 					</p>
-					<p>
-						So the prompt now refuses the process, the material and the period
-						(<code>Radierung</code>, <code>Papier</code>, <code>Barock</code>)
-						and keeps the visible-mark vocabulary you use.{' '}
-						{rev.tags[0] && rev.tags[1] ? (
-							<>
-								Across both media that took banned values from{' '}
-								{rev.tags[0].before.banned + rev.tags[1].before.banned} to{' '}
-								{rev.tags[0].after.banned + rev.tags[1].after.banned}, while
-								the kept vocabulary went from{' '}
-								{rev.tags[0].before.kept + rev.tags[1].before.kept} to{' '}
-								{rev.tags[0].after.kept + rev.tags[1].after.kept}: the second
-								figure matters as much as the first, since a fall there would
-								mean the rule had cut into what you actually catalogue.
-							</>
-						) : null}{' '}
-						Each sheet can be opened against the keywords it replaced.
-					</p>
-					<p className="text-ground-muted">
-						The <Link to="/staedel-research/evaluation">scores</Link> now judge
-						these revised keywords, with a model that took no part in the run.
-						They sit about two points below the pilot's because that judge marks
-						harder, not because the keywords got worse: the evaluation page
-						separates the two effects.
-					</p>
+					<RuleTable rules={loaderData.rules} />
 				</RevisionNotice>
 
 				<PromptDisclosure
 					prompt={prompt}
-					label={`The tagging prompt for ${mediumGerman(medium)}, in full`}
+					label={`The round-3 keyword prompt for ${mediumGerman(medium)}, in full`}
 				/>
 
 				<SelectionConsole
 					medium={medium}
 					workId={work?.id ?? null}
-					modelId={modelId}
+					modelId={line}
+					modelParam="line"
 					works={sheets}
-					models={models}
+					models={lineOptions}
 					resetTo={`?medium=${medium}`}
 					summary={
 						work
-							? `${work.objectNumber} · all five models`
-							: `${sheets.length} sheets · ${selectedModel?.label ?? modelId}` +
-								(modelIsRevised ? ' · revised' : ' · pilot output')
+							? `${work.objectNumber} · ${current.label}`
+							: `${sheets.length} sheets · ${current.label} · round 3`
 					}
 				/>
 
-				{work && loaderData.byModel && loaderData.position ? (
+				{work && loaderData.sheet ? (
 					<SheetView
 						work={work}
-						byModel={loaderData.byModel}
-						modelId={modelId}
-						selectedModelLabel={selectedModel?.label ?? modelId}
-						selectedModelProvider={selectedModel?.provider ?? ''}
-						position={loaderData.position}
-						previous={loaderData.previous}
-						next={loaderData.next}
+						sheet={loaderData.sheet}
+						data={loaderData}
 						hrefWith={hrefWith}
 					/>
 				) : rows ? (
-					<SheetGrid rows={rows} hrefWith={hrefWith} />
+					<SheetGrid rows={rows} line={line} hrefWith={hrefWith} />
 				) : (
 					<NoRecords>No sheets in this medium.</NoRecords>
 				)}
@@ -397,56 +295,103 @@ export default function StadelTags({ loaderData }: Route.ComponentProps) {
 	)
 }
 
-function TagsHeader({
-	medium,
-	modelLabel: label,
-	hrefWith,
+/**
+ * Round 2 against round 3 for each rule, per model. The total number of values
+ * is the first row, because it fell, and a reader should weigh the falling flag
+ * counts against it rather than discover it later.
+ */
+function RuleTable({
+	rules,
 }: {
-	medium: 'prints' | 'drawings'
-	modelLabel: string
-	hrefWith: (changes: Record<string, string | number | null>) => string
+	rules: Awaited<ReturnType<typeof loader>>['rules']
 }) {
+	const cell = (before: number, after: number, total?: [number, number]) => (
+		<span className="tabular-nums">
+			<span className="text-ground-muted">
+				{before}
+				{total ? `/${total[0]}` : ''}
+			</span>
+			<span className="text-ground-muted mx-1.5">→</span>
+			<span className={cn(after < before ? 'text-link' : 'text-ground-fg')}>
+				{after}
+				{total ? `/${total[1]}` : ''}
+			</span>
+		</span>
+	)
 	return (
-		<header className="border-rule container border-b py-10 md:py-14">
-			<div className="grid gap-8 lg:grid-cols-12">
-				<div className="lg:col-span-8">
-					<Data className="text-ground-muted mb-4 block tracking-[0.2em]">
-						Task 1 · Iconographic keywords
-					</Data>
-					<Display as="h1" size="chapter" className="measure-wide">
-						Nine fields, five models, one record
-					</Display>
-					<p className="font-body text-prose-lg measure mt-6">
-						Every sheet in the sample, tagged independently by each model
-						against the schema in the briefing, and set beside the annotation
-						the Städel already holds for that sheet. Values are the model's own
-						German; nothing here has been edited, reordered or filtered.
-					</p>
-				</div>
-				<div className="flex flex-col justify-end gap-3 lg:col-span-4">
-					<Data className="text-ground-muted">Medium</Data>
-					<MediumSwitch
-						current={medium}
-						hrefFor={(next) => hrefWith({ medium: next, work: null })}
-					/>
-					<p className="font-body text-prose-sm text-ground-muted">
-						Prompts differ by medium: printmaking marks and lettering for{' '}
-						{mediumLabel('prints').toLowerCase()}, autograph marks and
-						preparatory function for {mediumLabel('drawings').toLowerCase()}.
-						Currently showing {label}.
-					</p>
-				</div>
-			</div>
-		</header>
+		<div className="overflow-x-auto">
+			<table className="min-w-full">
+				<thead>
+					<tr className="border-rule-strong border-b">
+						<th
+							scope="col"
+							className="font-data text-data-sm text-ground-muted py-2 pr-4 text-left tracking-[0.12em] uppercase"
+						>
+							Rule
+						</th>
+						{rules.lines.map((l) => (
+							<th
+								key={l.id}
+								scope="col"
+								className="font-data text-data-sm text-ground-muted py-2 pr-4 text-right tracking-normal"
+							>
+								{l.before.label} → {l.after.label}
+							</th>
+						))}
+					</tr>
+				</thead>
+				<tbody className="font-data text-data">
+					<tr className="border-rule border-b">
+						<th
+							scope="row"
+							className="font-body text-prose-sm py-2 pr-4 text-left font-normal"
+						>
+							Keyword values, all fields
+						</th>
+						{rules.lines.map((l) => (
+							<td key={l.id} className="py-2 pr-4 text-right">
+								<span className="tabular-nums">
+									<span className="text-ground-muted">{l.before.values}</span>
+									<span className="text-ground-muted mx-1.5">→</span>
+									{l.after.values}
+								</span>
+							</td>
+						))}
+					</tr>
+					{RULE_ROWS.map((row) => (
+						<tr key={row.check} className="border-rule border-b">
+							<th
+								scope="row"
+								className="font-body text-prose-sm py-2 pr-4 text-left font-normal"
+							>
+								{row.note}
+							</th>
+							{rules.lines.map((l) => (
+								<td key={l.id} className="py-2 pr-4 text-right">
+									{row.check === 'geo'
+										? cell(l.before.geo, l.after.geo, [
+												l.before.geoTotal,
+												l.after.geoTotal,
+											])
+										: cell(l.before[row.check], l.after[row.check])}
+								</td>
+							))}
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
 	)
 }
 
-/** The browse view: twenty sheets, with what each source holds on them. */
+/** The browse view: twenty sheets, with how much each changed. */
 function SheetGrid({
 	rows,
+	line,
 	hrefWith,
 }: {
 	rows: NonNullable<Awaited<ReturnType<typeof loader>>['rows']>
+	line: LineId
 	hrefWith: (changes: Record<string, string | number | null>) => string
 }) {
 	return (
@@ -454,7 +399,7 @@ function SheetGrid({
 			{rows.map((row) => (
 				<article key={row.id} className="flex flex-col gap-3">
 					<Link
-						to={hrefWith({ work: row.id })}
+						to={hrefWith({ work: row.id, line })}
 						prefetch="intent"
 						className="block no-underline"
 					>
@@ -474,7 +419,7 @@ function SheetGrid({
 					<div className="flex flex-col gap-1">
 						<Display as="h3" size="title" className="text-[1rem] leading-tight">
 							<Link
-								to={hrefWith({ work: row.id })}
+								to={hrefWith({ work: row.id, line })}
 								className="hover:text-link no-underline"
 							>
 								{row.title ?? 'Untitled'}
@@ -489,14 +434,32 @@ function SheetGrid({
 						</p>
 						<dl className="border-rule mt-1 flex flex-wrap gap-x-5 gap-y-1 border-t pt-2">
 							<div className="flex items-baseline gap-2">
-								<Data className="text-ground-muted">Städel</Data>
-								<Data className="tabular-nums">{row.museumTagCount}</Data>
+								<Data className="text-ground-muted">{row.objectNumber}</Data>
 							</div>
-							<div className="flex items-baseline gap-2">
-								<Data className="text-ground-muted">Model</Data>
-								<Data className="tabular-nums">{row.modelTagCount}</Data>
+							<div
+								className="flex items-baseline gap-2"
+								title="Keyword values, round 2 → round 3"
+							>
+								<Data className="text-ground-muted">Values</Data>
+								<Data className="tabular-nums">
+									{row.before} → {row.now}
+								</Data>
+							</div>
+							<div
+								className="flex items-baseline gap-2"
+								title="Values an automatic check flags, round 2 → round 3"
+							>
+								<Data className="text-stamp-fg">⚑</Data>
+								<Data className="tabular-nums">
+									{row.flagsBefore} → {row.flagsNow}
+								</Data>
 							</div>
 						</dl>
+						{row.inNotes ? (
+							<Data className="text-link mt-1 normal-case">
+								Named in your notes
+							</Data>
+						) : null}
 					</div>
 				</article>
 			))}
@@ -504,31 +467,22 @@ function SheetGrid({
 	)
 }
 
-/** The sheet view: plate, count matrix, then record against record. */
+type LoaderData = Awaited<ReturnType<typeof loader>>
+
+/** The sheet view: plate and notes, then the comparison the reader chose. */
 function SheetView({
 	work,
-	byModel,
-	modelId,
-	selectedModelLabel,
-	selectedModelProvider,
-	position,
-	previous,
-	next,
+	sheet,
+	data,
 	hrefWith,
 }: {
-	work: NonNullable<Awaited<ReturnType<typeof loader>>['work']>
-	byModel: NonNullable<Awaited<ReturnType<typeof loader>>['byModel']>
-	modelId: string
-	selectedModelLabel: string
-	selectedModelProvider: string
-	position: { index: number; total: number }
-	previous: { id: string; objectNumber: string } | null
-	next: { id: string; objectNumber: string } | null
+	work: NonNullable<LoaderData['work']>
+	sheet: NonNullable<LoaderData['sheet']>
+	data: LoaderData
 	hrefWith: (changes: Record<string, string | number | null>) => string
 }) {
-	const selected = byModel.find((entry) => entry.model.id === modelId)
+	const { compare, changesOnly, current, previous, other } = data
 	const museumTotal = countTagRecord(work.museum)
-	const modelTotal = selected?.tags.total ?? 0
 
 	return (
 		<div className="flex flex-col gap-10">
@@ -541,97 +495,340 @@ function SheetView({
 						{work.title ?? 'Untitled'}
 					</Display>
 					<WorkMetadata work={work} />
-					<UncertaintyNotice
-						notice={
-							museumTotal === 0
-								? 'No iconographic annotation on record for this sheet · nothing to compare against'
-								: null
-						}
-					/>
+					<SheetNotes notes={sheet.notes} />
 					<SheetPager
-						previous={previous}
-						next={next}
-						position={`${position.index} / ${position.total}`}
+						previous={sheet.previous}
+						next={sheet.next}
+						position={`${sheet.position.index} / ${sheet.position.total}`}
 						hrefFor={(id) => hrefWith({ work: id })}
 					/>
 				</div>
 			</div>
 
-			<CountMatrix
-				museum={work.museum}
-				byModel={byModel}
-				selectedModelId={modelId}
-				hrefWith={hrefWith}
-			/>
+			{sheet.spotCheck ? <SpotCheckTable check={sheet.spotCheck} /> : null}
 
-			{/* Below lg the two records read as full columns, one after the other;
-			    at lg+, where they sit side by side, RecordComparison lines up every
-			    field in its own row so a long list on one side can't push that
-			    side's later fields out of step with the other's. */}
-			<div className="grid gap-y-12 lg:hidden">
-				<RecordColumn
-					heading="Städel record"
-					subheading={`As catalogued · ${museumTotal} values`}
-					record={work.museum}
-					isMuseum
+			<div className="border-rule flex flex-wrap items-end gap-x-8 gap-y-4 border-t pt-6">
+				<Segmented
+					label="Model"
+					current={data.line}
+					options={data.lineOptions.map((l) => ({
+						id: l.id,
+						label: l.label,
+					}))}
+					hrefFor={(id) => hrefWith({ line: id })}
 				/>
-				<RecordColumn
-					heading={selectedModelLabel}
-					subheading={`${selectedModelProvider} · ${modelTotal} values · ${
-						modelTotal - museumTotal >= 0 ? '+' : ''
-					}${modelTotal - museumTotal} against the record`}
-					record={selected?.tags.fields ?? {}}
-					mark={markForModel(
-						selected?.model.status ?? 'retired',
-						Boolean(selected?.superseded),
-					)}
+				<Segmented
+					label={`Compare ${current.label} with`}
+					current={compare}
+					options={[
+						{ id: 'previous', label: `Round 2 · ${previous.label}` },
+						{ id: 'museum', label: 'Städel record' },
+						{ id: 'other', label: other.label },
+					]}
+					hrefFor={(id) => hrefWith({ compare: id === 'previous' ? null : id })}
 				/>
+				{compare === 'previous' ? (
+					<Segmented
+						label="Show"
+						current={changesOnly ? 'changes' : 'all'}
+						options={[
+							{ id: 'all', label: 'All values' },
+							{ id: 'changes', label: 'Changes only' },
+						]}
+						hrefFor={(id) => hrefWith({ show: id === 'all' ? null : id })}
+					/>
+				) : null}
 			</div>
-			<RecordComparison
-				className="hidden lg:grid"
-				left={{
-					heading: 'Städel record',
-					subheading: `As catalogued · ${museumTotal} values`,
-					record: work.museum,
-					isMuseum: true,
-				}}
-				right={{
-					heading: selectedModelLabel,
-					subheading: `${selectedModelProvider} · ${modelTotal} values · ${
-						modelTotal - museumTotal >= 0 ? '+' : ''
-					}${modelTotal - museumTotal} against the record`,
-					record: selected?.tags.fields ?? {},
-					mark: markForModel(
-						selected?.model.status ?? 'retired',
-						Boolean(selected?.superseded),
-					),
-				}}
-			/>
 
-			{selected?.superseded ? (
-				<details className="border-rule group border">
-					<summary className="hover:text-link font-data text-data-sm text-ground-muted cursor-pointer list-none px-4 py-3 tracking-[0.12em] uppercase select-none">
-						<span className="mr-2 inline-block group-open:hidden" aria-hidden>
-							+
-						</span>
-						<span
-							className="mr-2 hidden group-open:inline-block"
-							aria-hidden
-						>
-							−
-						</span>
-						The keywords this replaced, 1 August ·{' '}
-						{selected.superseded.total} values
-					</summary>
-					<div className="border-rule border-t p-4 opacity-70">
-						<RecordColumn
-							heading={selectedModelLabel}
-							subheading={`Pilot run · ${selected.superseded.total} values`}
-							record={selected.superseded.fields}
-						/>
-					</div>
-				</details>
+			{compare === 'previous' ? (
+				<DiffView
+					diff={sheet.diff}
+					changesOnly={changesOnly}
+					beforeLabel={previous.label}
+					afterLabel={current.label}
+				/>
+			) : (
+				<SideBySide
+					left={
+						compare === 'museum'
+							? {
+									heading: 'Städel record',
+									subheading: `As catalogued · ${museumTotal} values`,
+									record: work.museum,
+									isMuseum: true,
+								}
+							: {
+									heading: other.label,
+									subheading: `${other.provider} · ${sheet.theirs.total} values`,
+									record: sheet.theirs.fields,
+									flags: sheet.theirs.flags,
+									mark: 'round3',
+								}
+					}
+					right={{
+						heading: current.label,
+						subheading: `${current.provider} · ${sheet.now.total} values`,
+						record: sheet.now.fields,
+						flags: sheet.now.flags,
+						mark: 'round3',
+					}}
+				/>
+			)}
+			{compare === 'museum' && museumTotal === 0 ? (
+				<UncertaintyNotice notice="No iconographic annotation on record for this sheet · nothing to compare against" />
 			) : null}
 		</div>
+	)
+}
+
+/**
+ * Where the terms a note names sit on this sheet, run by run. Every matching
+ * value is listed with its field, and those in the field the note asks for are
+ * set in the accent: a curator reads the placement, not a pass mark.
+ */
+function SpotCheckTable({
+	check,
+}: {
+	check: NonNullable<NonNullable<LoaderData['sheet']>['spotCheck']>
+}) {
+	return (
+		<section className="border-rule flex flex-col gap-3 border p-4">
+			<div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+				<Data className="tracking-[0.2em]">Where the terms sit</Data>
+				<Data className="text-ground-muted break-all normal-case">
+					In the accent: filed under {check.want}, as your note asks
+				</Data>
+			</div>
+			<ul className="flex flex-col">
+				{check.runs.map((run) => (
+					<li
+						key={run.run}
+						className="border-rule flex flex-col gap-x-4 gap-y-1 border-t py-2 sm:flex-row sm:items-baseline"
+					>
+						<div className="flex shrink-0 items-baseline gap-3 sm:w-72">
+							<RevisionMark
+								kind={run.round === 'Round 3' ? 'round3' : 'revised'}
+							/>
+							<span className="font-body text-prose-sm">{run.model}</span>
+						</div>
+						{run.hits.length ? (
+							<ul className="flex min-w-0 flex-wrap gap-x-4 gap-y-1">
+								{run.hits.map((hit, i) => (
+									<li
+										key={`${hit.field}-${hit.value}-${i}`}
+										className={cn(
+											'font-data text-data-sm tracking-normal break-all',
+											hit.field === check.want
+												? 'text-link'
+												: 'text-ground-muted',
+										)}
+									>
+										<span className="text-ground-fg">{hit.value}</span>
+										<span className="ml-1.5">
+											{hit.field.replace(/^Ikon\./, '')}
+											{hit.type ? ` · ${hit.type}` : ''}
+										</span>
+									</li>
+								))}
+							</ul>
+						) : (
+							<span className="font-body text-prose-sm text-ground-muted italic">
+								None of these terms.
+							</span>
+						)}
+					</li>
+				))}
+			</ul>
+		</section>
+	)
+}
+
+/** Round 2 against round 3 in one column: the diff, by the four bands. */
+function DiffView({
+	diff,
+	changesOnly,
+	beforeLabel,
+	afterLabel,
+}: {
+	diff: KeywordDiff
+	changesOnly: boolean
+	beforeLabel: string
+	afterLabel: string
+}) {
+	const t = diff.totals
+	const moved = t.movedIn
+	const visible = (status: string) => !changesOnly || status !== 'kept'
+	const fields = new Map(diff.fields.map((f) => [f.field, f]))
+
+	return (
+		<div className="flex flex-col gap-8">
+			<div className="flex flex-col gap-3">
+				<p className="font-body text-prose measure">
+					<strong>{afterLabel}</strong> (round 3) against{' '}
+					<strong>{beforeLabel}</strong> (round 2):{' '}
+					<span className="text-link">{t.added} new</span>,{' '}
+					<span className="text-ground-muted">{t.removed} dropped</span>,{' '}
+					{moved} moved to another field, {t.kept} kept. Automatic checks flag{' '}
+					{diff.flagsBefore} values in round 2 and {diff.flagsAfter} in round 3.
+				</p>
+				<DiffLegend />
+			</div>
+
+			{TAG_SECTIONS.map((section) => {
+				const sectionFields = section.fields
+					.map((f) => fields.get(f))
+					.filter((f) => f !== undefined)
+					.filter((f) => !changesOnly || f.counts.kept < countAll(f.counts))
+				if (changesOnly && sectionFields.length === 0) return null
+				return (
+					<section key={section.title} className="flex flex-col gap-5">
+						<div className="border-rule-strong border-b pb-2">
+							<Data className="tracking-[0.2em]">{section.title}</Data>
+							<p className="font-body text-prose-sm text-ground-muted mt-1">
+								{section.blurb}
+							</p>
+						</div>
+						{section.fields.map((field) => {
+							const f = fields.get(field)
+							if (!f) {
+								return changesOnly ? null : (
+									<EmptyField key={field} field={field} />
+								)
+							}
+							if (changesOnly && f.counts.kept === countAll(f.counts)) {
+								return null
+							}
+							return (
+								<div key={field} className="border-rule border-t pt-3">
+									<div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+										<div className="flex flex-wrap items-baseline gap-x-3">
+											<h4 className="font-data text-data text-ground-fg tracking-[0.06em]">
+												{field}
+											</h4>
+											<Data className="text-ground-muted tracking-normal normal-case opacity-80">
+												{TAG_FIELDS[field].gloss}
+											</Data>
+										</div>
+										<Data className="text-ground-muted tabular-nums">
+											{f.counts.added + f.counts.movedIn > 0 ? (
+												<span className="text-link mr-3">
+													+{f.counts.added + f.counts.movedIn}
+												</span>
+											) : null}
+											{f.counts.removed + f.counts.movedOut > 0 ? (
+												<span className="mr-3">
+													−{f.counts.removed + f.counts.movedOut}
+												</span>
+											) : null}
+											{f.counts.kept} kept
+										</Data>
+									</div>
+									<div className="grid gap-x-8 gap-y-4 md:grid-cols-2 xl:grid-cols-3">
+										{f.groups.map((group) => {
+											const values = group.values.filter((v) =>
+												visible(v.status),
+											)
+											if (!values.length) return null
+											return (
+												<div
+													key={group.type ?? '—'}
+													className={cn(
+														group.type === null &&
+															'md:col-span-2 xl:col-span-3',
+													)}
+												>
+													{group.type ? (
+														<Data className="text-link mb-1.5 block">
+															{group.type}
+														</Data>
+													) : null}
+													<div className="flex flex-wrap gap-1.5">
+														{values.map((v, i) => (
+															<DiffKeyword
+																key={`${v.value}-${v.status}-${i}`}
+																value={v}
+															/>
+														))}
+													</div>
+												</div>
+											)
+										})}
+									</div>
+								</div>
+							)
+						})}
+					</section>
+				)
+			})}
+		</div>
+	)
+}
+
+const countAll = (counts: Record<string, number>) =>
+	Object.values(counts).reduce((a, b) => a + b, 0)
+
+function EmptyField({ field }: { field: TagField }) {
+	return (
+		<div className="border-rule flex flex-wrap items-baseline justify-between gap-x-4 border-t pt-3">
+			<h4 className="font-data text-data text-ground-muted tracking-[0.06em]">
+				{field}
+			</h4>
+			<p className="font-body text-prose-sm text-ground-muted italic">
+				Empty in both rounds.
+			</p>
+		</div>
+	)
+}
+
+/** Two records side by side: a full column each below lg, a field grid above. */
+function SideBySide({
+	left,
+	right,
+}: {
+	left: ComparisonSide
+	right: ComparisonSide
+}) {
+	return (
+		<>
+			<div className="grid gap-y-12 lg:hidden">
+				{[left, right].map((side) => (
+					<div key={side.heading} className="flex flex-col gap-6">
+						<header className="border-rule-strong border-b pb-3">
+							<div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+								<Display as="h3" size="title" className="text-[1.0625rem]">
+									{side.heading}
+								</Display>
+								{side.mark ? <RevisionMark kind={side.mark} /> : null}
+							</div>
+							<Data className="text-ground-muted mt-1 block normal-case">
+								{side.subheading}
+							</Data>
+						</header>
+						{TAG_SECTIONS.flatMap((section) => section.fields).map((field) => (
+							<TagFieldBlock
+								key={field}
+								field={field}
+								value={side.record[field]}
+								flags={side.flags}
+								absent={
+									side.isMuseum &&
+									FIELDS_ABSENT_FROM_MUSEUM_RECORDS.includes(field)
+										? 'Not collected by the museum: one of the four categories the project adds.'
+										: undefined
+								}
+							/>
+						))}
+					</div>
+				))}
+			</div>
+			<RecordComparison className="hidden lg:grid" left={left} right={right} />
+			<p className="font-body text-prose-sm text-ground-muted measure">
+				Flags (⚑) mark what an automatic check matched:{' '}
+				{(Object.keys(FLAG_LABELS) as Array<FlagCheck>)
+					.map((c) => FLAG_LABELS[c].label)
+					.join(', ')}
+				. They are prompts to look, not verdicts.
+			</p>
+		</>
 	)
 }

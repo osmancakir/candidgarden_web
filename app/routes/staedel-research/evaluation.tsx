@@ -18,13 +18,13 @@ import {
 } from './+shared/components.tsx'
 import {
 	evaluationForWork,
-	FINALIST_MODEL_IDS,
+	SCORED_MODEL_IDS,
 	manifest,
 	resolveModel,
 	resolveSelection,
 	judgeCheckFor,
 	scoreboardFor,
-	tagsForWorkAndModel,
+	scoredKeywordCount,
 	worksInMedium,
 } from './+shared/pilot.server.ts'
 import {
@@ -66,7 +66,7 @@ export const meta: Route.MetaFunction = () => [
 export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url)
 	const { medium, work } = resolveSelection(url)
-	const modelId = resolveModel(url, 'model', FINALIST_MODEL_IDS)
+	const modelId = resolveModel(url, 'model', SCORED_MODEL_IDS)
 	const sheets = worksInMedium(medium)
 	const scoreboard = scoreboardFor(medium)
 	const judgeCheck = judgeCheckFor(medium)
@@ -81,6 +81,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		medium,
 		modelId,
 		models: manifest.models,
+		scoredIds: SCORED_MODEL_IDS,
 		scoreboard,
 		sheets: sheets.map((w) => ({
 			id: w.id,
@@ -105,7 +106,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 						notAfter: w.notAfter,
 						scores: result?.scores ?? null,
 						overall: result?.overall ?? null,
-						tagCount: tagsForWorkAndModel(w.id, modelId).total,
+						tagCount: scoredKeywordCount(w.id, modelId),
 					}
 				}),
 		/** Sheet mode: both finalists ranked on the one sheet, with reasons. */
@@ -201,8 +202,9 @@ export default function StadelEvaluation({ loaderData }: Route.ComponentProps) {
 	} = loaderData
 	const hrefWith = useHrefWith()
 	const selectedModel = models.find((m) => m.id === modelId)
-	/** Only the finalists were ever scored — the judge and retired models never ran here. */
-	const evaluableModels = models.filter((m) => m.status === 'finalist')
+	const scoredIds = loaderData.scoredIds
+	/** Only the round-2 finalists were scored — round 3 was not, see the notice. */
+	const evaluableModels = models.filter((m) => scoredIds.includes(m.id))
 	const leader = scoreboard[0]
 	const runnerUp = scoreboard[1]
 
@@ -338,9 +340,26 @@ export default function StadelEvaluation({ loaderData }: Route.ComponentProps) {
 			</section>
 
 			<div className="container flex flex-col gap-8 py-10 md:py-14">
-				<RevisionNotice>
+				<RevisionNotice
+					kind="round3"
+					caption="not scored, and why"
+				>
 					<p>
-						These scores are new. The pilot's judge was itself one of the five
+						<strong>Round 3 has no scores, on purpose.</strong> Everything on this
+						page judges the round-2 keywords of GPT-5.6 Sol and Claude Opus 5. The
+						judge’s rubric rewards comprehensive output, and your notes asked for
+						the opposite: fewer, stricter values — no open compounds, no unnamed
+						roles as persons, no kinds of place as geography. Scored on that rubric,
+						round 3 would lose points for following your rules, so a score would
+						mislead rather than inform. Round 3 is measured against your rules
+						instead, on the{' '}
+						<Link to="/staedel-research/tags">keywords</Link> and{' '}
+						<Link to="/staedel-research/descriptions">descriptions</Link> pages.
+					</p>
+				</RevisionNotice>
+				<RevisionNotice kind="revised" caption="the neutral re-score">
+					<p>
+						These scores were new on 25 August. The pilot's judge was itself one of the five
 						contestants; with the roster cut to two, the judge is now Gemini 3.1
 						Pro, which takes no part in the run and is neutral by construction
 						rather than by assurance.
