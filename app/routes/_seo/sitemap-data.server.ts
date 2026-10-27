@@ -50,7 +50,6 @@ export const STATIC_PATHS = [
 	'/about',
 	'/essays',
 	'/glossary',
-	'/companions',
 	'/support',
 	'/privacy',
 	'/tos',
