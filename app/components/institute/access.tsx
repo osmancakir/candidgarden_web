@@ -49,14 +49,3 @@ export function AccessPage({
 		</div>
 	)
 }
-
-/** A ruled divider carrying a mono label — "or", "alternatively", "passkey". */
-export function AccessDivider({ children }: { children: React.ReactNode }) {
-	return (
-		<div className="my-6 flex items-center gap-4">
-			<span className="bg-rule h-px flex-1" />
-			<Data className="text-ground-muted">{children}</Data>
-			<span className="bg-rule h-px flex-1" />
-		</div>
-	)
-}

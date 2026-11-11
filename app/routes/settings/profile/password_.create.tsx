@@ -105,7 +105,7 @@ export default function CreatePasswordRoute({
 			<PanelHeading
 				kind="Credentials"
 				title="Create a password"
-				lead="This account currently signs in through a connected provider or a passkey. Setting a password adds another way in; it does not remove the others."
+				lead="This account currently signs in through a connected provider. Setting a password adds another way in; it does not remove the others."
 			/>
 			<Form method="POST" {...getFormProps(form)} className="max-w-md">
 				<Field

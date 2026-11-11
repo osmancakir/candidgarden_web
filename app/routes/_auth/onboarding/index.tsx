@@ -154,7 +154,7 @@ export default function OnboardingRoute({
 		<AccessPage
 			kind="Registration"
 			title="Complete your record"
-			lead={`The address ${loaderData.email} is verified. What follows is the record the institute will keep about you.`}
+			lead={`The address ${loaderData.email} is verified. What follows is the record we will keep about you.`}
 		>
 			<Form method="POST" {...getFormProps(form)}>
 				<HoneypotInputs />

@@ -88,7 +88,7 @@ export default function VerifyRoute({ actionData }: Route.ComponentProps) {
 			lead={
 				type
 					? headings[type]
-					: 'This verification link names a type the institute does not issue.'
+					: 'This verification link names a type we do not issue.'
 			}
 		>
 			<ErrorList errors={form.errors} id={form.errorId} />

@@ -3,10 +3,9 @@
 The Epic Stack manages its own authentication using web standards and
 established libraries and tools.
 
-This app offers two mechanisms for authentication:
-
-1. Username and password authentication
-2. Passkey authentication
+Accounts sign in with a username and password. Passkey (WebAuthn) login was
+removed; the `Passkey` model is still in the Prisma schema but nothing reads or
+writes it.
 
 ## Username and password authentication
 
@@ -17,53 +16,6 @@ which takes them through the onboarding flow which will allow them to set their
 username and password.
 
 The password is stored using the [bcrypt](https://npm.im/bcrypt) algorithm.
-
-## Passkey Authentication
-
-The Epic Stack includes support for passkey authentication using the WebAuthn
-standard. Passkeys provide a more secure, phishing-resistant alternative to
-traditional passwords. They can be stored in your device's secure hardware (like
-Touch ID, Face ID, or Windows Hello) or in external security keys.
-
-Users can register multiple passkeys for their account through the passkeys
-settings page. Each passkey can be either device-bound (platform authenticator)
-or portable (cross-platform authenticator like a security key). The
-implementation uses the
-[@simplewebauthn/server](https://npm.im/simplewebauthn/server) and
-[@simplewebauthn/browser](https://npm.im/simplewebauthn/browser) packages to
-handle the WebAuthn protocol.
-
-When a user attempts to log in with a passkey:
-
-1. The server generates a challenge
-2. The browser prompts the user to authenticate using one of their registered
-   passkeys
-3. Upon successful authentication, the user is logged in without needing to
-   enter a password
-
-Passkeys offer several advantages:
-
-- No passwords to remember or type
-- Phishing-resistant (tied to specific domains)
-- Biometric authentication when available
-- Can be synced across devices (if the user is using a manager like
-  [1Password](https://1password.com/))
-- Support for both built-in authenticators (like Touch ID) and external security
-  keys
-
-The passkey data is stored in the database using a `Passkey` model which tracks:
-
-- A unique identifier (`id`) for each passkey
-- The authenticator's AAGUID (a unique identifier for the make and model of the
-  authenticator). This can be used to help the user identify which managers
-  their passkeys are from if they have multiple managers.
-- The public key used for verification
-- A counter to prevent replay attacks
-- The device type (platform or cross-platform)
-- Whether the credential is backed up
-- Optional transport methods (USB, NFC, etc.)
-- Creation and update timestamps
-- The relationship to the user who owns the passkey
 
 ## TOTP and Two-Factor Authentication
 

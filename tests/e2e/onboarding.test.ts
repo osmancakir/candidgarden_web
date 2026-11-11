@@ -46,7 +46,7 @@ test('onboarding with link', async ({ page, navigate, getOnboardingData }) => {
 	await expect(page).toHaveURL(`/login`)
 
 	const createAccountLink = page.getByRole('link', {
-		name: /register with the institute/i,
+		name: /open an account/i,
 	})
 	await createAccountLink.click()
 
@@ -63,7 +63,7 @@ test('onboarding with link', async ({ page, navigate, getOnboardingData }) => {
 	invariant(email, 'Email not found')
 	expect(email.to).toBe(onboardingData.email.toLowerCase())
 	expect(email.from).toBe('hello@candidgarden.com')
-	// §7 rules out “Welcome to…”; the institute states what the mail is for.
+	// §7 rules out “Welcome to…”; the mail states what it is for.
 	expect(email.subject).toMatch(/verify your address/i)
 	const onboardingUrl = extractUrl(email.text) as AppPages
 	invariant(onboardingUrl, 'Onboarding URL not found')
@@ -127,7 +127,7 @@ test('onboarding with a short code', async ({
 	invariant(email, 'Email not found')
 	expect(email.to).toBe(onboardingData.email.toLowerCase())
 	expect(email.from).toBe('hello@candidgarden.com')
-	// §7 rules out “Welcome to…”; the institute states what the mail is for.
+	// §7 rules out “Welcome to…”; the mail states what it is for.
 	expect(email.subject).toMatch(/verify your address/i)
 	const codeMatch = email.text.match(CODE_REGEX)
 	const code = codeMatch?.groups?.code

@@ -25,9 +25,9 @@ export default function PrivacyRoute() {
 			<DocumentSection n={1} heading="Accounts">
 				<p>
 					If you hold an account, we store the name and email address you gave
-					us, a hash of your password, and any passkeys or connected identity
-					providers you chose to register. We store the sessions that keep you
-					signed in. We do not store your password.
+					us, a hash of your password, and any connected identity providers you
+					chose to register. We store the sessions that keep you signed in. We
+					do not store your password.
 				</p>
 			</DocumentSection>
 

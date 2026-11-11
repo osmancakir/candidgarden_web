@@ -109,7 +109,7 @@ export default function EditUserProfile({ loaderData }: Route.ComponentProps) {
 			<PanelHeading
 				kind="Personnel record"
 				title={user.name ?? user.username}
-				lead="What the institute holds about you, and the controls for changing it."
+				lead="What we hold about you, and the controls for changing it."
 			/>
 
 			<div className="flex flex-wrap items-start gap-6">
@@ -162,11 +162,6 @@ export default function EditUserProfile({ loaderData }: Route.ComponentProps) {
 							</SettingsLink>
 						}
 					/>
-					<LedgerRow
-						label="Passkeys"
-						value="Sign in without a password"
-						action={<SettingsLink to="passkeys">Manage passkeys</SettingsLink>}
-					/>
 				</Ledger>
 			</section>
 
@@ -177,7 +172,7 @@ export default function EditUserProfile({ loaderData }: Route.ComponentProps) {
 				<Ledger>
 					<LedgerRow
 						label="Export"
-						value="Everything the institute holds about you, as JSON."
+						value="Everything we hold about you, as JSON."
 						action={
 							<Link
 								reloadDocument
