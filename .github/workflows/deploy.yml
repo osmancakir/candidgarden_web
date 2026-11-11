@@ -112,7 +112,16 @@ jobs:
       - name: 🏄 Copy test env vars
         run: cp .env.example .env
       - name: 📥 Install Playwright browser
-        run: npm run test:e2e:install
+        run: npx playwright install chromium
+      # ubuntu-24.04 already ships every library Chromium needs; --with-deps
+      # only adds fonts. It goes through the runner's apt mirror, which has
+      # failed DNS resolution for minutes at a time, and that is no reason to
+      # block a deploy. A library that is genuinely missing still fails the
+      # tests below.
+      - name: 📦 Install Playwright system deps (best effort)
+        run: npx playwright install-deps chromium
+        continue-on-error: true
+        timeout-minutes: 4
       - name: 🛠 Migrate and seed database
         run: npx prisma migrate reset --force
       - name: 🏗 Build Node test harness
