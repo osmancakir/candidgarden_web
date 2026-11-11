@@ -124,7 +124,7 @@ function buildWhere(f: ArchiveFilters): Prisma.ResourceWhereInput {
  * differently on two runs of the same query — which for a paginated ring means
  * a work shown twice and another never.
  */
-const DEAL_ORDER: Prisma.ResourceOrderByWithRelationInput[] = [
+export const DEAL_ORDER: Prisma.ResourceOrderByWithRelationInput[] = [
 	{ shuffle: 'asc' },
 	{ id: 'asc' },
 ]
@@ -317,7 +317,7 @@ async function loadRankedIndex(
 	try {
 		hits = await senseCandidates(filters.sense, timings)
 	} catch (error) {
-		// The index is the homepage (§5). A Workers AI outage or a missing grant
+		// The index is the archive's front door (§5). A Workers AI outage or a missing grant
 		// on the embedding table must cost the reader the ranking, not the
 		// archive, so this degrades to the filtered index carrying a notice.
 		console.error('sense search failed', error)

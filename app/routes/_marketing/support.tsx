@@ -70,7 +70,7 @@ export const meta: Route.MetaFunction = () => [
 	{
 		name: 'description',
 		content:
-			'How to dispute a reading, report a broken record, or otherwise write to the Institute for Art Re-Search.',
+			'How to dispute a reading, report a broken record, or otherwise write to Candid Garden.',
 	},
 ]
 
@@ -171,7 +171,7 @@ export default function SupportRoute({ loaderData }: Route.ComponentProps) {
 	return (
 		<DocumentPage
 			kind="Correspondence"
-			title="Write to the institute"
+			title="Write to us"
 			lead="We would rather hold a correction than a reading. Disputes are the most useful post we receive; please put them first."
 		>
 			<DocumentSection n={1} heading="Disputing a reading">

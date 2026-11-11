@@ -39,14 +39,15 @@ const SWR = 1000 * 60 * 60 * 24
 /**
  * The public pages that exist whatever the archive holds.
  *
- * `/archive` is deliberately absent: §5 renders it and `/` from one
- * implementation, and a sitemap that lists both is asking two addresses to
- * compete for the same content. `/` is the one the site calls its homepage, so
- * it is the one advertised. The drift's readout and session are absent for a
- * different reason — they are the state of one reader's passage, not pages.
+ * `/` is the company page and `/archive` the index. Until November 2026 the
+ * two rendered the same view and only `/` was listed, so the two addresses did
+ * not compete for one page's content; now they are different pages and both
+ * are advertised. The drift's readout and session are absent for a different
+ * reason — they are the state of one reader's passage, not pages.
  */
 export const STATIC_PATHS = [
 	'/',
+	'/archive',
 	'/about',
 	'/essays',
 	'/glossary',

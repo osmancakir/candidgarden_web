@@ -26,7 +26,7 @@ export default function GlossaryRoute() {
 		<DocumentPage
 			kind="Glossary"
 			title="Terms used in this archive"
-			lead="Defined in plain language, in the sense this institute uses them. Where a term comes from German-language scholarship, the original is given; where our use is narrower than the scholarly one, we say so."
+			lead="Defined in plain language, in the sense we use them. Where a term comes from German-language scholarship, the original is given; where our use is narrower than the scholarly one, we say so."
 		>
 			<Glossary
 				entries={[

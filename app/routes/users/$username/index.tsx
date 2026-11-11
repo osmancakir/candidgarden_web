@@ -95,7 +95,7 @@ export const meta: Route.MetaFunction = ({ data, params }) => {
 		{ title: `${displayName} · Candid Garden` },
 		{
 			name: 'description',
-			content: `Contributor record for ${displayName} at the Institute for Art Re-Search.`,
+			content: `Contributor record for ${displayName} at Candid Garden.`,
 		},
 	]
 }

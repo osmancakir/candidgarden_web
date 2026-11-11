@@ -33,9 +33,10 @@ import {
 } from './filters.ts'
 
 /**
- * §5: "The index is the homepage." Candid Garden opens not with a hero image
- * but with the archive itself — a one-paragraph institutional statement in
- * Times, then the console, then the records.
+ * §5: the archive opens not with a hero image but with the archive itself — a
+ * one-paragraph institutional statement in Times, then the console, then the
+ * records. Until November 2026 this was also the site's homepage; it is now
+ * `/archive` alone, and `/` is the company page.
  */
 
 function toSummary(work: ArchiveWork): WorkSummary {

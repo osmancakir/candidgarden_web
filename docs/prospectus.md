@@ -109,9 +109,10 @@ So the deck is public and unlisted:
   hand-written allowlist rather than a derived one.
 
 Both sitemap roads are closed, and the page reaches people the way a proposal
-does: because someone sent it to them. That keeps the README's promise that no
-marketing page stands between a visitor and the research material — the archive
-is still the homepage, and this is a document you are handed.
+does: because someone sent it to them. Since November 2026 the homepage is the
+company page and states the services in public, in the Institute register; the
+deck stays unlisted anyway, because it is a document you are handed rather than
+a page you find.
 
 ## Everything that decides the screen is in the URL
 

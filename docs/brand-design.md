@@ -223,10 +223,31 @@ reflowing headlines.
 
 ## 5. Layout & Structure
 
-**The index is the homepage.** Like CARI's aesthetics index, Candid Garden opens
-not with a hero image but with the archive itself: a filter console above a
-dense, scannable index of works. Filters worthy of the ARTigo material: motif
-keyword, iconographic subject (Iconclass-style), period, medium,
+> **Reversed, November 2026: the homepage is the company page.** Candid Garden
+> became a research and software studio that sells its work — AI cataloguing,
+> model evaluation, digitalisation, synthetic data, web and mobile applications,
+> research — and the archive became one exhibit of that work rather than the
+> front door. The index below is unchanged and lives at `/archive` alone.
+>
+> The first company page applied this register straight — numbered, ruled, all
+> text — and read like a filing cabinet. The one that shipped keeps the
+> materials (paper and void, one ultramarine, the three faces, no radius) but
+> takes its structure from the studios museums hire (Bluecadet, Local Projects,
+> ART+COM, Interactive Things): the live atlas full-bleed behind the first
+> sentence and services as big rows that flood ultramarine under the pointer. (A
+> full ultramarine band of headline figures was tried and taken out. A
+> case-study grid of large screenshots under a "category · client" line was
+> built and then parked until there are screenshots worth leading with; it waits
+> in `app/routes/_marketing/+home/selected-work.tsx`.) That spends the accent
+> big, on purpose: §3's restraint is right for an archive and wrong for a page
+> whose job is to be remembered by a buyer. Screenshots may be cropped to a
+> card; artworks still may not (the daily plate strip is height-constrained).
+> Carousels, rounded cards and selling copy stay refused.
+
+**The index is the archive's front page.** Like CARI's aesthetics index, Candid
+Garden opens not with a hero image but with the archive itself: a filter console
+above a dense, scannable index of works. Filters worthy of the ARTigo material:
+motif keyword, iconographic subject (Iconclass-style), period, medium,
 model-confidence range, verification status. Filters are visible form elements
 in the mono face — a console, not a hamburger. A one-paragraph institutional
 statement in Times sits above it, CARI-style, and that is the entire "hero."
@@ -514,14 +535,15 @@ stamped on an index row is byte-identical to the same date on a dossier.
 
 ## 9b. Route map
 
-The index **is** the homepage (§5): `/` and `/archive` render the same view from
-one implementation in `app/routes/archive/+shared/`. Filter state lives entirely
-in the URL, so any view of the archive is citable, works without JavaScript, and
+`/` is the company page (§5, reversed November 2026); the index is `/archive`,
+implemented in `app/routes/archive/+shared/`. Filter state lives entirely in the
+URL, so any view of the archive is citable, works without JavaScript, and
 degrades to a plain GET form.
 
 | Route                             | Register                      | Notes                                                                                                                                   |
 | --------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`, `/archive`                   | paper (level 3 flips to void) | Statement, filter console, records at the chosen level                                                                                  |
+| `/`                               | paper, work on level 3        | Company page: statement, services, work, products, terms, client login and contact                                                      |
+| `/archive`                        | paper (level 3 flips to void) | Statement, filter console, records at the chosen level                                                                                  |
 | `/archive/:id`                    | **the descent**               | The signature. Paper → slate → void                                                                                                     |
 | `/archive/atlas`                  | void                          | `Latent space` — the fourth chip, not a fourth level (§2). See [atlas.md](./atlas.md)                                                   |
 | `/about`                          | paper                         | Institute charter (§7)                                                                                                                  |

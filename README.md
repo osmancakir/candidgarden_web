@@ -31,8 +31,10 @@ machine truth.
 - **Turns the corpus into a spatial argument.** The Atlas projects the reading
   corpus into a stable three-dimensional UMAP layout so a search becomes a
   constellation rather than another reordered list.
-- **Treats the archive as the product.** The index is the homepage. There is no
-  marketing page between the visitor and the research material.
+- **Treats the archive as evidence.** The homepage is the company page of Candid
+  Garden, the research and software practice behind the archive; the index lives
+  at `/archive` and opens straight onto the console and the records, with no
+  marketing page between a reader and the research material.
 
 ## The Atlas
 

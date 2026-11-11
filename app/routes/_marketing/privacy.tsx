@@ -9,7 +9,7 @@ export const meta: Route.MetaFunction = () => [
 	{
 		name: 'description',
 		content:
-			'What the Institute for Art Re-Search records about its readers, and what it does not.',
+			'What Candid Garden records about its readers, and what it does not.',
 	},
 ]
 
@@ -20,7 +20,7 @@ export default function PrivacyRoute() {
 		<DocumentPage
 			kind="Notice"
 			title="What we record about you"
-			lead="This institute keeps records about pictures. It keeps as few as it can about readers. What follows is the complete list."
+			lead="We keep records about pictures. It keeps as few as it can about readers. What follows is the complete list."
 		>
 			<DocumentSection n={1} heading="Accounts">
 				<p>

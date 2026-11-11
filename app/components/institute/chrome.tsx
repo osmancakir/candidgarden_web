@@ -1,5 +1,4 @@
 import { Link, NavLink } from 'react-router'
-import { DATASET } from '#app/utils/archive.ts'
 import { cn } from '#app/utils/misc.tsx'
 import { Data } from './primitives.tsx'
 
@@ -29,89 +28,103 @@ export function Wordmark({
 			</span>
 			{withSubtitle ? (
 				<Data className="text-ground-muted mt-1 block">
-					Institute for Art Re-Search
+					Research &amp; Software · Munich
 				</Data>
 			) : null}
 		</Link>
 	)
 }
 
-const NAV = [
-	{ to: '/archive', label: 'Index' },
+type NavItem = { to: string; label: string }
+
+/**
+ * The company's sections. Two of them are places on the homepage rather than
+ * pages, so they are plain hash links: a `NavLink` matches on the pathname
+ * alone and would mark every one of them active at once on `/`.
+ */
+const NAV: ReadonlyArray<NavItem> = [
+	{ to: '/#services', label: 'Services' },
+	{ to: '/archive', label: 'Archive' },
+	{ to: '/#contact', label: 'Contact' },
+]
+
+/** The footer carries the archive's written matter as well. */
+const FOOTER_NAV: ReadonlyArray<NavItem> = [
+	...NAV,
 	{ to: '/essays', label: 'Essays' },
 	{ to: '/glossary', label: 'Glossary' },
-	{ to: '/about', label: 'About' },
-] as const
+	{ to: '/about', label: 'Charter' },
+]
+
+const navItemClass =
+	'font-data text-data-sm tracking-[0.12em] uppercase no-underline transition-colors'
 
 /**
  * §5's wireframe: a mono nav rail, not a hamburger. It wraps rather than
- * collapsing, because a four-item institutional menu has no business hiding.
+ * collapsing, because a short institutional menu has no business hiding.
  */
-export function InstituteNav({ className }: { className?: string }) {
+export function InstituteNav({
+	className,
+	items = NAV,
+}: {
+	className?: string
+	items?: ReadonlyArray<NavItem>
+}) {
 	return (
 		<nav
 			aria-label="Sections"
 			className={cn('flex flex-wrap gap-x-6 gap-y-2', className)}
 		>
-			{NAV.map(({ to, label }) => (
-				<NavLink
-					key={to}
-					to={to}
-					prefetch="intent"
-					className={({ isActive }) =>
-						cn(
-							'font-data text-data-sm tracking-[0.12em] uppercase no-underline transition-colors',
-							isActive
-								? 'text-link underline underline-offset-4'
-								: 'text-ground-fg hover:text-link hover:underline hover:underline-offset-4',
-						)
-					}
-				>
-					{label}
-				</NavLink>
-			))}
+			{items.map(({ to, label }) =>
+				to.includes('#') ? (
+					<Link
+						key={to}
+						to={to}
+						className={cn(
+							navItemClass,
+							'text-ground-fg hover:text-link hover:underline hover:underline-offset-4',
+						)}
+					>
+						{label}
+					</Link>
+				) : (
+					<NavLink
+						key={to}
+						to={to}
+						prefetch="intent"
+						className={({ isActive }) =>
+							cn(
+								navItemClass,
+								isActive
+									? 'text-link underline underline-offset-4'
+									: 'text-ground-fg hover:text-link hover:underline hover:underline-offset-4',
+							)
+						}
+					>
+						{label}
+					</NavLink>
+				),
+			)}
 		</nav>
 	)
 }
 
 /**
- * §8: "A visible humans.txt-style colophon credits dataset, models, typefaces,
- * and advisors." It sits in the footer of every page, on the void ground, in
- * the machine voice — the archive accounting for itself.
+ * The footer of every page: wordmark, navigation, legal links. It used to carry
+ * the archive's colophon (dataset, method, tag counts) as §8 asks; that went
+ * when the site became the company's, since the footer now speaks for the
+ * studio rather than the archive.
  */
 export function Colophon({ className }: { className?: string }) {
-	const entries: Array<[string, React.ReactNode]> = [
-		['Dataset', `${DATASET} · 54,497 artworks`],
-		['Method', 'Panofsky I–III'],
-		['Tags', '513,159'],
-		['Human Tags', '295,343'],
-		['AI Tags', '226,947'],
-		['Taggings', '5,805,481'],
-	]
 	return (
 		<footer className={cn('register-void px-5 py-12 md:px-8', className)}>
 			<div className="container">
 				<div className="border-rule flex flex-wrap items-start justify-between gap-8 border-b pb-8">
 					<Wordmark />
-					<InstituteNav className="gap-x-8" />
+					<InstituteNav className="gap-x-8" items={FOOTER_NAV} />
 				</div>
 
-				<dl className="mt-8 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-					{entries.map(([term, value]) => (
-						<div key={term} className="flex flex-wrap items-baseline gap-2">
-							<Data className="text-ground-muted w-24 shrink-0">{term}</Data>
-							<Data className="normal-case">{value}</Data>
-						</div>
-					))}
-				</dl>
-
-				<p className="font-body text-prose-sm measure text-ground-muted mt-8">
-					Candid Garden publishes machine-generated iconographic metadata,
-					presented for scholarly correction. Readings are provisional. We
-					invite dispute.
-				</p>
-
-				<div className="border-rule mt-8 flex flex-wrap items-center justify-between gap-4 border-t pt-6">
+				<div className="mt-6 flex flex-wrap items-center justify-between gap-4">
 					<Data className="text-ground-muted normal-case">
 						© {new Date().getUTCFullYear()} Candid Garden
 					</Data>
@@ -161,7 +174,7 @@ export function PrintColophon() {
 | (__ / _ \| .' | |) | || |) | | (_ / / _ \|   / |) | _|| .' |
  \___/_/ \_\_|\_|___/___|___/   \___/_/ \_\_|_\___/|___|_|\_|
 
-              INSTITUTE FOR ART RE-SEARCH
+                RESEARCH & SOFTWARE · MUNICH
 `}
 			</pre>
 			<p style={{ fontFamily: 'monospace', fontSize: '12px' }}>

@@ -98,7 +98,7 @@ export function SignupEmail({
 		<E.Html lang="en" dir="ltr">
 			<E.Container>
 				<h1>
-					<E.Text>Candid Garden · Institute for Art Re-Search</E.Text>
+					<E.Text>Candid Garden · Research &amp; Software, Munich</E.Text>
 				</h1>
 				<p>
 					<E.Text>
@@ -135,7 +135,7 @@ export default function SignupRoute({ actionData }: Route.ComponentProps) {
 	return (
 		<AccessPage
 			kind="Registration"
-			title="Register with the institute"
+			title="Open an account"
 			lead="We will send a verification code to the address you give us. We keep the address, and nothing else you have not offered."
 		>
 			<Form method="POST" {...getFormProps(form)}>

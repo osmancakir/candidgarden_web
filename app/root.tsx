@@ -73,7 +73,7 @@ export const meta: Route.MetaFunction = ({ data }) => {
 	return [
 		{
 			title: data
-				? 'Candid Garden · Institute for Art Re-Search'
+				? 'Candid Garden · Research & Software, Munich'
 				: 'Error | Candid Garden',
 		},
 		{
@@ -286,7 +286,7 @@ function App() {
 								<UserDropdown />
 							) : (
 								<Button asChild variant="outline" size="sm">
-									<Link to="/login">Log in</Link>
+									<Link to="/login">Client login</Link>
 								</Button>
 							)}
 							<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />

@@ -516,7 +516,7 @@ export default function Dossier({ loaderData }: Route.ComponentProps) {
 										a gap to be papered over. A model that has named{' '}
 										{motifs.length} motifs has not thereby interpreted a
 										painting, and the distance between those two things is the
-										subject of this institute.
+										subject of this archive.
 									</p>
 								</div>
 

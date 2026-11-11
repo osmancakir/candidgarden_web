@@ -28,7 +28,7 @@ export const meta: Route.MetaFunction = () => [
 	{
 		name: 'description',
 		content:
-			'Essays, methodology and corrections from the Institute for Art Re-Search — the chapter that revisits the archive’s own gaps.',
+			'Essays, methodology and corrections from the Candid Garden Archive — the chapter that revisits the archive’s own gaps.',
 	},
 ]
 
@@ -37,8 +37,8 @@ export default function EssaysRoute() {
 		<DocumentPage
 			kind="Reprise · Chapter IV"
 			title="Essays, methodology, and corrections"
-			lead="The chapter that revisits the archive’s gaps. Everything here is about the limits of what the preceding three levels can claim."
-			stamp={<RecordStamp date={new Date('2026-03-14T00:00:00Z')} run={118} />}
+			lead="Notes from the Candid Garden Archive, the studio’s own research collection. This is the chapter that revisits the archive’s gaps: everything here is about the limits of what the three levels can claim."
+			stamp={<RecordStamp date={new Date('2026-11-11T00:00:00Z')} run={118} />}
 		>
 			<DocumentSection n="I" heading="On calling it confidence">
 				<p>
@@ -66,26 +66,31 @@ export default function EssaysRoute() {
 				</p>
 			</DocumentSection>
 
-			<DocumentSection n="II" heading="Why Levels II and III are empty">
+			<DocumentSection n="II" heading="Why every reading says who wrote it">
 				<p>
-					Every dossier in this archive descends through Panofsky’s three levels
-					and, at the second and third, tells you there is no reading on record.
-					This is not an unfinished feature. The corpus holds motif annotations
-					— Level I material — and nothing else. To populate Level II we would
-					have to generate identifications; to populate Level III, we would have
-					to generate interpretation.
+					For most of the archive’s life, every dossier descended through
+					Panofsky’s three levels and, at the second and third, said there was
+					no reading on record. The corpus held motif annotations — Level I
+					material — and nothing else. We argued on this page that an archive
+					filling those sections with unmarked machine prose would be a more
+					impressive website and a considerably worse research instrument, and
+					that the empty sections were the finding.
 				</p>
 				<p>
-					Both are within a model’s power to produce fluently and neither is
-					within this institute’s power to warrant. An archive that filled those
-					sections with unmarked machine prose would be a more impressive
-					website and a considerably worse research instrument. The empty
-					sections are the finding.
+					They are no longer empty. Since August 2026 every work carries a Level
+					II reading and all but 152 a Level III one — 54,497 and 54,345 of them
+					— drafted by GPT-4o from the archive’s description corpus. The
+					argument has not changed; the word that carried it was{' '}
+					<em>unmarked</em>. Each reading is set in the same type a curator’s
+					would be, and beneath it says what it is: written by a machine, with
+					the model and the corpus it came from.
 				</p>
 				<p>
-					When readings are added, they will arrive stamped: model, run, date,
-					and a human-verification status that starts at <em>unreviewed</em> and
-					stays there until someone actually reviews it.
+					None of them has been checked by a person, and nothing on the page
+					suggests otherwise. Where a work has no Level III reading, the dossier
+					still says so rather than filling the space. When a reading is
+					reviewed, or replaced by one a person wrote, the byline will change to
+					say that too.
 				</p>
 			</DocumentSection>
 
