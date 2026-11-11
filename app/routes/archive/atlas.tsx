@@ -114,6 +114,12 @@ type Label = {
 	notAfter: number | null
 }
 
+/** How long the pointer has to rest on a point before its label is asked for. */
+const LABEL_DWELL_MS = 120
+
+/** After this, the dialog stops waiting and offers to try again. */
+const WORK_TIMEOUT_MS = 10_000
+
 export default function Atlas({ loaderData }: Route.ComponentProps) {
 	const { query, hits, error } = loaderData
 	const navigation = useNavigation()
@@ -132,6 +138,13 @@ export default function Atlas({ loaderData }: Route.ComponentProps) {
 	// crossing the same cluster twice costs one request, not two.
 	const labelCache = useRef(new Map<number, Label>())
 
+	// A request goes out only once the pointer settles on a point, and is never
+	// cancelled once sent. Sweeping across a dense cluster used to start and
+	// abort a request for every point crossed, dozens a second; on HTTP/3
+	// Firefox then stalled the connection, and the next request on it (the
+	// click's dialog) hung in the browser for minutes without reaching
+	// Cloudflare. A label is ~150 bytes: letting a stale one land in the cache
+	// costs nothing, and resetting the stream is what hurt.
 	useEffect(() => {
 		if (!hover) {
 			setLabel(null)
@@ -142,21 +155,24 @@ export default function Atlas({ loaderData }: Route.ComponentProps) {
 			setLabel(cached)
 			return
 		}
-		const abort = new AbortController()
 		setLabel(null)
-		fetch(`/resources/atlas-label?id=${hover.resourceId}`, {
-			signal: abort.signal,
-		})
-			.then((response) =>
-				response.ok ? (response.json() as Promise<Label>) : null,
-			)
-			.then((value) => {
-				if (!value) return
-				labelCache.current.set(value.id, value)
-				setLabel(value)
-			})
-			.catch(() => {})
-		return () => abort.abort()
+		let current = true
+		const timer = setTimeout(() => {
+			fetch(`/resources/atlas-label?id=${hover.resourceId}`)
+				.then((response) =>
+					response.ok ? (response.json() as Promise<Label>) : null,
+				)
+				.then((value) => {
+					if (!value) return
+					labelCache.current.set(value.id, value)
+					if (current) setLabel(value)
+				})
+				.catch(() => {})
+		}, LABEL_DWELL_MS)
+		return () => {
+			current = false
+			clearTimeout(timer)
+		}
 	}, [hover])
 
 	// A click opens the work in a dialog over the map rather than leaving for
@@ -345,14 +361,20 @@ function WorkDialog({
 		() => workCache.get(resourceId) ?? null,
 	)
 	const [failed, setFailed] = useState(false)
+	const [attempt, setAttempt] = useState(0)
 	const dialogRef = useRef<HTMLDialogElement>(null)
 
+	// Like the hover labels, a superseded request is left to finish into the
+	// cache rather than cancelled. Only a request that has stalled is aborted,
+	// and then the reader is offered another go instead of an endless wait.
 	useEffect(() => {
 		setFailed(false)
 		const cached = workCache.get(resourceId)
 		if (cached) return setWork(cached)
 		setWork(null)
+		let current = true
 		const abort = new AbortController()
+		const timer = setTimeout(() => abort.abort(), WORK_TIMEOUT_MS)
 		fetch(`/resources/atlas-work?id=${resourceId}`, { signal: abort.signal })
 			.then((response) => {
 				if (!response.ok) throw new Error(String(response.status))
@@ -360,13 +382,16 @@ function WorkDialog({
 			})
 			.then((value) => {
 				workCache.set(value.id, value)
-				setWork(value)
+				if (current) setWork(value)
 			})
 			.catch(() => {
-				if (!abort.signal.aborted) setFailed(true)
+				if (current) setFailed(true)
 			})
-		return () => abort.abort()
-	}, [resourceId])
+			.finally(() => clearTimeout(timer))
+		return () => {
+			current = false
+		}
+	}, [resourceId, attempt])
 
 	// Focus follows the reader into each newly opened work, so a keyboard or
 	// screen-reader user lands on it; the map itself has no keyboard reach.
@@ -424,9 +449,18 @@ function WorkDialog({
 
 			<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 py-4">
 				{failed ? (
-					<Data className="text-stamp-fg">
-						This record could not be retrieved.
-					</Data>
+					<div className="flex flex-col items-start gap-3">
+						<Data className="text-stamp-fg">
+							This record could not be retrieved.
+						</Data>
+						<button
+							type="button"
+							onClick={() => setAttempt((n) => n + 1)}
+							className="border-rule hover:border-link hover:text-link focus-visible:border-link font-data border px-3 py-1.5 text-xs tracking-[0.12em] uppercase focus-visible:outline-none"
+						>
+							Try again
+						</button>
+					</div>
 				) : !work ? (
 					<Data className="text-ground-muted animate-pulse">
 						Retrieving record {resourceId}…
