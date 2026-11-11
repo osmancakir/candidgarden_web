@@ -3,7 +3,32 @@ import { type GetSrcArgs, defaultGetSrc } from 'openimg/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFormAction, useNavigation } from 'react-router'
 import { useSpinDelay } from 'spin-delay'
-import { twMerge } from 'tailwind-merge'
+import { extendTailwindMerge } from 'tailwind-merge'
+
+/**
+ * tailwind-merge must be told the theme's type scale (§9, `--text-*` in
+ * tailwind.css). Left to its defaults it cannot tell `text-data-sm` (a size)
+ * from `text-ground-muted` (a colour), files both as the same group, and keeps
+ * only the last: every `<Data className="text-ground-muted">` lost its size and
+ * fell back to the inherited one, which is why muted mono labels across the
+ * site rendered larger than the unmuted ones beside them.
+ */
+const twMerge = extendTailwindMerge({
+	extend: {
+		theme: {
+			text: [
+				'display',
+				'chapter',
+				'title',
+				'prose',
+				'prose-lg',
+				'prose-sm',
+				'data',
+				'data-sm',
+			],
+		},
+	},
+})
 
 export function getUserImgSrc(objectKey?: string | null) {
 	return objectKey
