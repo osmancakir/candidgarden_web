@@ -10,7 +10,9 @@ import { useOptionalUser, userHasRole } from '#app/utils/user.ts'
 import {
 	ARCHIVE,
 	CONTACT_EMAIL,
+	SERVICE_GROUPS,
 	SERVICES,
+	STANDARDS,
 	TERMS,
 	WORKED_WITH,
 	type Service,
@@ -43,11 +45,11 @@ import { type Route } from './+types/index.ts'
  */
 
 export const meta: Route.MetaFunction = () => [
-	{ title: 'Candid Garden · Research & Software, Munich' },
+	{ title: 'Candid Garden · Collection data & software, Munich' },
 	{
 		name: 'description',
 		content:
-			'Candid Garden is a research and software studio in Munich: AI cataloguing and model evaluation for museums, digitalisation, synthetic data, web and mobile applications, and research.',
+			'Candid Garden is a research and software studio in Munich. We catalogue museum and library collections with AI, align records to GND, Getty AAT, Iconclass and Wikidata, deliver LIDO and CIDOC CRM, and write back into MuseumPlus and Axiell. One project, no subscription.',
 	},
 ]
 
@@ -77,6 +79,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
 			<Hero />
 			<Statement />
 			<Services />
+			<Standards />
 			<TodayInTheArchive specimens={specimens} />
 			<WorkedWith />
 			<HowWeWork />
@@ -141,12 +144,19 @@ function Hero() {
 
 			<div className="container pt-32 pb-10 md:pb-12">
 				<Data className="block tracking-[0.25em]">
-					Candid Garden · Research &amp; software studio · Munich
+					Candid Garden · Collection data &amp; software · Munich
 				</Data>
 				<h1 className="font-display mt-6 max-w-[19ch] text-[clamp(2.4rem,5.4vw,5.25rem)] leading-[0.93] tracking-[-0.02em] uppercase">
-					We make collections <span className="text-link">legible</span> to
-					machines, and machines legible to people.
+					We catalogue, standardise and publish{' '}
+					<span className="text-link">collections</span>
 				</h1>
+				<p className="font-body text-prose-lg text-bone/85 mt-8 max-w-[58ch]">
+					For museums, libraries and archives. We enrich your records with
+					current vision and language models, match them to GND, Getty AAT,
+					Iconclass and Wikidata, deliver LIDO or CIDOC CRM, and write the
+					result back into MuseumPlus, Axiell or whatever you run. You keep a
+					finished catalogue, not a login.
+				</p>
 
 				<div className="border-rule mt-10 flex flex-col gap-6 border-t pt-6 md:flex-row md:items-end md:justify-between">
 					<ul className="flex flex-wrap gap-x-5 gap-y-2">
@@ -192,11 +202,12 @@ function Statement() {
 	return (
 		<section className="container py-24 md:py-36">
 			<p className="font-body text-ground-muted max-w-[30ch] text-[clamp(1.6rem,3.4vw,3.1rem)] leading-[1.18] tracking-[-0.01em]">
-				<Em>Candid Garden</Em> is a research and software studio. We build{' '}
-				<Em>web and mobile apps</Em>, catalogue <Em>collections</Em> with
-				machine vision, find out <Em>which model to trust</Em>, and generate the{' '}
-				<Em>data</Em> the rest depends on — for museums, research institutions
-				and companies that need the work <Em>finished</Em>, not demonstrated.
+				<Em>Candid Garden</Em> is a research and software studio in Munich. We
+				make <Em>collections legible to machines</Em>, and machines legible to
+				people: every record a model writes carries the{' '}
+				<Em>model, run and date</Em> that made it, so your specialists can
+				correct it. For institutions that need the work{' '}
+				<Em>finished, in their own system</Em>, not demonstrated in ours.
 			</p>
 		</section>
 	)
@@ -213,16 +224,74 @@ function Services() {
 				<div className="border-rule flex flex-wrap items-end justify-between gap-6 border-b pb-6">
 					<SectionTitle count={SERVICES.length}>What we do</SectionTitle>
 					<Data className="text-ground-muted max-w-xs tracking-normal normal-case">
-						Bought one at a time or together. Where the same thing can already
+						One project or one phase at a time. Where the same thing can already
 						be seen, the row opens it.
 					</Data>
 				</div>
 			</div>
-			<ol>
-				{SERVICES.map((service, i) => (
-					<ServiceRow key={service.id} service={service} n={i + 1} />
+			{SERVICE_GROUPS.map((group, gi) => {
+				const offset = SERVICE_GROUPS.slice(0, gi).reduce(
+					(sum, g) => sum + g.services.length,
+					0,
+				)
+				return (
+					<div key={group.id} id={group.id} className="scroll-mt-24">
+						<div className="container flex flex-col gap-3 pt-14 pb-6 md:grid md:grid-cols-12 md:gap-x-6">
+							<Data className="tracking-[0.25em] md:col-span-6">
+								{group.title}
+							</Data>
+							<p className="font-body text-prose text-ground-muted max-w-[52ch] md:col-span-6">
+								{group.lead}
+							</p>
+						</div>
+						<ol className="border-rule border-t">
+							{group.services.map((service, i) => (
+								<ServiceRow
+									key={service.id}
+									service={service}
+									n={offset + i + 1}
+								/>
+							))}
+						</ol>
+					</div>
+				)
+			})}
+		</section>
+	)
+}
+
+/* ==========================================================================
+   Standards — the systems, vocabularies and schemas, named outright.
+   ========================================================================== */
+
+function Standards() {
+	return (
+		<section id="standards" className="container scroll-mt-24 pb-28">
+			<div className="border-rule flex flex-wrap items-end justify-between gap-6 border-b pb-6">
+				<SectionTitle>Systems &amp; standards</SectionTitle>
+				<Data className="text-ground-muted max-w-xs tracking-normal normal-case">
+					What we read, write and align to. A typical German art-history project
+					is LIDO or CIDOC CRM for structure, with GND, AAT and Iconclass for
+					the terms.
+				</Data>
+			</div>
+			<ul className="grid gap-x-8 gap-y-10 pt-8 md:grid-cols-3">
+				{STANDARDS.map(({ title, items }) => (
+					<li key={title} className="flex flex-col gap-4">
+						<span className="font-display text-title uppercase">{title}</span>
+						<ul className="flex flex-col gap-2">
+							{items.map((item) => (
+								<li
+									key={item}
+									className="font-data text-data-sm border-rule border-b pb-2 tracking-[0.1em] uppercase"
+								>
+									{item}
+								</li>
+							))}
+						</ul>
+					</li>
 				))}
-			</ol>
+			</ul>
 		</section>
 	)
 }

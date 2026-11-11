@@ -46,63 +46,142 @@ export type Service = {
 	evidence: { label: string; to: string } | null
 }
 
-export const SERVICES: Array<Service> = [
+/**
+ * Collection work first, because a museum or library arrives looking for its
+ * own problem, and the rest after, because the same hands build the apps.
+ */
+export type ServiceGroup = {
+	id: string
+	title: string
+	lead: string
+	services: Array<Service>
+}
+
+export const SERVICE_GROUPS: Array<ServiceGroup> = [
 	{
 		id: 'collections',
-		name: 'AI cataloguing',
-		line: 'Iconographic keywords and bilingual descriptions for whole collections, in your schema, every record stamped with the model and run that made it.',
-		delivers: [
-			'Catalogue audit',
-			'Full run',
-			'Writeback to Axiell, MuseumPlus, CSV',
+		title: 'For collections',
+		lead: 'From your export to a finished catalogue in your own system: enriched, aligned to the standards your portal expects, and written back. Bought as one project or one phase at a time.',
+		services: [
+			{
+				id: 'cataloguing',
+				name: 'AI cataloguing',
+				line: 'Iconographic keywords, Iconclass codes and bilingual descriptions for whole collections, written into your schema. Every record is stamped with the model and run that made it, and stays marked as machine-made until a person has checked it.',
+				delivers: [
+					'Catalogue audit',
+					'Full run',
+					'Writeback to MuseumPlus, Axiell, CSV',
+				],
+				evidence: { label: 'The archive', to: '/archive' },
+			},
+			{
+				id: 'vocabularies',
+				name: 'Vocabularies & authority files',
+				line: 'Free text turned into identifiers. Artists, places, object types and subjects matched to GND, the Getty vocabularies, Iconclass and Wikidata, with the source of every match kept and the ambiguous ones held back for review.',
+				delivers: ['GND · AAT · ULAN · TGN', 'Iconclass', 'Wikidata · VIAF'],
+				evidence: { label: 'The archive', to: '/archive' },
+			},
+			{
+				id: 'standards',
+				name: 'Schemas & migrations',
+				line: 'Your records in the model the next system or portal expects: LIDO for Europeana and museum-digital, CIDOC CRM and Linked Art, EDM, Dublin Core, DataCite for the repository. Migrations between MuseumPlus, Axiell Adlib and Collections, and spreadsheets, with every row accounted for.',
+				delivers: [
+					'LIDO · CIDOC CRM · EDM',
+					'DataCite · Dublin Core',
+					'MuseumPlus ↔ Axiell',
+				],
+				evidence: null,
+			},
+			{
+				id: 'evaluation',
+				name: 'Model evaluation',
+				line: 'Which model to trust, settled on your own material: every major provider, a frozen sample, blind scoring by your curators, and the cost of the full run before anyone commits to it.',
+				delivers: ['Blind scoring', 'Disclosed prompts', 'Cost per model'],
+				evidence: null,
+			},
+			{
+				id: 'web',
+				name: 'Collection websites',
+				line: 'Your collection online, in your repository: search, dossiers, maps of the whole holding. React and TypeScript on Cloudflare or AWS, Postgres with pgvector, tested before anything ships.',
+				delivers: [
+					'Semantic search',
+					'React Router · TypeScript',
+					'Postgres · pgvector',
+				],
+				evidence: { label: 'The atlas', to: '/archive/atlas' },
+			},
+			{
+				id: 'research',
+				name: 'Research',
+				line: 'Questions answered with a method and a written report: semantic search, maps of latent space, model bias, evaluations built to fail visibly. Shaped to fit a funding application where one is needed.',
+				delivers: ['Embeddings', 'UMAP · WebGL', 'Written reports'],
+				evidence: { label: 'The atlas', to: '/archive/atlas' },
+			},
 		],
-		evidence: { label: 'The archive', to: '/archive' },
 	},
 	{
-		id: 'evaluation',
-		name: 'Model evaluation',
-		line: 'Which model to trust, settled on your own material: every major provider, a frozen sample, blind scoring, the cost before the full run.',
-		delivers: ['Blind scoring', 'Disclosed prompts', 'Cost per model'],
-		evidence: null,
-	},
-	{
-		id: 'digitalisation',
-		name: 'Digitalisation',
-		line: 'Free text into identifiers. Artists, works and holders matched to Wikidata, metadata in the standard your repository expects, ambiguity held back for review.',
-		delivers: ['Wikidata QIDs', 'DataCite & schema work', 'Migrations'],
-		evidence: { label: 'The archive', to: '/archive' },
-	},
-	{
-		id: 'synthetic-data',
-		name: 'Synthetic data',
-		line: 'Datasets written by models to a schema and checked by validators: evaluation sets, test fixtures, training material, texts graded to a reading level.',
-		delivers: ['Typed output', 'Validator passes', 'Provenance per row'],
-		evidence: null,
-	},
-	{
-		id: 'web',
-		name: 'Web applications',
-		line: 'Full stack, from schema to deploy pipeline: React and TypeScript on Cloudflare or AWS, Postgres or SQLite, tested before anything ships.',
-		delivers: [
-			'React Router · TypeScript',
-			'Postgres · pgvector · D1',
-			'CI/CD',
+		id: 'software',
+		title: 'Beyond collections',
+		lead: 'The same studio builds products. Where a project needs an app, a dataset or an API, it does not need a second vendor.',
+		services: [
+			{
+				id: 'apps',
+				name: 'Web & mobile apps',
+				line: 'Full stack, from schema to store review: React and TypeScript on the web, React Native, Expo or Flutter on iOS and Android, with sign-in, subscriptions and the API behind them.',
+				delivers: ['React Native · Flutter', 'Sign in with Apple', 'CI/CD'],
+				evidence: { label: 'Magpie Jar', to: 'https://magpiejar.com' },
+			},
+			{
+				id: 'synthetic-data',
+				name: 'Synthetic data',
+				line: 'Datasets written by models to a schema and checked by validators: evaluation sets, test fixtures, training material, texts graded to a reading level.',
+				delivers: ['Typed output', 'Validator passes', 'Provenance per row'],
+				evidence: null,
+			},
 		],
-		evidence: { label: 'Magpie Jar', to: 'https://magpiejar.com' },
+	},
+]
+
+export const SERVICES: Array<Service> = SERVICE_GROUPS.flatMap(
+	(g) => g.services,
+)
+
+/* --------------------------------------------------------------------------
+   Systems and standards — the nouns a registrar scans for.
+   -------------------------------------------------------------------------- */
+
+export const STANDARDS: Array<{ title: string; items: Array<string> }> = [
+	{
+		title: 'Collection systems',
+		items: [
+			'MuseumPlus',
+			'Axiell Adlib',
+			'Axiell Collections',
+			'museum-digital',
+			'Excel · CSV · FileMaker',
+		],
 	},
 	{
-		id: 'mobile',
-		name: 'Mobile apps',
-		line: 'Native iOS and Android in React Native, Expo or Flutter, taken through store review, with sign-in, subscriptions and the API behind them.',
-		delivers: ['React Native · Flutter', 'Sign in with Apple', 'RevenueCat'],
-		evidence: { label: 'Magpie Jar', to: 'https://magpiejar.com' },
+		title: 'Authority files & vocabularies',
+		items: [
+			'GND',
+			'Getty AAT · ULAN · TGN · CONA',
+			'Iconclass',
+			'Wikidata · VIAF',
+			'LCSH · LCNAF',
+			'RKDartists · Oberbegriffsdatei',
+		],
 	},
 	{
-		id: 'research',
-		name: 'Research',
-		line: 'Questions answered with a method and a written report: semantic search, maps of latent space, model bias, evaluations built to fail visibly.',
-		delivers: ['Embeddings', 'UMAP · WebGL', 'Written reports'],
-		evidence: { label: 'The atlas', to: '/archive/atlas' },
+		title: 'Schemas & data models',
+		items: [
+			'LIDO',
+			'CIDOC CRM · Linked Art',
+			'EDM (Europeana)',
+			'CDWA · VRA Core',
+			'Dublin Core · DataCite',
+			'MARC 21 · EAD · EAC-CPF',
+		],
 	},
 ]
 
@@ -202,6 +281,10 @@ export const WORKED_WITH: Array<{ name: string; note: string }> = [
 
 export const TERMS: Array<{ term: string; body: string }> = [
 	{
+		term: 'A project, not a subscription',
+		body: 'One scoped project with a finished deliverable: a file in your system or code in your repository. No seats, no minimum term, no portal to keep paying for.',
+	},
+	{
 		term: 'By the phase',
 		body: 'Fixed price per phase, each signed off on its own. Stop after any of them and keep what was made.',
 	},
@@ -210,11 +293,7 @@ export const TERMS: Array<{ term: string; body: string }> = [
 		body: 'Model and hosting costs passed through without markup, measured in a pilot before the full run.',
 	},
 	{
-		term: 'Nothing rented',
-		body: 'No seats, no minimum term, no portal. The result is a file in your system or code in your repository.',
-	},
-	{
 		term: 'Public buyers',
-		body: 'Phases cut to sit below procurement thresholds, with the evidence a funding application needs.',
+		body: 'Phases cut to sit below procurement thresholds, with the evidence a funding application needs. English and German.',
 	},
 ]

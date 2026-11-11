@@ -190,8 +190,8 @@ export function buildDeck(f: DeckFigures): Array<Slide> {
 			kind: 'title',
 			id: 'title',
 			eyebrow: {
-				de: 'Institut für Kunst-Re-Search',
-				en: 'Institute for Art Re-Search',
+				de: 'Candid Garden · Sammlungsdaten & Software · München',
+				en: 'Candid Garden · Collection data & software · Munich',
 			},
 			title: {
 				de: 'Maschinenlesungen, die ein Kurator prüfen kann',
