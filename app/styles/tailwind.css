@@ -642,6 +642,54 @@
 }
 
 /* ==========================================================================
+   The atlas's place names and selection ring (atlas-canvas.tsx).
+   Positioned by the render loop each frame. Regions are system text, in the
+   data face; neighborhoods are closer to a curator's note, in the body face's
+   italic. A halo alone is not enough where the points are densest and the
+   ground is nearly bone itself, so each name sits on a translucent void
+   scrim: dark enough to read, thin enough that the points still show through.
+   ========================================================================== */
+
+.atlas-label {
+	position: absolute;
+	top: 0;
+	left: 0;
+	padding: 1px 5px;
+	white-space: nowrap;
+	color: var(--bone);
+	background: color-mix(in oklab, var(--void) 72%, transparent);
+	text-shadow: 0 0 3px var(--void);
+	transition: opacity 250ms ease;
+	will-change: transform;
+}
+.atlas-label[data-visible='false'] {
+	opacity: 0;
+}
+.atlas-label-region {
+	font-family: var(--font-data);
+	font-size: 0.6875rem;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+}
+.atlas-label-hood {
+	font-family: var(--font-body);
+	font-size: 0.9375rem;
+	font-style: italic;
+	line-height: 1;
+}
+.atlas-ring {
+	width: 22px;
+	height: 22px;
+	margin: -11px 0 0 -11px;
+	border: 2px solid var(--ultra-lift);
+	border-radius: 9999px;
+	box-shadow: 0 0 0 2px var(--void);
+}
+.atlas-ring[data-visible='false'] {
+	display: none;
+}
+
+/* ==========================================================================
    §8 The print stylesheet is an easter egg.
    Printing any page yields the wordmark in ASCII and a refusal. The markup for
    it lives in `PrintColophon` in app/root.tsx; everything else is withheld.

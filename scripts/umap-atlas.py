@@ -7,6 +7,12 @@ the atlas route renders. Run it in the venv that has umap-learn:
     .venv-atlas/bin/pip install "umap-learn>=0.5.7" numpy
     .venv-atlas/bin/python scripts/umap-atlas.py --in .atlas
 
+It is the first of three steps; the files it writes are format 1, which the
+site no longer reads. Regions, neighborhoods and their names come next:
+
+    npm run atlas:cluster   # scripts/cluster-atlas.py → .atlas/atlas-v2.*
+    npm run atlas:name      # scripts/name-atlas-clusters.mjs → public/atlas/
+
 This is an offline step and must stay one. UMAP has no closed form: the layout
 comes out of an optimisation over the whole corpus at once, which is minutes of
 CPU and hundreds of megabytes of working set. It cannot run in a Worker, in a

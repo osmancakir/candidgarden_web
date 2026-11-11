@@ -1,17 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Form, Link, data, useNavigate, useNavigation } from 'react-router'
+import { Form, Link, data, useNavigation } from 'react-router'
 import {
 	AtlasCanvas,
 	type AtlasHit,
 	type AtlasHover,
 	type AtlasManifest,
+	type AtlasPick,
 	type ColorMode,
 	type LevelFilter,
 } from '#app/components/institute/atlas-canvas.tsx'
+import { PANOFSKY } from '#app/components/institute/descent.tsx'
+import { Chip, Data } from '#app/components/institute/primitives.tsx'
+import { Plate, workHref } from '#app/components/institute/record.tsx'
+import { Icon } from '#app/components/ui/icon.tsx'
+import { displayPeriod } from '#app/utils/archive.ts'
 import { cache, cachified } from '#app/utils/cache.server.ts'
 import { pipeHeaders } from '#app/utils/headers.server.ts'
+import { getWorkImgSrc } from '#app/utils/misc.tsx'
 import { searchInterpretationPoints } from '#app/utils/semantic-search.server.ts'
 import { makeTimings } from '#app/utils/timing.server.ts'
+import { type AtlasWork } from '../resources/atlas-work.tsx'
 import { SENSE_MAX_LENGTH } from './+shared/filters.ts'
 import { type Route } from './+types/atlas.ts'
 
@@ -108,13 +116,13 @@ type Label = {
 
 export default function Atlas({ loaderData }: Route.ComponentProps) {
 	const { query, hits, error } = loaderData
-	const navigate = useNavigate()
 	const navigation = useNavigation()
 	const [colorMode, setColorMode] = useState<ColorMode>('uniform')
 	const [levelFilter, setLevelFilter] = useState<LevelFilter>('both')
 	const [manifest, setManifest] = useState<AtlasManifest | null>(null)
 	const [hover, setHover] = useState<AtlasHover>(null)
 	const [label, setLabel] = useState<Label | null>(null)
+	const [selection, setSelection] = useState<AtlasPick | null>(null)
 
 	const searching =
 		navigation.state === 'loading' &&
@@ -151,10 +159,13 @@ export default function Atlas({ loaderData }: Route.ComponentProps) {
 		return () => abort.abort()
 	}, [hover])
 
-	const onSelect = useCallback(
-		(resourceId: number) => navigate(`/archive/${resourceId}`),
-		[navigate],
-	)
+	// A click opens the work in a dialog over the map rather than leaving for
+	// the dossier: most points are glanced at, not studied, and every trip to
+	// the dossier used to cost the reader the view they had turned the map to.
+	const onSelect = useCallback((pick: AtlasPick | null) => {
+		setSelection(pick)
+	}, [])
+	const closeDialog = useCallback(() => setSelection(null), [])
 	const onReady = useCallback(
 		(loaded: AtlasManifest) => setManifest(loaded),
 		[],
@@ -166,6 +177,7 @@ export default function Atlas({ loaderData }: Route.ComponentProps) {
 				hits={hits}
 				colorMode={colorMode}
 				levelFilter={levelFilter}
+				selected={selection}
 				onHover={setHover}
 				onSelect={onSelect}
 				onReady={onReady}
@@ -267,7 +279,8 @@ export default function Atlas({ loaderData }: Route.ComponentProps) {
 					{/* Kept clear of the bottom-right corner, where the theme control
 					    and the dev indicator sit. */}
 					<p className="bg-ground/80 text-ground-muted mr-16 max-w-60 p-3 text-right font-mono text-[10px] leading-relaxed">
-						Drag to rotate · scroll to zoom · click a point for its record.
+						Drag to rotate · scroll to zoom in to the neighborhoods · click a
+						point to read about it.
 						<br />
 						Near means near; far is only approximately far.
 					</p>
@@ -295,9 +308,231 @@ export default function Atlas({ loaderData }: Route.ComponentProps) {
 							? ' · single reading'
 							: ` · spread ${hover.spread.toFixed(3)}`}
 					</p>
+					{hover.neighborhood ? (
+						<p className="text-ground-fg mt-1 font-serif text-xs italic">
+							{hover.neighborhood.name}
+						</p>
+					) : null}
 				</div>
 			) : null}
+
+			{selection ? <WorkDialog pick={selection} onClose={closeDialog} /> : null}
 		</div>
+	)
+}
+
+/** Works fetched once per visit, so going back to a point costs nothing. */
+const workCache = new Map<number, AtlasWork>()
+
+/**
+ * The work behind a clicked point, abridged.
+ *
+ * Non-modal, and docked to the side of the map rather than centred over it:
+ * the reader can keep turning the map and clicking other points, and the
+ * dialog follows. Escape, the close button, or a click on empty space closes
+ * it. The full dossier is one link away and is the only place the readings
+ * appear whole.
+ */
+function WorkDialog({
+	pick,
+	onClose,
+}: {
+	pick: AtlasPick
+	onClose: () => void
+}) {
+	const { resourceId } = pick
+	const [work, setWork] = useState<AtlasWork | null>(
+		() => workCache.get(resourceId) ?? null,
+	)
+	const [failed, setFailed] = useState(false)
+	const dialogRef = useRef<HTMLDialogElement>(null)
+
+	useEffect(() => {
+		setFailed(false)
+		const cached = workCache.get(resourceId)
+		if (cached) return setWork(cached)
+		setWork(null)
+		const abort = new AbortController()
+		fetch(`/resources/atlas-work?id=${resourceId}`, { signal: abort.signal })
+			.then((response) => {
+				if (!response.ok) throw new Error(String(response.status))
+				return response.json() as Promise<AtlasWork>
+			})
+			.then((value) => {
+				workCache.set(value.id, value)
+				setWork(value)
+			})
+			.catch(() => {
+				if (!abort.signal.aborted) setFailed(true)
+			})
+		return () => abort.abort()
+	}, [resourceId])
+
+	// Focus follows the reader into each newly opened work, so a keyboard or
+	// screen-reader user lands on it; the map itself has no keyboard reach.
+	useEffect(() => {
+		dialogRef.current?.focus({ preventScroll: true })
+	}, [resourceId])
+
+	useEffect(() => {
+		function onKeyDown(event: KeyboardEvent) {
+			if (event.key === 'Escape') onClose()
+		}
+		document.addEventListener('keydown', onKeyDown)
+		return () => document.removeEventListener('keydown', onKeyDown)
+	}, [onClose])
+
+	const src = work ? getWorkImgSrc(work.objectKey) : null
+	// The reading that was clicked comes first; the work's other one follows.
+	const readings = work
+		? [...work.readings].sort(
+				(a, b) =>
+					Number(b.level === pick.level) - Number(a.level === pick.level),
+			)
+		: []
+
+	return (
+		<dialog
+			ref={dialogRef}
+			open
+			tabIndex={-1}
+			aria-labelledby="atlas-work-title"
+			aria-busy={!work && !failed}
+			className="border-rule bg-ground text-ground-fg fixed inset-x-3 top-auto bottom-3 z-20 m-0 flex h-auto max-h-[65svh] w-auto flex-col overflow-hidden border p-0 shadow-[0_0_0_1px_var(--void)] outline-none md:absolute md:inset-x-auto md:top-6 md:right-6 md:bottom-24 md:max-h-none md:w-[26rem]"
+		>
+			<div className="border-rule flex items-start justify-between gap-3 border-b px-4 py-3">
+				<div className="min-w-0">
+					<Data className="text-ground-muted block text-[10px]">
+						{pick.region?.name ?? 'Out on its own'}
+					</Data>
+					{pick.neighborhood ? (
+						<p className="font-body mt-0.5 truncate text-sm italic">
+							{pick.neighborhood.name}
+						</p>
+					) : null}
+				</div>
+				<button
+					type="button"
+					onClick={onClose}
+					aria-label="Close"
+					title="Close (Esc)"
+					className="border-rule hover:border-link hover:text-link focus-visible:border-link flex size-8 shrink-0 items-center justify-center border focus-visible:outline-none"
+				>
+					<Icon name="cross-1" className="size-3.5" />
+				</button>
+			</div>
+
+			<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 py-4">
+				{failed ? (
+					<Data className="text-stamp-fg">
+						This record could not be retrieved.
+					</Data>
+				) : !work ? (
+					<Data className="text-ground-muted animate-pulse">
+						Retrieving record {resourceId}…
+					</Data>
+				) : (
+					<>
+						{src ? (
+							<div className="flex justify-center">
+								<Plate
+									work={{
+										id: work.id,
+										title: work.title,
+										artist: work.artist,
+										notBefore: work.notBefore,
+										notAfter: work.notAfter,
+										institution: work.institution,
+										objectKey: work.objectKey,
+										motifs: work.motifs,
+									}}
+									src={src}
+									maxHeight="max-h-52"
+									sizes="26rem"
+								/>
+							</div>
+						) : null}
+
+						<div>
+							<h2
+								id="atlas-work-title"
+								className="font-display text-xl leading-tight uppercase"
+							>
+								{work.title ?? 'Untitled'}
+							</h2>
+							{work.titleEn ? (
+								<p className="font-body text-ground-muted mt-0.5 text-sm">
+									{work.titleEn}
+								</p>
+							) : null}
+							<p className="font-body mt-1 italic">
+								{work.artist ?? 'Unknown maker'}
+							</p>
+							<Data className="text-ground-muted mt-1 block">
+								{displayPeriod(work.notBefore, work.notAfter)}
+								{work.institution ? ` · ${work.institution}` : ''}
+							</Data>
+						</div>
+
+						{readings.length ? (
+							<div className="flex flex-col gap-3">
+								{readings.map((reading) => (
+									<figure
+										key={reading.level}
+										className={
+											reading.level === pick.level
+												? 'border-link border-l-2 pl-3'
+												: 'border-rule border-l pl-3'
+										}
+									>
+										<figcaption>
+											<Data className="text-ground-muted">
+												Level {PANOFSKY[reading.level].numeral} ·{' '}
+												{PANOFSKY[reading.level].gloss}
+												{reading.source === 'MODEL' ? ' · machine-written' : ''}
+											</Data>
+										</figcaption>
+										<p className="font-body mt-1 text-[0.95rem] leading-snug">
+											{reading.excerpt}
+										</p>
+									</figure>
+								))}
+							</div>
+						) : (
+							<Data className="text-ground-muted">
+								No reading on file for this work.
+							</Data>
+						)}
+
+						{work.motifs.length ? (
+							<div>
+								<Data className="text-ground-muted mb-2 block">
+									Strongest motifs
+								</Data>
+								<div className="flex flex-wrap gap-1.5">
+									{work.motifs.map((motif) => (
+										<Chip
+											key={motif}
+											label={motif}
+											to={`/?motif=${encodeURIComponent(motif)}`}
+										/>
+									))}
+								</div>
+							</div>
+						) : null}
+					</>
+				)}
+			</div>
+
+			<div className="border-rule border-t px-4 py-3">
+				<Link
+					to={workHref(resourceId)}
+					className="font-data text-data-sm hover:text-link tracking-[0.12em] uppercase underline underline-offset-4"
+				>
+					Open the full dossier →
+				</Link>
+			</div>
+		</dialog>
 	)
 }
 

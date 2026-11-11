@@ -25,6 +25,19 @@ const ULTRA_LIFT = '#8B87FF'
 const BONE = '#E8E5DE'
 const VOID = '#0D0D0D'
 
+/**
+ * A named patch of the map, from `scripts/cluster-atlas.py` and
+ * `scripts/name-atlas-clusters.mjs`. `center` is the member nearest the
+ * cluster's mean, in the same normalised space as the positions.
+ */
+export type AtlasCluster = {
+	id: number
+	name: string
+	size: number
+	center: [number, number, number]
+	terms: string[]
+}
+
 export type AtlasManifest = {
 	formatVersion: number
 	count: number
@@ -38,20 +51,48 @@ export type AtlasManifest = {
 		metric: string
 		seed: number | null
 	}
+	noise: { uint8: number; uint16: number }
+	regions: AtlasCluster[]
+	neighborhoods: AtlasCluster[]
 	layout: Record<string, { offset: number; byteLength: number; dtype: string }>
 }
 
 export type AtlasHit = { resourceId: number; level: number; similarity: number }
 
-export type AtlasHover = {
+/** A reading on the map, and the places it sits in. */
+export type AtlasPick = {
 	resourceId: number
 	level: number
-	/** Cosine distance to the work's other reading, or null if it has none. */
-	spread: number | null
-	/** Screen position of the point, for placing the label. */
-	x: number
-	y: number
-} | null
+	region: AtlasCluster | null
+	neighborhood: AtlasCluster | null
+}
+
+export type AtlasHover =
+	| (AtlasPick & {
+			/** Cosine distance to the work's other reading, or null if it has none. */
+			spread: number | null
+			/** Screen position of the point, for placing the label. */
+			x: number
+			y: number
+	  })
+	| null
+
+/**
+ * The bytes 1.6MB of positions are read as, and the version `cluster-atlas.py`
+ * writes. A file of another version is refused rather than misread.
+ */
+const FORMAT_VERSION = 2
+
+/**
+ * Camera distance below which neighborhood names replace region names. Home
+ * is 1.9; the regions read from there, and a reader who has zoomed in by about
+ * a third is looking at a patch small enough for its neighborhoods to mean
+ * something.
+ */
+const NEIGHBORHOOD_DISTANCE = 1.3
+
+/** A press that moves further than this is a drag to turn the map, not a pick. */
+const CLICK_SLOP = 5
 
 export type ColorMode = 'uniform' | 'spread'
 export type LevelFilter = 'both' | 2 | 3
@@ -153,6 +194,8 @@ type AtlasData = {
 	resourceIds: Uint32Array
 	levels: Uint8Array
 	spreads: Uint8Array
+	regions: Uint8Array
+	neighborhoods: Uint16Array
 }
 
 async function loadAtlas(signal: AbortSignal): Promise<AtlasData> {
@@ -165,9 +208,9 @@ async function loadAtlas(signal: AbortSignal): Promise<AtlasData> {
 		),
 	])
 
-	if (manifest.formatVersion !== 1) {
+	if (manifest.formatVersion !== FORMAT_VERSION) {
 		throw new Error(
-			`atlas.bin is format ${manifest.formatVersion}; this build reads 1. Re-run scripts/umap-atlas.py.`,
+			`atlas.bin is format ${manifest.formatVersion}; this build reads ${FORMAT_VERSION}. Re-run scripts/cluster-atlas.py and scripts/name-atlas-clusters.mjs.`,
 		)
 	}
 
@@ -195,6 +238,16 @@ async function loadAtlas(signal: AbortSignal): Promise<AtlasData> {
 			layout.spreads!.offset,
 			layout.spreads!.byteLength,
 		),
+		regions: new Uint8Array(
+			buffer,
+			layout.regions!.offset,
+			layout.regions!.byteLength,
+		),
+		neighborhoods: new Uint16Array(
+			buffer,
+			layout.neighborhoods!.offset,
+			layout.neighborhoods!.byteLength / 2,
+		),
 	}
 }
 
@@ -202,18 +255,32 @@ export function AtlasCanvas({
 	hits,
 	colorMode,
 	levelFilter,
+	selected = null,
 	onHover,
 	onSelect,
 	onReady,
+	ambient = false,
 }: {
 	hits: Array<AtlasHit>
 	colorMode: ColorMode
 	levelFilter: LevelFilter
+	/** The reading to ring on the map, if any. */
+	selected?: { resourceId: number; level: number } | null
 	onHover: (hover: AtlasHover) => void
-	onSelect: (resourceId: number) => void
+	/** A point, or null for a click on empty space. */
+	onSelect: (pick: AtlasPick | null) => void
 	onReady: (manifest: AtlasManifest) => void
+	/**
+	 * The atlas as a backdrop rather than an instrument — the homepage hero.
+	 * It turns slowly on its own, takes no pointer input (so it can never
+	 * swallow the page's scroll or a phone's swipe), stops drawing while it is
+	 * off screen, and holds still for a reader who asked for reduced motion.
+	 */
+	ambient?: boolean
 }) {
 	const containerRef = useRef<HTMLDivElement>(null)
+	const labelsRef = useRef<HTMLDivElement>(null)
+	const ringRef = useRef<HTMLDivElement>(null)
 	const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
 	const [message, setMessage] = useState<string | null>(null)
 
@@ -229,6 +296,8 @@ export function AtlasCanvas({
 		match: Float32Array
 		setUniform: (name: string, value: number) => void
 		flushMatch: () => void
+		/** Point index to ring, or -1. */
+		setSelected: (index: number) => void
 		dispose: () => void
 	} | null>(null)
 
@@ -255,7 +324,23 @@ export function AtlasCanvas({
 
 			const THREE = three
 			const { OrbitControls } = controlsModule
-			const { positions, levels, spreads, resourceIds, manifest } = data
+			const {
+				positions,
+				levels,
+				spreads,
+				resourceIds,
+				regions,
+				neighborhoods,
+				manifest,
+			} = data
+			const regionById = new Map(manifest.regions.map((c) => [c.id, c]))
+			const hoodById = new Map(manifest.neighborhoods.map((c) => [c.id, c]))
+			const pickAt = (index: number): AtlasPick => ({
+				resourceId: resourceIds[index]!,
+				level: levels[index]!,
+				region: regionById.get(regions[index]!) ?? null,
+				neighborhood: hoodById.get(neighborhoods[index]!) ?? null,
+			})
 
 			const renderer = new THREE.WebGLRenderer({
 				antialias: true,
@@ -278,7 +363,7 @@ export function AtlasCanvas({
 				0.01,
 				100,
 			)
-			camera.position.set(0, 0, 1.9)
+			camera.position.set(0, 0, ambient ? 1.45 : 1.9)
 
 			const controls = new OrbitControls(camera, renderer.domElement)
 			controls.enableDamping = true
@@ -286,6 +371,15 @@ export function AtlasCanvas({
 			controls.rotateSpeed = 0.5
 			controls.minDistance = 0.15
 			controls.maxDistance = 8
+			if (ambient) {
+				controls.enabled = false
+				controls.autoRotate = !window.matchMedia(
+					'(prefers-reduced-motion: reduce)',
+				).matches
+				controls.autoRotateSpeed = 0.55
+				renderer.domElement.style.pointerEvents = 'none'
+				renderer.domElement.style.touchAction = 'auto'
+			}
 
 			const geometry = new THREE.BufferGeometry()
 			geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
@@ -351,14 +445,34 @@ export function AtlasCanvas({
 			let pointerInside = false
 			let hoverDirty = false
 			let lastHovered = -1
+			let selectedIndex = -1
 			const clientPointer = { x: 0, y: 0 }
+			const pressedAt = { x: 0, y: 0 }
 
-			function onPointerMove(event: PointerEvent) {
+			function aim(event: PointerEvent | MouseEvent) {
 				const rect = renderer.domElement.getBoundingClientRect()
 				pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
 				pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
 				clientPointer.x = event.clientX - rect.left
 				clientPointer.y = event.clientY - rect.top
+			}
+
+			/** The nearest showing reading under the pointer, or -1. */
+			function hitTest() {
+				raycaster.setFromCamera(pointer, camera)
+				const filter = uniforms.uLevelFilter.value
+				const hit = raycaster
+					.intersectObject(points, false)
+					.find(
+						(intersection) =>
+							intersection.index !== undefined &&
+							(filter === 0 || levels[intersection.index] === filter),
+					)
+				return hit?.index ?? -1
+			}
+
+			function onPointerMove(event: PointerEvent) {
+				aim(event)
 				pointerInside = true
 				hoverDirty = true
 			}
@@ -370,12 +484,30 @@ export function AtlasCanvas({
 				onHover(null)
 			}
 
-			function onClick() {
-				if (lastHovered >= 0) onSelect(resourceIds[lastHovered]!)
+			function onPointerDown(event: PointerEvent) {
+				pressedAt.x = event.clientX
+				pressedAt.y = event.clientY
+			}
+
+			// Tested at the click itself rather than read from the last hover, so
+			// a tap on a touch screen, which has no hover, picks too.
+			function onClick(event: MouseEvent) {
+				// A drag that turned the map ends in a click as well; that one is
+				// the reader letting go, not choosing.
+				if (
+					Math.hypot(event.clientX - pressedAt.x, event.clientY - pressedAt.y) >
+					CLICK_SLOP
+				) {
+					return
+				}
+				aim(event)
+				const index = hitTest()
+				onSelect(index >= 0 ? pickAt(index) : null)
 			}
 
 			renderer.domElement.addEventListener('pointermove', onPointerMove)
 			renderer.domElement.addEventListener('pointerleave', onPointerLeave)
+			renderer.domElement.addEventListener('pointerdown', onPointerDown)
 			renderer.domElement.addEventListener('click', onClick)
 
 			/**
@@ -387,29 +519,20 @@ export function AtlasCanvas({
 			function pick() {
 				if (!hoverDirty || !pointerInside) return
 				hoverDirty = false
-				raycaster.setFromCamera(pointer, camera)
-				const intersections = raycaster.intersectObject(points, false)
+				const index = hitTest()
 
-				const filter = uniforms.uLevelFilter.value
-				const hit = intersections.find(
-					(intersection) =>
-						intersection.index !== undefined &&
-						(filter === 0 || levels[intersection.index] === filter),
-				)
-
-				if (!hit || hit.index === undefined) {
+				if (index < 0) {
 					if (lastHovered !== -1) {
 						lastHovered = -1
 						onHover(null)
 					}
 					return
 				}
-				if (hit.index === lastHovered) return
-				lastHovered = hit.index
-				const byte = spreads[hit.index]!
+				if (index === lastHovered) return
+				lastHovered = index
+				const byte = spreads[index]!
 				onHover({
-					resourceId: resourceIds[hit.index]!,
-					level: levels[hit.index]!,
+					...pickAt(index),
 					// Null rather than 0 for a single-reading work: the caller has to
 					// say "no second reading", not "a distance of zero".
 					spread:
@@ -423,6 +546,117 @@ export function AtlasCanvas({
 				})
 			}
 
+			// ----- names: regions from far out, neighborhoods up close -----------
+			//
+			// HTML laid over the canvas rather than text drawn in WebGL: it stays
+			// crisp at any pixel ratio, takes the site's type, and is readable by
+			// the browser's find-in-page. Largest first, so where two collide on
+			// screen the bigger place keeps its name.
+			type Label = {
+				region: boolean
+				element: HTMLSpanElement
+				width: number
+				height: number
+				at: InstanceType<typeof THREE.Vector3>
+			}
+			const labels: Label[] = []
+			const labelLayer = labelsRef.current
+			if (labelLayer && !ambient) {
+				for (const [list, region] of [
+					[manifest.regions, true],
+					[manifest.neighborhoods, false],
+				] as const) {
+					for (const cluster of [...list].sort((a, b) => b.size - a.size)) {
+						if (!cluster.name) continue
+						const label = document.createElement('span')
+						label.textContent = cluster.name
+						label.className = region
+							? 'atlas-label atlas-label-region'
+							: 'atlas-label atlas-label-hood'
+						label.dataset.visible = 'false'
+						labelLayer.appendChild(label)
+						labels.push({
+							region,
+							element: label,
+							width: 0,
+							height: 0,
+							at: new THREE.Vector3(...cluster.center),
+						})
+					}
+				}
+			}
+			function measureLabels() {
+				for (const label of labels) {
+					label.width = label.element.offsetWidth
+					label.height = label.element.offsetHeight
+				}
+			}
+			measureLabels()
+			void document.fonts?.ready.then(measureLabels)
+
+			const projected = new THREE.Vector3()
+			function placeLabels() {
+				if (!labels.length) return
+				const width = element.clientWidth
+				const height = element.clientHeight
+				const hoodsShown =
+					camera.position.distanceTo(controls.target) < NEIGHBORHOOD_DISTANCE
+				const taken: Array<[number, number, number, number]> = []
+				for (const label of labels) {
+					let visible = label.region !== hoodsShown
+					if (visible) {
+						projected.copy(label.at).project(camera)
+						const x = (projected.x * 0.5 + 0.5) * width
+						const y = (-projected.y * 0.5 + 0.5) * height
+						const box: [number, number, number, number] = [
+							x - label.width / 2 - 6,
+							y - label.height / 2 - 3,
+							x + label.width / 2 + 6,
+							y + label.height / 2 + 3,
+						]
+						visible =
+							projected.z < 1 &&
+							box[0] > 0 &&
+							box[2] < width &&
+							box[1] > 0 &&
+							box[3] < height &&
+							!taken.some(
+								(b) =>
+									box[0] < b[2] &&
+									box[2] > b[0] &&
+									box[1] < b[3] &&
+									box[3] > b[1],
+							)
+						if (visible) {
+							taken.push(box)
+							label.element.style.transform = `translate(${Math.round(box[0] + 6)}px, ${Math.round(box[1] + 3)}px)`
+						}
+					}
+					label.element.dataset.visible = visible ? 'true' : 'false'
+				}
+			}
+
+			/** Keeps the ring on the selected reading as the map turns. */
+			function placeRing() {
+				const ring = ringRef.current
+				if (!ring) return
+				if (selectedIndex < 0) {
+					ring.dataset.visible = 'false'
+					return
+				}
+				projected
+					.set(
+						positions[selectedIndex * 3]!,
+						positions[selectedIndex * 3 + 1]!,
+						positions[selectedIndex * 3 + 2]!,
+					)
+					.project(camera)
+				const x = (projected.x * 0.5 + 0.5) * element.clientWidth
+				const y = (-projected.y * 0.5 + 0.5) * element.clientHeight
+				ring.dataset.visible = projected.z < 1 ? 'true' : 'false'
+				ring.style.transform = `translate(${x}px, ${y}px)`
+			}
+
 			const observer = new ResizeObserver(() => {
 				const { clientWidth, clientHeight } = element
 				if (!clientWidth || !clientHeight) return
@@ -432,12 +666,22 @@ export function AtlasCanvas({
 			})
 			observer.observe(element)
 
+			// A backdrop scrolled past is not worth a GPU frame per refresh.
+			let onScreen = true
+			const visibility = new IntersectionObserver(([entry]) => {
+				onScreen = entry?.isIntersecting ?? true
+			})
+			if (ambient) visibility.observe(element)
+
 			let frame = 0
 			function animate() {
 				frame = requestAnimationFrame(animate)
+				if (!onScreen) return
 				controls.update()
 				pick()
 				renderer.render(scene, camera)
+				placeLabels()
+				placeRing()
 			}
 			animate()
 
@@ -452,15 +696,21 @@ export function AtlasCanvas({
 				flushMatch() {
 					matchAttribute.needsUpdate = true
 				},
+				setSelected(next) {
+					selectedIndex = next
+				},
 				dispose() {
 					cancelAnimationFrame(frame)
 					observer.disconnect()
+					visibility.disconnect()
 					renderer.domElement.removeEventListener('pointermove', onPointerMove)
 					renderer.domElement.removeEventListener(
 						'pointerleave',
 						onPointerLeave,
 					)
+					renderer.domElement.removeEventListener('pointerdown', onPointerDown)
 					renderer.domElement.removeEventListener('click', onClick)
+					for (const label of labels) label.element.remove()
 					controls.dispose()
 					geometry.dispose()
 					material.dispose()
@@ -522,17 +772,44 @@ export function AtlasCanvas({
 		)
 	}, [levelFilter, status])
 
+	const selectedKey = selected ? selected.resourceId * 4 + selected.level : -1
+	useEffect(() => {
+		const current = sceneRef.current
+		if (!current || status !== 'ready') return
+		current.setSelected(
+			selectedKey < 0 ? -1 : (current.index.get(selectedKey) ?? -1),
+		)
+	}, [selectedKey, status])
+
 	return (
-		<div className="relative h-full w-full" style={{ backgroundColor: VOID }}>
+		<div
+			className="relative h-full w-full overflow-hidden"
+			style={{ backgroundColor: VOID }}
+		>
 			<div ref={containerRef} className="h-full w-full" />
-			{status !== 'ready' ? (
+			{/* The map's place names. Decorative to a screen reader, which gets
+			    the same names, per point, in the dialog a click opens. */}
+			<div
+				ref={labelsRef}
+				aria-hidden="true"
+				className="pointer-events-none absolute inset-0"
+			/>
+			<div
+				ref={ringRef}
+				aria-hidden="true"
+				data-visible="false"
+				className="atlas-ring pointer-events-none absolute top-0 left-0"
+			/>
+			{/* A backdrop that fails is simply the void ground; it has no reader
+			    waiting on it, so it does not announce itself. */}
+			{status !== 'ready' && !ambient ? (
 				<div
 					className="absolute inset-0 grid place-items-center px-6 text-center font-mono text-xs tracking-wide"
 					style={{ color: status === 'error' ? '#D97A73' : BONE }}
 				>
 					{status === 'error'
 						? (message ?? 'The atlas could not load.')
-						: 'Loading the projection — 89,800 readings, 1.6 MB.'}
+						: 'Loading the projection — 89,800 readings, 1.8 MB.'}
 				</div>
 			) : null}
 		</div>
